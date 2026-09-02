@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import { formatTime } from './dates';
+import { registerNotificationHandler } from './notificationRouter';
 
 // "Still working on this?" While a task is running, a repeating notification
 // checks in every N minutes with three replies: Still on it, Pause, Finish.
@@ -8,6 +9,7 @@ import { formatTime } from './dates';
 // task; cancelled when it pauses or finishes.
 
 export const CHECKIN_CATEGORY = 'task-checkin';
+const ACTION_PREFIX = 'checkin-';
 const ACTION_STILL = 'checkin-still';
 const ACTION_PAUSE = 'checkin-pause';
 const ACTION_FINISH = 'checkin-finish';
@@ -25,32 +27,20 @@ export default function useTaskCheckins(store, { minutes }) {
   const storeRef = useRef(store);
   storeRef.current = store;
   const scheduled = useRef(new Map()); // taskId -> `${startedAt}:${minutes}`
-  const handled = useRef(new Set());
 
-  const handle = useCallback((response) => {
-    if (!response) return;
-    const key = `${response.notification?.request?.identifier}:${response.notification?.date}:${response.actionIdentifier}`;
-    if (handled.current.has(key)) return;
-    handled.current.add(key);
-    const taskId = response.notification?.request?.content?.data?.taskId;
-    if (!taskId) return;
-    const s = storeRef.current;
-    if (response.actionIdentifier === ACTION_PAUSE) s.pauseTask(taskId);
-    else if (response.actionIdentifier === ACTION_FINISH) s.finishTask(taskId);
-    // "Still on it" needs nothing: the repeat keeps going.
-  }, []);
+  useEffect(
+    () =>
+      registerNotificationHandler(ACTION_PREFIX, (response) => {
+        const taskId = response.notification?.request?.content?.data?.taskId;
+        if (!taskId) return;
+        const s = storeRef.current;
+        if (response.actionIdentifier === ACTION_PAUSE) s.pauseTask(taskId);
+        else if (response.actionIdentifier === ACTION_FINISH) s.finishTask(taskId);
+        // "Still on it" needs nothing: the repeat keeps going.
+      }),
+    []
+  );
 
-  useEffect(() => {
-    const sub = Notifications.addNotificationResponseReceivedListener(handle);
-    return () => sub.remove();
-  }, [handle]);
-
-  const last = Notifications.useLastNotificationResponse();
-  useEffect(() => {
-    if (last && store.loaded) handle(last);
-  }, [last, store.loaded, handle]);
-
-  // Reconcile scheduled check-ins with the set of running tasks.
   const running = store.tasks.filter((t) => !t.done && t.startedAt);
   const signature = running.map((t) => `${t.id}:${t.startedAt}`).join(';');
 

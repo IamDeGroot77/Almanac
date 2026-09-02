@@ -97,11 +97,4 @@ export function trackedShare(days, timeLog) {
   return { awakeMs: awake, trackedMs: tracked, share: awake ? tracked / awake : 0 };
 }
 
-export function routineCompletion(routines, routineDone, tasks, progressFn) {
-  return routines.map((r) => {
-    const periods = Object.keys(routineDone?.[r.id] || {});
-    return { id: r.id, name: r.name, periodsTouched: periods.length };
-  });
-}
-
 export const fmt = formatDuration;

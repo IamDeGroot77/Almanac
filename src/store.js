@@ -198,15 +198,17 @@ export function useAlmanacStore() {
 
   const actions = useMemo(
     () => ({
+      // Returns the new task's id.
       addTask(text, listId, personId = null) {
         const trimmed = text.trim();
-        if (!trimmed) return;
+        if (!trimmed) return null;
         const now = Date.now();
+        const id = newId('t');
         edit((s) => ({
           tasks: [
             ...s.tasks,
             {
-              id: newId('t'),
+              id,
               text: trimmed,
               done: false,
               listId,
@@ -217,6 +219,7 @@ export function useAlmanacStore() {
             },
           ],
         }));
+        return id;
       },
       setTaskPerson(id, personId) {
         const now = Date.now();
@@ -574,13 +577,6 @@ export function personName(people, personId) {
   return p ? p.name : 'Me';
 }
 
-// Guess a person from a list name, e.g. "Zeke School" -> zeke. Used for lists
-// that arrive from Google, where there's no other signal.
-export function guessPersonFromName(people, name) {
-  const lower = (name || '').toLowerCase();
-  const hit = people.find((p) => p.id !== 'me' && lower.includes(p.name.toLowerCase()));
-  return hit ? hit.id : null;
-}
 
 export function tasksForList(tasks, listId) {
   const inList = tasks.filter((t) => t.listId === listId);

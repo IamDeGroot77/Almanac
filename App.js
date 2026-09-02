@@ -1,36 +1,27 @@
 import { StatusBar } from 'expo-status-bar';
-import { AppState, StyleSheet, View } from 'react-native';
-import { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors } from './src/theme';
-import { dayKey, describeDayKey, parseDayKey } from './src/dates';
-import { setAlmanacToday, almanacDayFromOffset, openDayKey, lastClosedDay } from './src/clock';
-import {
-  useAlmanacStore,
-  pastUnfinished,
-  dayListIdForOffset,
-  tasksForList,
-  personOf,
-  personName,
-  isDayList,
-  dayOfList,
-} from './src/store';
-import { formatDuration } from './src/durations';
-import { dueStatus } from './src/due';
-import { routineProgress } from './src/routines';
+import { almanacDayFromOffset } from './src/clock';
+import { useAlmanacStore } from './src/store';
+import useAlmanacDay from './src/hooks/useAlmanacDay';
+import usePeopleFilter from './src/hooks/usePeopleFilter';
+import useTodayDerived from './src/hooks/useTodayDerived';
 import useCalendarEvents from './src/useCalendarEvents';
 import useTaskReminders from './src/reminders';
 import { scheduleDailyReminder } from './src/notifications';
+import { useNotificationRouter } from './src/notificationRouter';
 import { useGoogleAuth } from './src/google/auth';
 import useGoogleSync from './src/google/useGoogleSync';
-
 import { useSleepDetection } from './src/sleep';
 import { useCanvasAuth } from './src/canvas/auth';
 import useCanvasSync from './src/canvas/useCanvasSync';
 import useAssignmentCalendar from './src/assignmentCalendar';
 import { useQuickAdd } from './src/quickAdd';
 import useTaskCheckins from './src/checkins';
+
 import TabBar from './src/components/TabBar';
 import TodayScreen from './src/screens/TodayScreen';
 import ListsScreen from './src/screens/ListsScreen';
@@ -51,53 +42,48 @@ export default function App() {
 }
 
 function AlmanacApp() {
+  // ----- data and the day ----------------------------------------------------
+  const store = useAlmanacStore();
+  const day = useAlmanacDay(store);
+  const people = usePeopleFilter(store);
   const [tab, setTab] = useState('today');
   const [dayOffset, setDayOffset] = useState(0); // 0 = today, 1 = tomorrow
-  const [personFilter, setPersonFilter] = useState('all'); // 'all' | person id
-  const store = useAlmanacStore();
+  const derived = useTodayDerived({
+    store,
+    visibleTasks: people.visibleTasks,
+    visibleRoutines: people.visibleRoutines,
+    dayOffset,
+    today: day.today,
+  });
 
-  // ----- the almanac day -------------------------------------------------
-  // The day you're in is the one opened with "I'm up" and not yet closed,
-  // even past midnight. Otherwise it's the calendar date.
-  const calendarToday = dayKey(new Date());
-  const openKey = openDayKey(store.days);
-  const today = openKey && openKey <= calendarToday ? openKey : calendarToday;
-  setAlmanacToday(today);
-  const pastMidnight = today !== calendarToday;
-  const openDay = openKey ? { key: openKey, ...store.days[openKey] } : null;
-
-  // Forgotten Good night: close a stale day on launch, on foreground, and
-  // every few minutes while the app is open.
-  useEffect(() => {
-    store.autoCloseStaleDay();
-    const sub = AppState.addEventListener('change', (s) => s === 'active' && store.autoCloseStaleDay());
-    const timer = setInterval(store.autoCloseStaleDay, 5 * 60 * 1000);
-    return () => {
-      sub.remove();
-      clearInterval(timer);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store.loaded]);
-
-  const calendar = useCalendarEvents(dayOffset, today);
+  // ----- integrations ---------------------------------------------------------
+  const calendar = useCalendarEvents(dayOffset, day.today);
   const google = useGoogleAuth();
   const sync = useGoogleSync(store, google);
-  useTaskReminders(store.tasks, store.loaded);
-  const sleep = useSleepDetection(store);
   const canvas = useCanvasAuth();
   const canvasSync = useCanvasSync(store, canvas);
   const assignmentCalendar = useAssignmentCalendar(store, {
     enabled: !!store.prefs.assignmentsToCalendar && canvas.connected,
     calendarId: store.prefs.assignmentCalendarId,
   });
+  const sleep = useSleepDetection(store);
+
+  // ----- notifications --------------------------------------------------------
+  useNotificationRouter(store.loaded);
+  useTaskReminders(store.tasks, store.loaded);
   useQuickAdd(store, { enabled: !!store.prefs.quickAddNotification });
   useTaskCheckins(store, { minutes: store.prefs.checkinMinutes ?? 30 });
-  const toggleAssignmentCalendar = async (on) => {
-    store.setPref('assignmentsToCalendar', on);
-    if (!on) await assignmentCalendar.removeAll();
-  };
-
   const [reminderStatus, setReminderStatus] = useState('pending');
+  useEffect(() => {
+    scheduleDailyReminder()
+      .then(setReminderStatus)
+      .catch((err) => {
+        console.warn('Reminder setup failed', err);
+        setReminderStatus('error');
+      });
+  }, []);
+
+  // ----- transient UI state ---------------------------------------------------
   const [focusTaskId, setFocusTaskId] = useState(null);
   const [reviewDismissed, setReviewDismissed] = useState(false);
   const [wrapOpen, setWrapOpen] = useState(false);
@@ -108,100 +94,31 @@ function AlmanacApp() {
   const [addingPerson, setAddingPerson] = useState(false);
   const [editingRoutine, setEditingRoutine] = useState(null); // null | {} (new) | routine
 
-  useEffect(() => {
-    scheduleDailyReminder()
-      .then(setReminderStatus)
-      .catch((err) => {
-        console.warn('Reminder setup failed', err);
-        setReminderStatus('error');
-      });
-  }, []);
-
   const onRefresh = async () => {
     await Promise.all([calendar.refresh(), sync.syncNow(), canvasSync.syncNow()]);
   };
 
-  const dayListId = dayListIdForOffset(dayOffset);
-  const headerDate = almanacDayFromOffset(dayOffset);
+  const showReview = dayOffset === 0 && store.loaded && !reviewDismissed && derived.reviewTasks.length > 0;
 
-  // ----- people -----------------------------------------------------------
-  const matchesFilter = (t) => personFilter === 'all' || personOf(t) === personFilter;
-  const visibleTasks = useMemo(
-    () => store.tasks.filter(matchesFilter),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [store.tasks, personFilter]
-  );
-  const tagFor = (t) =>
-    personFilter === 'all' && personOf(t) !== 'me' ? personName(store.people, t.personId) : null;
-  const visibleLists = store.lists.filter(
-    (l) =>
-      personFilter === 'all' ||
-      personOf(l) === personFilter ||
-      store.tasks.some((t) => t.listId === l.id && matchesFilter(t))
-  );
-  const visibleRoutines = store.routines.filter(matchesFilter);
-  const filterName = personFilter === 'all' ? null : personName(store.people, personFilter);
-
-  const addTask = (text, listId) => {
-    const list = store.lists.find((l) => l.id === listId);
-    const personId = personFilter !== 'all' ? personFilter : list?.personId || null;
-    store.addTask(text, listId, personId);
-  };
-  const addList = (name) => store.addList(name, personFilter !== 'all' ? personFilter : null);
-
-  // ----- review, due, summary ---------------------------------------------
-  const reviewTasks = useMemo(() => pastUnfinished(visibleTasks), [visibleTasks]);
-  // Shown whenever earlier days left something behind; no button required.
-  const showReview = dayOffset === 0 && store.loaded && !reviewDismissed && reviewTasks.length > 0;
-
-  const todayListId = dayListIdForOffset(0);
-  const dueOverdue = visibleTasks.filter((t) => t.listId !== todayListId && dueStatus(t) === 'overdue');
-  const dueToday = visibleTasks.filter((t) => t.listId !== todayListId && dueStatus(t) === 'today');
-  const contextFor = (t) => {
-    if (isDayList(t.listId)) return describeDayKey(dayOfList(t.listId));
-    return store.lists.find((l) => l.id === t.listId)?.name || null;
-  };
-
-  const daySummary = useMemo(() => {
-    const { done } = tasksForList(visibleTasks, dayListId);
-    if (done.length === 0) return null;
-    const tracked = done.reduce((sum, t) => sum + (t.durationMs || 0), 0);
-    const parts = [`${done.length} done`];
-    if (tracked > 0) parts.push(`${formatDuration(tracked)} tracked`);
-    return parts.join(' · ');
-  }, [visibleTasks, dayListId]);
-
-  // ----- wrap-up -----------------------------------------------------------
-  const wrapUp = useMemo(() => {
-    if (!wrapOpen || dayOffset !== 0) return null;
-    // From the almanac day's midnight until now, so a late night still counts.
-    const start = parseDayKey(today).getTime();
-    const end = Date.now() + 1;
-    const doneToday = visibleTasks.filter((t) => t.done && t.doneAt >= start && t.doneAt < end);
-    const open = tasksForList(visibleTasks, todayListId).open;
-    const routineState = { tasks: store.tasks, routineDone: store.routineDone };
-    return {
-      doneCount: doneToday.length,
-      openCount: open.length,
-      trackedMs: doneToday.reduce((s, t) => s + (t.durationMs || 0), 0),
-      estimateMs: doneToday.filter((t) => t.durationMs).reduce((s, t) => s + (t.estimateMs || 0), 0),
-      routines: visibleRoutines.map((r) => ({ name: r.name, ...routineProgress(r, routineState) })),
-      note: store.dayNotes[today] || '',
-      onChangeNote: (text) => store.setDayNote(today, text),
-      onPushToTomorrow: () => store.pushOpenToTomorrow(today),
-      onGoodNight: () => {
-        store.endDay(today);
-        setWrapOpen(false);
-      },
-      onClose: () => setWrapOpen(false),
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wrapOpen, dayOffset, visibleTasks, visibleRoutines, store.routineDone, store.dayNotes, today]);
+  const wrapUp =
+    wrapOpen && dayOffset === 0
+      ? {
+          ...derived.wrapUpStats,
+          note: store.dayNotes[day.today] || '',
+          onChangeNote: (text) => store.setDayNote(day.today, text),
+          onPushToTomorrow: () => store.pushOpenToTomorrow(day.today),
+          onGoodNight: () => {
+            store.endDay(day.today);
+            setWrapOpen(false);
+          },
+          onClose: () => setWrapOpen(false),
+        }
+      : null;
 
   const listProps = {
-    tasks: visibleTasks,
-    tagFor,
-    onAdd: addTask,
+    tasks: people.visibleTasks,
+    tagFor: people.tagFor,
+    onAdd: people.addTask,
     onToggle: store.toggleTask,
     onStart: (id) => {
       store.startTask(id);
@@ -216,13 +133,14 @@ function AlmanacApp() {
 
   const personProps = {
     people: store.people,
-    personFilter,
-    setPersonFilter,
+    personFilter: people.personFilter,
+    setPersonFilter: people.setPersonFilter,
     onAddPerson: () => setAddingPerson(true),
-    filterName,
+    filterName: people.filterName,
   };
 
   const sheetTask = sheetTaskId ? store.tasks.find((t) => t.id === sheetTaskId) || null : null;
+  const focusTask = focusTaskId ? store.tasks.find((t) => t.id === focusTaskId && !t.done && t.startedAt) || null : null;
   const optionsList = store.lists.find((l) => l.id === optionsListId) || null;
 
   return (
@@ -232,48 +150,48 @@ function AlmanacApp() {
           <TodayScreen
             dayOffset={dayOffset}
             setDayOffset={setDayOffset}
-            headerDate={headerDate}
+            headerDate={almanacDayFromOffset(dayOffset)}
             {...personProps}
-            openDay={openDay}
-            pastMidnight={pastMidnight}
-            lastClosed={lastClosedDay(store.days)}
-            dayLabel={parseDayKey(today).toLocaleDateString([], { weekday: 'long' })}
+            openDay={day.openDay}
+            pastMidnight={day.pastMidnight}
+            lastClosed={day.lastClosed}
+            dayLabel={day.dayLabel}
             onStartDay={() => {
-              store.startDay(calendarToday);
+              store.startDay(day.calendarToday);
               setReviewDismissed(false);
               onRefresh();
             }}
             onGoingToBed={() => setWrapOpen(true)}
             onReopenDay={(key) => store.reopenDay(key)}
             onStartFresh={() => {
-              if (openKey) store.endDay(openKey);
-              store.startDay(calendarToday);
+              if (day.openKey) store.endDay(day.openKey);
+              store.startDay(day.calendarToday);
               setReviewDismissed(false);
               setWrapOpen(false);
             }}
             showReview={showReview}
-            reviewTasks={reviewTasks}
+            reviewTasks={derived.reviewTasks}
             onApplyReview={(carry, drop) => store.applyReview(carry, drop)}
             onLaterReview={() => setReviewDismissed(true)}
             calendar={calendar}
             onRefresh={onRefresh}
-            dueOverdue={dueOverdue}
-            dueToday={dueToday}
-            contextFor={contextFor}
-            routines={visibleRoutines}
+            dueOverdue={derived.dueOverdue}
+            dueToday={derived.dueToday}
+            contextFor={derived.contextFor}
+            routines={people.visibleRoutines}
             routineState={{ tasks: store.tasks, routineDone: store.routineDone }}
             lists={store.lists}
             onToggleRoutineItem={store.toggleRoutineItem}
             onEditRoutine={setEditingRoutine}
-            dayListId={dayListId}
-            daySummary={daySummary}
+            dayListId={derived.dayListId}
+            daySummary={derived.daySummary}
             wrapUp={wrapUp}
             listProps={listProps}
           />
         )}
         {tab === 'lists' && (
           <ListsScreen
-            lists={visibleLists}
+            lists={people.visibleLists}
             allListsCount={store.lists.length}
             {...personProps}
             googleConnected={!!google.account}
@@ -285,10 +203,8 @@ function AlmanacApp() {
               setRenamingListId(null);
             }}
             onCancelRename={() => setRenamingListId(null)}
-            routines={visibleRoutines}
-            onNewRoutine={() =>
-              setEditingRoutine({ personId: personFilter !== 'all' ? personFilter : 'me', items: [] })
-            }
+            routines={people.visibleRoutines}
+            onNewRoutine={() => setEditingRoutine({ personId: people.defaultPerson, items: [] })}
             onEditRoutine={setEditingRoutine}
             onRefresh={onRefresh}
             refreshing={sync.state === 'syncing'}
@@ -309,7 +225,10 @@ function AlmanacApp() {
             canvas={canvas}
             canvasSync={canvasSync}
             canvasCourses={store.canvas?.courses || []}
-            onToggleAssignmentCalendar={toggleAssignmentCalendar}
+            onToggleAssignmentCalendar={async (on) => {
+              store.setPref('assignmentsToCalendar', on);
+              if (!on) await assignmentCalendar.removeAll();
+            }}
             linkedEventCount={Object.keys(store.calendarEvents || {}).length}
             onStageReview={() => {
               store.devBackdateOpenTasks();
@@ -327,15 +246,14 @@ function AlmanacApp() {
         visible={addingList}
         title="New list"
         hint={
-          (filterName ? `This list will be for ${filterName}. ` : '') +
+          (people.filterName ? `This list will be for ${people.filterName}. ` : '') +
           "A named list for things that aren't tied to a day, like Groceries or Home. It syncs with Google Tasks when you're connected."
         }
         placeholder="List name"
         submitLabel="Create list"
-        onSubmit={addList}
+        onSubmit={people.addList}
         onClose={() => setAddingList(false)}
       />
-
       <NameModal
         visible={addingPerson}
         title="Add a person"
@@ -345,7 +263,6 @@ function AlmanacApp() {
         onSubmit={store.addPerson}
         onClose={() => setAddingPerson(false)}
       />
-
       <ListOptionsModal
         list={optionsList}
         people={store.people}
@@ -354,7 +271,6 @@ function AlmanacApp() {
         onDelete={store.deleteList}
         onClose={() => setOptionsListId(null)}
       />
-
       <RoutineEditorModal
         routine={editingRoutine}
         lists={store.lists}
@@ -363,9 +279,8 @@ function AlmanacApp() {
         onDelete={store.deleteRoutine}
         onClose={() => setEditingRoutine(null)}
       />
-
       <FocusModal
-        task={focusTaskId ? store.tasks.find((t) => t.id === focusTaskId && !t.done && t.startedAt) || null : null}
+        task={focusTask}
         prefs={store.prefs}
         onPhoneFree={store.setTaskPhoneFree}
         onPause={(id) => {
@@ -378,7 +293,6 @@ function AlmanacApp() {
         }}
         onClose={() => setFocusTaskId(null)}
       />
-
       <TaskSheet
         task={sheetTask}
         lists={store.lists}

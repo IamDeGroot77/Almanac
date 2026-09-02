@@ -14,13 +14,6 @@ export function dayFromOffset(offset) {
   return d;
 }
 
-export function dayBounds(offset) {
-  const start = dayFromOffset(offset);
-  const end = new Date(start);
-  end.setHours(23, 59, 59, 999);
-  return { start, end };
-}
-
 export function todayKey() {
   return dayKey(dayFromOffset(0));
 }

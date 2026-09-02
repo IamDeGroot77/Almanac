@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import * as Sleep from '../modules/almanac-sleep';
-import { dayKey } from './dates';
 
 // Folds Google's detected sleep segments into the day bracket. A segment is
 // "asleep from start to end"; its end lands on the wake day, its start on the
@@ -64,11 +63,3 @@ export function useSleepDetection(store) {
   return { ...status, enable, disable, segments: Sleep.isAvailable() ? Sleep.getSegments() : [] };
 }
 
-// Which day a sleep segment belongs to: the day you woke up on.
-export const wakeDayOf = (seg) => dayKey(new Date(seg.end));
-export const bedDayOf = (seg) => {
-  // Bedtime before 6 AM counts as the previous day's night.
-  const d = new Date(seg.start);
-  if (d.getHours() < 6) d.setDate(d.getDate() - 1);
-  return dayKey(d);
-};

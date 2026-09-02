@@ -32,4 +32,3 @@ export const APP_CATALOG = [
   },
 ];
 
-export const catalogPackages = () => APP_CATALOG.map((a) => a.package);
