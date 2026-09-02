@@ -10,6 +10,7 @@ import { tasksForList } from '../store';
 export default function TaskList({
   listId,
   title,
+  subtitle,
   tasks,
   emptyText,
   onAdd,
@@ -58,6 +59,7 @@ export default function TaskList({
             accessibilityHint={onTitleLongPress ? 'Long press to rename or delete this list' : undefined}
           >
             <Text style={styles.title}>{title}</Text>
+            {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
           </TouchableOpacity>
         )}
         {done.length > 0 && (
@@ -100,6 +102,7 @@ const styles = StyleSheet.create({
     minHeight: 32,
   },
   title: { fontSize: 18, fontWeight: '700', color: colors.ink },
+  subtitle: { fontSize: 12, color: colors.muted, marginTop: 1 },
   renameInput: { fontSize: 18, fontWeight: '700', paddingVertical: 6, marginRight: 10 },
   inputRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
 });

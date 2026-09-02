@@ -21,7 +21,10 @@ import EventsSection from './src/components/EventsSection';
 import TaskList from './src/components/TaskList';
 import ReviewCard from './src/components/ReviewCard';
 import MoveTaskModal from './src/components/MoveTaskModal';
+import GoogleSection from './src/components/GoogleSection';
 import { SmallButton } from './src/components/Buttons';
+import { useGoogleAuth } from './src/google/auth';
+import useGoogleSync from './src/google/useGoogleSync';
 
 export default function App() {
   return (
@@ -35,6 +38,12 @@ function AlmanacScreen() {
   const [dayOffset, setDayOffset] = useState(0); // 0 = today, 1 = tomorrow
   const calendar = useCalendarEvents(dayOffset);
   const store = useAlmanacStore();
+  const google = useGoogleAuth();
+  const sync = useGoogleSync(store, google);
+
+  const onRefresh = async () => {
+    await Promise.all([calendar.refresh(), sync.syncNow()]);
+  };
 
   const [reminderStatus, setReminderStatus] = useState('pending');
   const [reviewDismissed, setReviewDismissed] = useState(false);
@@ -91,7 +100,7 @@ function AlmanacScreen() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
         refreshControl={
-          <RefreshControl refreshing={calendar.refreshing} onRefresh={calendar.refresh} />
+          <RefreshControl refreshing={calendar.refreshing} onRefresh={onRefresh} />
         }
       >
         <Text style={styles.kicker}>{dayOffset === 0 ? 'Today' : 'Tomorrow'}</Text>
@@ -129,6 +138,7 @@ function AlmanacScreen() {
             key={list.id}
             listId={list.id}
             title={list.name}
+            subtitle={list.googleListId && google.account ? 'Synced with Google Tasks' : null}
             tasks={store.tasks}
             emptyText="Empty."
             onAdd={store.addTask}
@@ -173,6 +183,8 @@ function AlmanacScreen() {
             </Text>
           )}
         </View>
+
+        <GoogleSection auth={google} sync={sync} />
 
         <Text style={styles.footer}>{reminderMessage(reminderStatus)}</Text>
       </ScrollView>

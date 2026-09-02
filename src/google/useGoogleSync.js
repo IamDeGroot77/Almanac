@@ -1,0 +1,78 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
+import { getValidAccessToken } from './auth';
+import { runSync } from './sync';
+import { GoogleApiError } from './tasksApi';
+
+const DEBOUNCE_MS = 3000;
+
+// Drives runSync: on sign-in, when the app comes to the foreground, on
+// demand, and a few seconds after any local change.
+export default function useGoogleSync(store, auth) {
+  const [status, setStatus] = useState({ state: 'idle', error: null });
+  const storeRef = useRef(store);
+  storeRef.current = store;
+  const inFlight = useRef(false);
+  const queued = useRef(false);
+
+  const syncNow = useCallback(async () => {
+    const current = storeRef.current;
+    if (!auth.account || !current.loaded) return;
+    if (inFlight.current) {
+      queued.current = true;
+      return;
+    }
+    inFlight.current = true;
+    setStatus({ state: 'syncing', error: null });
+    try {
+      const token = await getValidAccessToken();
+      if (!token) {
+        await auth.signOut();
+        throw new Error('Google session expired. Connect again.');
+      }
+      const snapshot = {
+        lists: current.lists,
+        tasks: current.tasks,
+        sync: current.sync,
+        localVersion: current.localVersion,
+      };
+      const result = await runSync(snapshot, token);
+      current.applySyncResult(result);
+      setStatus({ state: 'idle', error: null });
+    } catch (err) {
+      console.warn('Google sync failed', err);
+      setStatus({ state: 'error', error: err.message || 'Sync failed' });
+      if (err instanceof GoogleApiError && err.status === 401) await auth.signOut();
+    } finally {
+      inFlight.current = false;
+      if (queued.current) {
+        queued.current = false;
+        syncNow();
+      }
+    }
+  }, [auth]);
+
+  // Sign-in and first load.
+  useEffect(() => {
+    if (auth.account && store.loaded) syncNow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.account, store.loaded]);
+
+  // Foreground.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') syncNow();
+    });
+    return () => sub.remove();
+  }, [syncNow]);
+
+  // Local changes, debounced.
+  useEffect(() => {
+    if (!auth.account || !store.loaded) return;
+    if (store.localVersion === store.sync.syncedVersion) return;
+    const timer = setTimeout(syncNow, DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [auth.account, store.loaded, store.localVersion, store.sync.syncedVersion, syncNow]);
+
+  return { ...status, lastSyncAt: store.sync.lastSyncAt, syncNow };
+}

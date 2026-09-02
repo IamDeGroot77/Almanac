@@ -41,12 +41,15 @@
           "defaultChannel": "daily-brief"
         }
       ],
-      "expo-dev-client"
+      "expo-dev-client",
+      "expo-web-browser",
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {
         "projectId": "729e1faa-0a56-4a1c-86bd-c9c72242b5fc"
-      }
+      },
+      "googleAndroidClientId": "PASTE_ANDROID_CLIENT_ID.apps.googleusercontent.com"
     },
     "owner": "iamdegroot77s-team"
   }
