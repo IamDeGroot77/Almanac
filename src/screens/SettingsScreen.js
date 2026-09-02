@@ -53,6 +53,8 @@ export default function SettingsScreen({
     setTheme(v);
     AsyncStorage.setItem('almanac:theme', v).catch(() => {});
   };
+  const [quotesText, setQuotesText] = useState(prefs.quotes || '');
+  useEffect(() => setQuotesText(prefs.quotes || ''), [prefs.quotes]);
   // Weather place lookup.
   const [placeQuery, setPlaceQuery] = useState('');
   const [placeOptions, setPlaceOptions] = useState([]);
@@ -83,12 +85,31 @@ export default function SettingsScreen({
             { id: 'system', name: 'Match phone' },
             { id: 'light', name: 'Light' },
             { id: 'dark', name: 'Dark' },
+            { id: 'anime', name: 'Anime' },
           ]}
           selected={theme}
           onSelect={pickTheme}
           compact
         />
         <Text style={styles.detail}>Takes effect the next time the app opens.</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Quotes and art</Text>
+        <Text style={shared.muted}>
+          Home shows a line for the day. Add your own, one per line, as "quote — who, show". Yours come up three
+          times as often as the built-in set. For pictures, drop images named art-something.jpg into the Files tab on
+          the laptop; one rotates onto Home each day.
+        </Text>
+        <TextInput
+          style={[shared.input, styles.quotesBox]}
+          multiline
+          value={quotesText}
+          onChangeText={setQuotesText}
+          onBlur={() => onSetPref('quotes', quotesText)}
+          placeholder={'Set your heart ablaze. — Rengoku, Demon Slayer'}
+          placeholderTextColor={colors.muted}
+        />
       </View>
 
       <DayPlanSection
@@ -349,6 +370,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '700', color: colors.ink },
   section: { marginTop: 28, paddingTop: 20, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: colors.ink, marginBottom: 6 },
+  quotesBox: { flex: 0, minHeight: 90, textAlignVertical: 'top', marginTop: 8 },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   detail: { fontSize: 13, color: colors.muted, marginTop: 4 },
   subTitle: { marginTop: 18 },

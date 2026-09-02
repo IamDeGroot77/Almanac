@@ -6,6 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 // The phone keeps four tabs. The laptop adds the planning views that want a
 // big screen and a keyboard.
 const PHONE_TABS = [
+  { id: 'home', label: 'Home', icon: 'home' },
   { id: 'today', label: 'Today', icon: 'sunny' },
   { id: 'lists', label: 'Lists', icon: 'list' },
   { id: 'journal', label: 'Journal', icon: 'book' },
@@ -14,6 +15,7 @@ const PHONE_TABS = [
 ];
 
 const WEB_TABS = [
+  { id: 'home', label: 'Home', icon: 'home' },
   { id: 'today', label: 'Today', icon: 'sunny' },
   { id: 'planner', label: 'Week', icon: 'grid' },
   { id: 'calendar', label: 'Calendar', icon: 'calendar' },

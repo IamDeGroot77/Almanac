@@ -90,6 +90,11 @@ snapshots, and native features hide behind small modules.
 - Skip tokens: a routine item can be skipped (-1 in `routineDone`), counting as complete for the period but not toward other routines' quotas; `skipsPerWeek` (default 2) tokens per routine per week, shown on the card. Never a broken streak.
 - Words: "Slipped" instead of "Overdue".
 
+## Home
+
+- `screens/HomeScreen.js` is the first tab on both devices: greeting, date, weather, a line for the day (`src/quotes.js`: starter anime quotes plus the user's own from `prefs.quotes`, shared), an optional picture (`src/art.js`: Drive drop-box images named `art-*`, one per day), the Now card (running task with Finish, else the best next pick with Start, block-aware), the day's numbers, working memory, and links.
+- Theme "Anime" (`theme.js` ANIME palette) joins system/light/dark in Settings → Appearance.
+
 ## Runs and badges
 
 - `src/achievements.js` (pure, tested by `scripts/test-achievements.mjs`): forgiving runs (one missed day in seven is absorbed, skips count as met) for opening the app, starting the day, and each daily routine, with the best run kept; a catalog of achievements with progress functions. `achievements` in the store (shared, earliest earn time wins in merge) records earn times; App checks after edits settle and toasts new ones. Shown on Insights under "Runs and badges". A day closed with nothing open sets `days[key].cleanSlate`.

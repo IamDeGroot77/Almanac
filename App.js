@@ -49,6 +49,9 @@ import TabBar from './src/components/TabBar';
 import TodayScreen from './src/screens/TodayScreen';
 import ListsScreen from './src/screens/ListsScreen';
 import JournalScreen from './src/screens/JournalScreen';
+import HomeScreen from './src/screens/HomeScreen';
+import { quoteOfDay, parseQuotes } from './src/quotes';
+import { useArt } from './src/art';
 import InsightsScreen from './src/screens/InsightsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import PlannerScreen from './src/screens/web/PlannerScreen';
@@ -102,7 +105,7 @@ function AlmanacApp() {
   const store = useAlmanacStore();
   const day = useAlmanacDay(store);
   const people = usePeopleFilter(store);
-  const [tab, setTab] = useState('today');
+  const [tab, setTab] = useState('home');
   const [journalPrompt, setJournalPrompt] = useState(null);
   const [dayOffset, setDayOffset] = useState(0); // 0 = today, 1 = tomorrow
   const derived = useTodayDerived({
@@ -285,6 +288,7 @@ function AlmanacApp() {
 
   // "Just one thing": pick the next task worth starting and open Focus on it.
   const timerApp = APP_CATALOG.find((a) => a.id === store.prefs.timerApp) || null;
+  const art = useArt(google.account, day.today);
   const block = currentBlock(store.prefs.dayBlocks, Date.now());
   const blockPicksAll = block ? categoryTasks(people.visibleTasks, store.lists, block.categoryId) : [];
   const justOneThing = () => {
@@ -333,6 +337,51 @@ function AlmanacApp() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <View style={styles.body}>
+        {tab === 'home' && (
+          <HomeScreen
+            store={store}
+            today={day.today}
+            headerDate={almanacDayFromOffset(0)}
+            forecast={weather.forecast}
+            art={art}
+            quote={quoteOfDay(day.today, parseQuotes(store.prefs.quotes))}
+            running={store.tasks.find((t) => !t.done && t.startedAt) || null}
+            blockInfo={blockInfoFor(store, block, blockPicksAll)}
+            nextPick={(blockPicksAll.length ? pickNext(blockPicksAll, { running: store.tasks.filter((t) => !t.done && t.startedAt).map((t) => t.id) }) : null) || pickNext(people.visibleTasks, { running: store.tasks.filter((t) => !t.done && t.startedAt).map((t) => t.id) })}
+            openToday={store.tasks.filter((t) => !t.done && !t.parentId && t.listId === dayListId(day.today)).length}
+            doneToday={derived.wrapUpStats.doneCount}
+            capacity={derived.capacity}
+            scratch={store.scratch || []}
+            scratchActions={{
+              onAdd: (text) => store.addScratch(text),
+              onEdit: store.editScratch,
+              onRemove: store.removeScratch,
+              onClearStale: store.clearStaleScratch,
+              onToTask: (id) => {
+                const n = (store.scratch || []).find((x) => x.id === id);
+                if (!n) return;
+                store.addTask(n.text, dayListId(day.today));
+                store.removeScratch(id);
+                setToast({ text: "Moved to today's tasks.", at: Date.now() });
+              },
+              onToJournal: (id) => {
+                const n = (store.scratch || []).find((x) => x.id === id);
+                if (!n) return;
+                store.addJournalEntry(n.text, { source: 'scratch' });
+                store.removeScratch(id);
+                setToast({ text: 'Saved to the journal.', at: Date.now() });
+              },
+            }}
+            onStart={(id) => {
+              store.startTask(id);
+              setFocusTaskId(id);
+            }}
+            onFinish={finishTask}
+            onOpenTask={(task) => setSheetTaskId(task.id)}
+            onJustOneThing={justOneThing}
+            onGo={setTab}
+          />
+        )}
         {tab === 'today' && (
           <TodayScreen
             dayOffset={dayOffset}

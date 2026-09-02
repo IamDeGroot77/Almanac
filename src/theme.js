@@ -32,10 +32,29 @@ const DARK = {
   scheme: 'dark',
 };
 
+// Anime: night-sky indigo with a neon accent. Same contrast rules as dark.
+const ANIME = {
+  bg: '#12101F',
+  ink: '#F4F0FF',
+  muted: '#A9A3C7',
+  line: '#2C2748',
+  accent: '#FF5C8A',
+  accentSoft: '#2A1F3D',
+  warnSoft: '#3A2A10',
+  warn: '#FFC857',
+  danger: '#FF7B7B',
+  onAccent: '#FFFFFF',
+  scheme: 'dark',
+};
+
 // Mutable in place so every module that imported `colors` sees the palette.
 export const colors = { ...LIGHT };
 
 export function applyTheme(preference) {
+  if (preference === 'anime') {
+    Object.assign(colors, ANIME);
+    return 'dark';
+  }
   const scheme = preference === 'dark' || preference === 'light' ? preference : Appearance.getColorScheme() || 'light';
   Object.assign(colors, scheme === 'dark' ? DARK : LIGHT);
   return scheme;
