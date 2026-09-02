@@ -61,6 +61,7 @@ snapshots, and native features hide behind small modules.
 
 ## Adherence (the phone does the initiating)
 
+- The morning brief follows the alarm clock: `modules/almanac-alarm` reads `AlarmManager.getNextAlarmClock`; `scheduleMorningBrief` in `src/notifications.js` schedules a one-off a minute after an alarm within 20 hours, else the brief is sent when the day auto-starts (`sendBriefIfDue`, once per day). Re-checked whenever the app comes to the foreground or goes to the background, so set the alarm before closing Almanac for the night if you want the brief tied to it.
 - `src/dayBracket.js`: the morning brief carries "I'm up" and "Just one thing" buttons; a bedtime nudge (pref `bedtimeHour`, -1 = off) carries "Going to bed" and "Not yet" (asks again in 30 minutes). Handlers run through `notificationRouter.js`, so the buttons work from the shade and the watch without opening the app.
 - Start of day happens by itself: `src/dayAuto.js` (pure, tested by `scripts/test-dayauto.mjs`) decides on each app open whether a clear stretch of sleep has passed (a detected segment ending after the last activity, or four hours without any); App applies it (`applyAutoStart`), resets the review, and refreshes. "I'm up" remains for correcting the time ("Just got up").
 - Today starts in Now mode when more than five tasks are open (App.js).

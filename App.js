@@ -11,7 +11,7 @@ import usePeopleFilter from './src/hooks/usePeopleFilter';
 import useTodayDerived from './src/hooks/useTodayDerived';
 import useCalendarEvents from './src/useCalendarEvents';
 import useTaskReminders from './src/reminders';
-import { scheduleDailyReminder } from './src/notifications';
+import { scheduleMorningBrief, sendBriefIfDue, briefDeliveredToday } from './src/notifications';
 import { useNotificationRouter } from './src/notificationRouter';
 import { useGoogleAuth } from './src/google/auth';
 import useGoogleSync from './src/google/useGoogleSync';
@@ -92,6 +92,25 @@ function AlmanacApp() {
   // today has more than a handful open, start in Now mode.
   // Start of day happens by itself: the first open after a clear stretch of
   // sleep closes any stale day, opens today, and brings the review.
+  const [reminderStatus, setReminderStatus] = useState({ mode: 'pending' });
+  const briefRef = useRef(reminderStatus);
+  briefRef.current = reminderStatus;
+  const refreshBrief = () =>
+    scheduleMorningBrief()
+      .then((st) => {
+        briefRef.current = st;
+        setReminderStatus(st);
+      })
+      .catch((err) => {
+        console.warn('Brief setup failed', err);
+        setReminderStatus({ mode: 'error' });
+      });
+  useEffect(() => {
+    refreshBrief();
+    const sub = AppState.addEventListener('change', () => refreshBrief());
+    return () => sub.remove();
+  }, []);
+
   const storeRef = useRef(store);
   storeRef.current = store;
   const onAppOpen = () => {
@@ -104,6 +123,7 @@ function AlmanacApp() {
       setDayOffset(0);
       setToast({ text: describeAutoStart(plan), at: Date.now() });
       onRefresh();
+      if (!briefDeliveredToday(briefRef.current)) sendBriefIfDue().catch(() => {});
     }
     s.noteAppOpen();
   };
@@ -131,15 +151,6 @@ function AlmanacApp() {
   const focusSession = useFocusSession();
   const [toast, setToast] = useState(null);
   useWeeklyLetterReminder(store.prefs.weeklyLetter !== false);
-  const [reminderStatus, setReminderStatus] = useState('pending');
-  useEffect(() => {
-    scheduleDailyReminder()
-      .then(setReminderStatus)
-      .catch((err) => {
-        console.warn('Reminder setup failed', err);
-        setReminderStatus('error');
-      });
-  }, []);
 
   // ----- transient UI state ---------------------------------------------------
   const [focusTaskId, setFocusTaskId] = useState(null);

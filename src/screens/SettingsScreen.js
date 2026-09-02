@@ -125,8 +125,8 @@ export default function SettingsScreen({
       ) : (
         <>
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Daily brief</Text>
-        <Text style={shared.muted}>{reminderMessage(reminderStatus) || 'Setting up the 6:30 AM reminder…'}</Text>
+        <Text style={styles.sectionTitle}>Morning brief</Text>
+        <Text style={shared.muted}>{reminderMessage(reminderStatus) || 'Checking your alarm…'}</Text>
       </View>
 
       <View style={styles.section}>
