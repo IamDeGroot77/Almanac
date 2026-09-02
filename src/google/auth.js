@@ -7,6 +7,12 @@ import Constants from 'expo-constants';
 
 // Google sign-in for the Tasks bridge, using the standard OAuth code flow
 // with PKCE (no client secret). Tokens live in the device keystore.
+//
+// The OAuth client is of type "iOS" even though this runs on Android. Google
+// no longer accepts custom-scheme redirects for "Android" type clients in a
+// browser flow (it steers Android apps to its native sign-in SDK), but iOS
+// type clients still do, need no SHA-1, and work from any platform. The
+// redirect scheme is the reversed client ID, registered in app.config.js.
 // Docs: https://docs.expo.dev/versions/v57.0.0/sdk/auth-session/
 //       https://docs.expo.dev/versions/v57.0.0/sdk/securestore/
 
@@ -14,10 +20,19 @@ WebBrowser.maybeCompleteAuthSession();
 
 const TOKENS_KEY = 'google_tokens';
 const SCOPES = ['https://www.googleapis.com/auth/tasks', 'openid', 'email'];
+const CLIENT_SUFFIX = '.apps.googleusercontent.com';
 
-export const googleClientId = Constants.expoConfig?.extra?.googleAndroidClientId || '';
+export const googleClientId = Constants.expoConfig?.extra?.googleClientId || '';
 export const isGoogleConfigured =
-  googleClientId.endsWith('.apps.googleusercontent.com') && !googleClientId.startsWith('PASTE');
+  googleClientId.endsWith(CLIENT_SUFFIX) && !googleClientId.startsWith('PASTE');
+
+export function redirectSchemeFor(clientId) {
+  return `com.googleusercontent.apps.${clientId.replace(CLIENT_SUFFIX, '')}`;
+}
+
+const redirectUri = isGoogleConfigured
+  ? AuthSession.makeRedirectUri({ native: `${redirectSchemeFor(googleClientId)}:/oauthredirect` })
+  : undefined;
 
 async function loadTokens() {
   try {
@@ -77,9 +92,11 @@ export function useGoogleAuth() {
   const [ready, setReady] = useState(false);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
+    clientId: googleClientId || undefined,
+    iosClientId: googleClientId || undefined,
     androidClientId: googleClientId || undefined,
+    redirectUri,
     scopes: SCOPES,
-    extraParams: { access_type: 'offline' },
   });
 
   useEffect(() => {

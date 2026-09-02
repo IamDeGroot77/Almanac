@@ -24,7 +24,9 @@ clicking through Google's console. Nothing here needs a credit card.
 1. Open <https://console.cloud.google.com/auth/overview> and click
    **Get started**.
 2. App name: `Almanac`. Support email: your address. Click **Next**.
-3. Audience: choose **External**. Click **Next**.
+3. Audience: choose **External**. This does not make anything public; it only
+   means regular Google accounts (not a Workspace organisation) can sign in,
+   and only the test users you list below.
 4. Contact email: your address. Agree to the policy and click **Create**.
 5. In the left menu open **Audience** and, under **Test users**, add the Google
    account your phone uses. Save.
@@ -35,31 +37,42 @@ Almanac will ask you to connect again. To stop that, come back to this
 "unverified app" warning on the sign-in screen, which is expected for a
 personal app; tap **Advanced** and continue. No review is needed.
 
-## 4. Create the Android client ID
+## 4. Create the OAuth client (type iOS, even for Android)
+
+Google no longer accepts browser-based sign-in for clients of type *Android*;
+it wants Android apps to use its native sign-in kit. Clients of type *iOS*
+still allow it, need no certificate fingerprint, and work from Android, so
+that's what Almanac uses.
 
 1. Open <https://console.cloud.google.com/auth/clients> and click
    **Create client**.
-2. Application type: **Android**.
-3. Name: `Almanac Android`.
-4. Package name: `com.iamdegroot.almanac`
-5. SHA-1 certificate fingerprint: paste the value Claude gives you (it comes
-   from the keystore EAS uses to sign the APK).
-6. Click **Create**. Copy the **Client ID**. It ends in
-   `.apps.googleusercontent.com`.
+2. Application type: **iOS**.
+3. Name: `Almanac`.
+4. Bundle ID: `com.iamdegroot.almanac`
+5. Leave App Store ID and Team ID empty. Click **Create**.
+6. Copy the **Client ID**. It ends in `.apps.googleusercontent.com`.
 
-## 5. Put the client ID in the app
+(If you already created an Android client earlier, it does no harm. Leave it.)
+
+## 5. Put the client ID in the app and rebuild once
 
 In `app.json`, replace the placeholder:
 
 ```json
 "extra": {
-  "googleAndroidClientId": "PASTE_ANDROID_CLIENT_ID.apps.googleusercontent.com"
+  "googleClientId": "PASTE_IOS_CLIENT_ID.apps.googleusercontent.com"
 }
 ```
 
-with your real client ID. Save, and the running dev server picks it up. The
-**Google Tasks** section at the bottom of the app then shows a
-**Connect Google Tasks** button.
+with your real client ID. The sign-in redirect scheme is derived from it and
+baked into the native app, so this needs one APK rebuild:
+
+```bash
+npm run build:dev:android
+```
+
+Install the new APK. The **Google Tasks** section at the bottom of the app
+then shows a **Connect Google Tasks** button.
 
 ## How the sync behaves
 

@@ -19,7 +19,7 @@ export default function GoogleSection({ auth, sync }) {
 
       {!auth.configured && (
         <Text style={shared.muted}>
-          Not set up yet. Add the Android client ID to app.json (see GOOGLE_SETUP.md).
+          Not set up yet. Add the Google client ID to app.json (see GOOGLE_SETUP.md).
         </Text>
       )}
 
