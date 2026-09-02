@@ -74,7 +74,9 @@ export default function DayBracket({
       <View style={styles.line}>
         <Text style={styles.lineText}>
           {pastMidnight ? `Still ${dayLabel} · ` : ''}Up since {formatTime(openDay.wokeAt)}
+          {openDay.autoStarted ? (openDay.wakeSource === 'open' ? ' · from your first open' : ' · from sleep detection') : ''}
         </Text>
+        {openDay.autoStarted && now - openDay.wokeAt < REOPEN_WINDOW_MS ? <SmallButton label="Just got up" onPress={onStart} /> : null}
         <SmallButton label="Going to bed" onPress={onBed} />
       </View>
       {onEnergy && energy?.wake == null ? (
@@ -90,6 +92,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '700', color: colors.ink, marginTop: 4 },
   sub: { fontSize: 14, color: colors.muted, marginTop: 2 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
-  line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
+  line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, gap: 8 },
   lineText: { fontSize: 13, color: colors.muted, flex: 1, marginRight: 10 },
 });

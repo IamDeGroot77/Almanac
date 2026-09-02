@@ -309,8 +309,27 @@ export function useAlmanacStore() {
       startDay(key) {
         setState((s) => ({
           ...s,
-          days: { ...s.days, [key]: { ...(s.days[key] || {}), wokeAt: Date.now(), sleptAt: null, implicit: false } },
+          days: { ...s.days, [key]: { ...(s.days[key] || {}), wokeAt: Date.now(), sleptAt: null, implicit: false, autoStarted: false } },
         }));
+      },
+      // From planAutoStart: close a stale day and open today, bypassing edit.
+      applyAutoStart(plan) {
+        setState((s) => {
+          const days = { ...s.days };
+          if (plan.closeKey && days[plan.closeKey] && !days[plan.closeKey].sleptAt) {
+            days[plan.closeKey] = { ...days[plan.closeKey], sleptAt: plan.closeAt, autoClosed: true, implicitClose: true };
+          }
+          days[plan.startKey] = {
+            ...(days[plan.startKey] || {}),
+            wokeAt: plan.wokeAt,
+            sleptAt: null,
+            implicit: false,
+            autoStarted: true,
+            wakeSource: plan.source === 'sleep' ? days[plan.startKey]?.sleep?.source || 'phone' : 'open',
+            lastActiveAt: Date.now(),
+          };
+          return { ...s, days };
+        });
       },
       endDay(key) {
         setState((s) => ({
@@ -349,7 +368,7 @@ export function useAlmanacStore() {
           }
           const morning = days[wakeKey] || {};
           const morningOverridable =
-            !morning.wokeAt || (morning.implicit && far(morning.wokeAt, seg.end)) ||
+            !morning.wokeAt || ((morning.implicit || morning.autoStarted) && far(morning.wokeAt, seg.end)) ||
             (fromWatch && morning.wakeDetected && morning.wakeSource !== 'health');
           if (morningOverridable) {
             days[wakeKey] = {

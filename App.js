@@ -24,6 +24,7 @@ import { useQuickAdd } from './src/quickAdd';
 import useTaskCheckins from './src/checkins';
 import useEnergyCheckins from './src/energy';
 import useDayBracketNotifications, { DEFAULT_BEDTIME_HOUR } from './src/dayBracket';
+import { planAutoStart, describeAutoStart } from './src/dayAuto';
 import useUndo from './src/hooks/useUndo';
 import UndoBar from './src/components/UndoBar';
 import { pickNext, nextStepOf, childrenOf } from './src/pickNext';
@@ -89,12 +90,31 @@ function AlmanacApp() {
   const [nowMode, setNowMode] = useState(false);
   // The app's own usage record, and the "one thing on screen" default: when
   // today has more than a handful open, start in Now mode.
+  // Start of day happens by itself: the first open after a clear stretch of
+  // sleep closes any stale day, opens today, and brings the review.
+  const storeRef = useRef(store);
+  storeRef.current = store;
+  const onAppOpen = () => {
+    const s = storeRef.current;
+    const plan = planAutoStart(s, Date.now());
+    if (plan) {
+      s.applyAutoStart(plan);
+      setReviewDismissed(false);
+      setWrapOpen(false);
+      setDayOffset(0);
+      setToast({ text: describeAutoStart(plan), at: Date.now() });
+      onRefresh();
+    }
+    s.noteAppOpen();
+  };
+  const onAppOpenRef = useRef(onAppOpen);
+  onAppOpenRef.current = onAppOpen;
   useEffect(() => {
     if (!store.loaded) return;
-    store.noteAppOpen();
+    onAppOpenRef.current();
     const openToday = store.tasks.filter((t) => !t.done && !t.parentId && t.listId === `day:${day.today}`).length;
     if (openToday > 5) setNowMode(true);
-    const sub = AppState.addEventListener('change', (s) => s === 'active' && store.noteAppOpen());
+    const sub = AppState.addEventListener('change', (st) => st === 'active' && onAppOpenRef.current());
     return () => sub.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store.loaded]);
