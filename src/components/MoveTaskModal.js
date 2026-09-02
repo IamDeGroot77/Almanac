@@ -30,7 +30,7 @@ export default function MoveTaskModal({ task, lists, onMove, onClose }) {
             </TouchableOpacity>
           ))}
           {destinations.length === 0 && (
-            <Text style={shared.muted}>No other lists yet. Create one below the day list.</Text>
+            <Text style={shared.muted}>No other lists yet. Create one with "+ New list" under Lists.</Text>
           )}
           <TouchableOpacity style={styles.cancel} onPress={onClose} accessibilityRole="button">
             <Text style={styles.cancelText}>Cancel</Text>

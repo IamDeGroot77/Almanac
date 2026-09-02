@@ -1,18 +1,19 @@
 import { StatusBar } from 'expo-status-bar';
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, shared } from './src/theme';
+import { colors } from './src/theme';
 import { dayFromOffset, formatHeaderDate } from './src/dates';
 import { useAlmanacStore, pastUnfinished, dayListIdForOffset } from './src/store';
 import useCalendarEvents from './src/useCalendarEvents';
@@ -21,6 +22,7 @@ import EventsSection from './src/components/EventsSection';
 import TaskList from './src/components/TaskList';
 import ReviewCard from './src/components/ReviewCard';
 import MoveTaskModal from './src/components/MoveTaskModal';
+import NewListModal from './src/components/NewListModal';
 import GoogleSection from './src/components/GoogleSection';
 import { SmallButton } from './src/components/Buttons';
 import { useGoogleAuth } from './src/google/auth';
@@ -49,7 +51,6 @@ function AlmanacScreen() {
   const [reviewDismissed, setReviewDismissed] = useState(false);
   const [movingTask, setMovingTask] = useState(null);
   const [renamingListId, setRenamingListId] = useState(null);
-  const [newListName, setNewListName] = useState('');
   const [addingList, setAddingList] = useState(false);
 
   useEffect(() => {
@@ -88,14 +89,12 @@ function AlmanacScreen() {
     ]);
   };
 
-  const submitNewList = () => {
-    store.addList(newListName);
-    setNewListName('');
-    setAddingList(false);
-  };
-
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView
+        style={styles.safe}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
@@ -123,7 +122,7 @@ function AlmanacScreen() {
 
         <TaskList
           listId={dayListId}
-          title={dayOffset === 0 ? "Today's list" : "Tomorrow's list"}
+          title={dayOffset === 0 ? "Today's tasks" : "Tomorrow's tasks"}
           tasks={store.tasks}
           emptyText={dayOffset === 0 ? 'Nothing planned yet.' : 'Nothing lined up for tomorrow.'}
           onAdd={store.addTask}
@@ -132,6 +131,16 @@ function AlmanacScreen() {
           onMove={setMovingTask}
           onClearCompleted={store.clearCompleted}
         />
+
+        <View style={styles.listsHeader}>
+          <Text style={styles.listsTitle}>Lists</Text>
+          <SmallButton label="+ New list" onPress={() => setAddingList(true)} />
+        </View>
+        {store.lists.length === 0 && (
+          <Text style={styles.hint}>
+            Named lists hold things that aren't tied to a day, like Groceries or Home.
+          </Text>
+        )}
 
         {store.lists.map((list) => (
           <TaskList
@@ -156,38 +165,17 @@ function AlmanacScreen() {
           />
         ))}
 
-        <View style={styles.newList}>
-          {addingList ? (
-            <View style={styles.inputRow}>
-              <TextInput
-                style={shared.input}
-                value={newListName}
-                onChangeText={setNewListName}
-                placeholder="List name"
-                placeholderTextColor={colors.muted}
-                autoFocus
-                returnKeyType="done"
-                onSubmitEditing={submitNewList}
-              />
-              <TouchableOpacity style={shared.primaryButton} onPress={submitNewList} accessibilityRole="button">
-                <Text style={shared.primaryButtonText}>Create</Text>
-              </TouchableOpacity>
-              <SmallButton label="Cancel" onPress={() => { setAddingList(false); setNewListName(''); }} style={styles.cancelButton} />
-            </View>
-          ) : (
-            <SmallButton label="+ New list" onPress={() => setAddingList(true)} />
-          )}
-          {store.lists.length === 0 && !addingList && (
-            <Text style={styles.hint}>
-              Lists hold tasks that aren't tied to a day, like Groceries or Home.
-            </Text>
-          )}
-        </View>
-
         <GoogleSection auth={google} sync={sync} />
 
         <Text style={styles.footer}>{reminderMessage(reminderStatus)}</Text>
       </ScrollView>
+      </KeyboardAvoidingView>
+
+      <NewListModal
+        visible={addingList}
+        onCreate={store.addList}
+        onClose={() => setAddingList(false)}
+      />
 
       <MoveTaskModal
         task={movingTask}
@@ -242,9 +230,16 @@ const styles = StyleSheet.create({
   segmentText: { fontSize: 14, fontWeight: '600', color: colors.accent },
   segmentTextActive: { color: colors.ink },
 
-  newList: { marginTop: 28 },
-  inputRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  cancelButton: { alignSelf: 'center' },
+  listsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 36,
+    paddingTop: 20,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
+  },
+  listsTitle: { fontSize: 15, fontWeight: '700', color: colors.muted, letterSpacing: 0.5, textTransform: 'uppercase' },
   hint: { marginTop: 8, fontSize: 13, color: colors.muted },
 
   footer: { marginTop: 32, fontSize: 13, color: colors.muted, textAlign: 'center' },
