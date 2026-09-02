@@ -233,4 +233,29 @@ assert.equal(remote.tasksOf(homeId).map((t) => t.title).join(), 'buy socks', 'ar
 assert.equal(state.tasks.filter((t) => t.text === 'buy socks').length, 1, 'no duplicate locally');
 console.log('8. move between synced lists ok');
 
+// 9. Timing stays local: a started task completed from Google gets a duration;
+//    a done task reopened from Google loses its timer.
+const paintId = remote.addTask(homeId, 'paint fence');
+await sync();
+const t5 = Date.now();
+state.tasks = state.tasks.map((t) =>
+  t.text === 'paint fence' ? { ...t, startedAt: t5 - 30 * 60000, updatedAt: t5 } : t
+);
+state.localVersion = 9;
+await sync();
+await sleep(5);
+remote.complete(homeId, paintId);
+await sleep(5);
+await sync();
+const paint = find('paint fence');
+assert.equal(paint.done, true);
+assert.ok(paint.durationMs >= 30 * 60000 - 1000 && paint.durationMs < 31 * 60000, `duration ${paint.durationMs}`);
+Object.assign(lists.get(homeId).tasks.get(paintId), { status: 'needsAction', completed: undefined, updated: nowIso() });
+await sleep(5);
+await sync();
+assert.equal(find('paint fence').done, false);
+assert.equal(find('paint fence').durationMs, null);
+assert.equal(find('paint fence').startedAt, null);
+console.log('9. timing survives remote completion ok');
+
 console.log('\nAll sync scenarios passed.');

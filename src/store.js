@@ -26,7 +26,14 @@ export const dayOfList = (listId) => listId.slice(DAY_PREFIX.length);
 export const dayListIdForOffset = (offset) => dayListId(dayKey(dayFromOffset(offset)));
 
 const emptySync = () => ({ lastSyncAt: null, syncedVersion: 0, deletedTasks: [], deletedLists: [] });
-const emptyState = () => ({ version: 2, lists: [], tasks: [], localVersion: 0, sync: emptySync() });
+const emptyState = () => ({
+  version: 2,
+  lists: [],
+  tasks: [],
+  timeLog: [], // finished, timed tasks: { id, taskId, text, listId, startedAt, doneAt, durationMs }
+  localVersion: 0,
+  sync: emptySync(),
+});
 
 function migrateLegacy(saved) {
   const today = dayListId(todayKey());
@@ -75,6 +82,30 @@ async function load() {
 
 const tombstone = (t) => (t.googleId ? { googleListId: t.googleListId, googleId: t.googleId } : null);
 
+const TIME_LOG_MAX = 2000;
+
+// Mark a task done at `now`. If it had been started, record how long it took
+// and append an entry to the time log for later analysis.
+function finishIn(s, id, now) {
+  const target = s.tasks.find((t) => t.id === id);
+  if (!target || target.done) return {};
+  const durationMs = target.startedAt ? Math.max(0, now - target.startedAt) : null;
+  const tasks = s.tasks.map((t) =>
+    t.id === id ? { ...t, done: true, doneAt: now, durationMs, updatedAt: now } : t
+  );
+  if (durationMs == null) return { tasks };
+  const entry = {
+    id: newId('log'),
+    taskId: target.id,
+    text: target.text,
+    listId: target.listId,
+    startedAt: target.startedAt,
+    doneAt: now,
+    durationMs,
+  };
+  return { tasks, timeLog: [...(s.timeLog || []), entry].slice(-TIME_LOG_MAX) };
+}
+
 export function useAlmanacStore() {
   const [state, setState] = useState(emptyState);
   const [loaded, setLoaded] = useState(false);
@@ -115,13 +146,34 @@ export function useAlmanacStore() {
           ],
         }));
       },
+      // Instant check-off (or undo). Works whether or not the task was started.
       toggleTask(id) {
+        const now = Date.now();
+        edit((s) => {
+          const target = s.tasks.find((t) => t.id === id);
+          if (!target) return {};
+          if (target.done) {
+            return {
+              tasks: s.tasks.map((t) =>
+                t.id === id
+                  ? { ...t, done: false, doneAt: null, startedAt: null, durationMs: null, updatedAt: now }
+                  : t
+              ),
+            };
+          }
+          return finishIn(s, id, now);
+        });
+      },
+      startTask(id) {
         const now = Date.now();
         edit((s) => ({
           tasks: s.tasks.map((t) =>
-            t.id === id ? { ...t, done: !t.done, doneAt: t.done ? null : now, updatedAt: now } : t
+            t.id === id && !t.done ? { ...t, startedAt: now, updatedAt: now } : t
           ),
         }));
+      },
+      finishTask(id) {
+        edit((s) => finishIn(s, id, Date.now()));
       },
       deleteTask(id) {
         edit((s) => {
@@ -186,7 +238,10 @@ export function useAlmanacStore() {
         edit((s) => ({
           tasks: s.tasks
             .filter((t) => !drop.has(t.id))
-            .map((t) => (carry.has(t.id) ? { ...t, listId: today, updatedAt: now } : t)),
+            // A timer left running overnight is meaningless; carried tasks start fresh.
+            .map((t) =>
+              carry.has(t.id) ? { ...t, listId: today, startedAt: null, updatedAt: now } : t
+            ),
         }));
       },
       // Result of a Google sync computed from an earlier snapshot. Anything

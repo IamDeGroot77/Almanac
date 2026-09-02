@@ -15,7 +15,8 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors } from './src/theme';
 import { dayFromOffset, formatHeaderDate } from './src/dates';
-import { useAlmanacStore, pastUnfinished, dayListIdForOffset } from './src/store';
+import { useAlmanacStore, pastUnfinished, dayListIdForOffset, tasksForList } from './src/store';
+import { formatDuration } from './src/durations';
 import useCalendarEvents from './src/useCalendarEvents';
 import { scheduleDailyReminder, reminderMessage } from './src/notifications';
 import EventsSection from './src/components/EventsSection';
@@ -65,6 +66,14 @@ function AlmanacScreen() {
   const dayListId = dayListIdForOffset(dayOffset);
   const headerDate = dayFromOffset(dayOffset);
   const reviewTasks = useMemo(() => pastUnfinished(store.tasks), [store.tasks]);
+  const daySummary = useMemo(() => {
+    const { done } = tasksForList(store.tasks, dayListId);
+    if (done.length === 0) return null;
+    const tracked = done.reduce((sum, t) => sum + (t.durationMs || 0), 0);
+    const parts = [`${done.length} done`];
+    if (tracked > 0) parts.push(`${formatDuration(tracked)} tracked`);
+    return parts.join(' · ');
+  }, [store.tasks, dayListId]);
   const showReview = dayOffset === 0 && store.loaded && !reviewDismissed && reviewTasks.length > 0;
 
   const onListTitleLongPress = (listId) => {
@@ -124,9 +133,12 @@ function AlmanacScreen() {
           listId={dayListId}
           title={dayOffset === 0 ? "Today's tasks" : "Tomorrow's tasks"}
           tasks={store.tasks}
+          subtitle={daySummary}
           emptyText={dayOffset === 0 ? 'Nothing planned yet.' : 'Nothing lined up for tomorrow.'}
           onAdd={store.addTask}
           onToggle={store.toggleTask}
+          onStart={store.startTask}
+          onFinish={store.finishTask}
           onDelete={store.deleteTask}
           onMove={setMovingTask}
           onClearCompleted={store.clearCompleted}
@@ -152,6 +164,8 @@ function AlmanacScreen() {
             emptyText="Empty."
             onAdd={store.addTask}
             onToggle={store.toggleTask}
+            onStart={store.startTask}
+            onFinish={store.finishTask}
             onDelete={store.deleteTask}
             onMove={setMovingTask}
             onClearCompleted={store.clearCompleted}

@@ -15,6 +15,8 @@ export default function TaskList({
   emptyText,
   onAdd,
   onToggle,
+  onStart,
+  onFinish,
   onDelete,
   onMove,
   onClearCompleted,
@@ -86,7 +88,15 @@ export default function TaskList({
       {all.length === 0 && <Text style={shared.muted}>{emptyText}</Text>}
 
       {all.map((t) => (
-        <TaskRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} onLongPress={onMove} />
+        <TaskRow
+          key={t.id}
+          task={t}
+          onToggle={onToggle}
+          onStart={onStart}
+          onFinish={onFinish}
+          onDelete={onDelete}
+          onLongPress={onMove}
+        />
       ))}
     </View>
   );

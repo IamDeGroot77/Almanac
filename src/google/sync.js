@@ -25,11 +25,25 @@ function toRemote(task) {
 
 function fromRemote(local, remote, googleListId) {
   const done = remote.status === 'completed';
+  const doneAt = done ? Date.parse(remote.completed) || local.doneAt || Date.now() : null;
+  // Timing lives only on this device. If Google completed a task we had
+  // started, close the timer at the completion time; if Google reopened a
+  // done task, clear it.
+  let durationMs = local.durationMs ?? null;
+  let startedAt = local.startedAt ?? null;
+  if (done && !local.done) {
+    durationMs = startedAt ? Math.max(0, doneAt - startedAt) : null;
+  } else if (!done && local.done) {
+    durationMs = null;
+    startedAt = null;
+  }
   return {
     ...local,
     text: remote.title?.trim() ? remote.title : local.text,
     done,
-    doneAt: done ? Date.parse(remote.completed) || local.doneAt || Date.now() : null,
+    doneAt,
+    startedAt,
+    durationMs,
     googleId: remote.id,
     googleListId,
     googleUpdated: Date.parse(remote.updated) || Date.now(),

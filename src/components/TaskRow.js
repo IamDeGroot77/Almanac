@@ -1,7 +1,21 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, shared } from '../theme';
+import { formatDuration, useNow } from '../durations';
 
-export default function TaskRow({ task, onToggle, onDelete, onLongPress }) {
+// A task is not started, in progress (startedAt set), or done.
+//  - tapping the circle toggles done / not started (instant check-off)
+//  - Start begins timing, Finish completes it and records the duration
+export default function TaskRow({ task, onToggle, onStart, onFinish, onDelete, onLongPress }) {
+  const inProgress = !task.done && !!task.startedAt;
+  const now = useNow(inProgress);
+
+  const elapsed = task.done
+    ? task.durationMs
+    : inProgress
+      ? now - task.startedAt
+      : null;
+  const elapsedLabel = elapsed != null ? formatDuration(elapsed) : null;
+
   return (
     <View style={[styles.row, shared.hairline]}>
       <TouchableOpacity
@@ -13,11 +27,49 @@ export default function TaskRow({ task, onToggle, onDelete, onLongPress }) {
         accessibilityState={{ checked: task.done }}
         accessibilityHint="Long press to move this task"
       >
-        <Text style={[styles.checkbox, task.done && styles.checkboxDone]}>
-          {task.done ? '✓' : ''}
-        </Text>
-        <Text style={[styles.text, task.done && styles.textDone]}>{task.text}</Text>
+        <View
+          style={[
+            styles.circle,
+            inProgress && styles.circleActive,
+            task.done && styles.circleDone,
+          ]}
+        >
+          {task.done ? <Text style={styles.check}>✓</Text> : null}
+          {inProgress ? <View style={styles.dot} /> : null}
+        </View>
+        <View style={styles.body}>
+          <Text style={[styles.text, task.done && styles.textDone]}>{task.text}</Text>
+          {elapsedLabel ? (
+            <Text style={[styles.elapsed, inProgress && styles.elapsedActive]}>
+              {inProgress ? `${elapsedLabel} so far` : elapsedLabel}
+            </Text>
+          ) : null}
+        </View>
       </TouchableOpacity>
+
+      {!task.done && !inProgress && (
+        <TouchableOpacity
+          style={styles.action}
+          onPress={() => onStart(task.id)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Start ${task.text}`}
+        >
+          <Text style={styles.actionText}>Start</Text>
+        </TouchableOpacity>
+      )}
+      {inProgress && (
+        <TouchableOpacity
+          style={[styles.action, styles.actionPrimary]}
+          onPress={() => onFinish(task.id)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Finish ${task.text}`}
+        >
+          <Text style={[styles.actionText, styles.actionTextPrimary]}>Finish</Text>
+        </TouchableOpacity>
+      )}
+
       <TouchableOpacity
         onPress={() => onDelete(task.id)}
         hitSlop={12}
@@ -31,22 +83,36 @@ export default function TaskRow({ task, onToggle, onDelete, onLongPress }) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 8 },
   main: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  checkbox: {
+  circle: {
     width: 22,
     height: 22,
-    borderRadius: 6,
+    borderRadius: 11,
     borderWidth: 1.5,
     borderColor: colors.accent,
-    textAlign: 'center',
-    lineHeight: 20,
-    fontSize: 14,
-    color: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
-  checkboxDone: { backgroundColor: colors.accent },
-  text: { fontSize: 16, color: colors.ink, flex: 1 },
+  circleActive: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
+  circleDone: { backgroundColor: colors.accent },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
+  check: { color: '#FFFFFF', fontSize: 13, lineHeight: 15, fontWeight: '700' },
+  body: { flex: 1 },
+  text: { fontSize: 16, color: colors.ink },
   textDone: { textDecorationLine: 'line-through', color: colors.muted },
-  delete: { color: colors.muted, fontSize: 16, paddingHorizontal: 8 },
+  elapsed: { fontSize: 12, color: colors.muted, marginTop: 1 },
+  elapsedActive: { color: colors.accent },
+  action: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  actionPrimary: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
+  actionText: { fontSize: 13, fontWeight: '600', color: colors.muted },
+  actionTextPrimary: { color: colors.accent },
+  delete: { color: colors.muted, fontSize: 16, paddingHorizontal: 6 },
 });
