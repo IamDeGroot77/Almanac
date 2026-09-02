@@ -10,6 +10,10 @@ import DueSection from '../components/DueSection';
 import RoutineCard from '../components/RoutineCard';
 import WrapUpCard from '../components/WrapUpCard';
 import DayBracket from '../components/DayBracket';
+import WeekStrip from '../components/WeekStrip';
+import WeatherLine from '../components/WeatherLine';
+import Timeline from '../components/Timeline';
+import { almanacDayKeyFromOffset } from '../clock';
 
 export default function TodayScreen({
   dayOffset,
@@ -49,19 +53,44 @@ export default function TodayScreen({
   wrapUp, // null | props for WrapUpCard
   onJustOneThing,
   listProps,
+  forecast,
+  nowMode,
+  setNowMode,
+  allTasks,
 }) {
   const isToday = dayOffset === 0;
+  const dayKey = almanacDayKeyFromOffset(dayOffset);
+  const dayName = headerDate.toLocaleDateString([], { weekday: 'long' });
+  const kicker = isToday ? (pastMidnight ? 'Today · past midnight' : 'Today') : dayOffset === 1 ? 'Tomorrow' : dayName;
+  const listTitle =
+    (isToday ? "Today's tasks" : dayOffset === 1 ? "Tomorrow's tasks" : dayName + "'s tasks") +
+    (filterName ? ' for ' + filterName : '');
+  // Now mode: only what can be acted on this minute.
+  const nowListProps = nowMode ? { ...listProps, tasks: listProps.tasks.filter((t) => !t.done) } : listProps;
   return (
     <Screen refreshing={calendar.refreshing} onRefresh={onRefresh}>
-      <Text style={styles.kicker}>
-        {isToday ? (pastMidnight ? 'Today · past midnight' : 'Today') : 'Tomorrow'}
-      </Text>
-      <Text style={styles.title}>{formatHeaderDate(headerDate)}</Text>
-
-      <View style={styles.segment}>
-        <SegmentButton label="Today" active={isToday} onPress={() => setDayOffset(0)} />
-        <SegmentButton label="Tomorrow" active={!isToday} onPress={() => setDayOffset(1)} />
+      <View style={styles.headerRow}>
+        <View style={styles.headerText}>
+          <Text style={styles.kicker}>{kicker}</Text>
+          <Text style={styles.title}>{formatHeaderDate(headerDate)}</Text>
+          <WeatherLine forecast={forecast} dayKey={dayKey} isToday={isToday} />
+        </View>
+        {isToday && setNowMode ? (
+          <TouchableOpacity
+            style={[styles.nowToggle, nowMode && styles.nowToggleOn]}
+            onPress={() => setNowMode(!nowMode)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: !!nowMode }}
+            accessibilityLabel="Now mode: show only what matters right now"
+          >
+            <Text style={[styles.nowToggleText, nowMode && styles.nowToggleTextOn]}>Now</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
+
+      {!nowMode && (
+        <WeekStrip tasks={allTasks || listProps.tasks} selectedOffset={dayOffset} onSelect={setDayOffset} forecast={forecast} />
+      )}
 
       <View style={styles.people}>
         <PersonChips
@@ -95,18 +124,31 @@ export default function TodayScreen({
 
       {wrapUp && <WrapUpCard {...wrapUp} />}
 
-      <EventsSection
-        status={calendar.status}
-        events={calendar.events}
-        calendarNames={calendar.calendarNames}
-        onRetry={calendar.retry}
-      />
+      {!nowMode && (
+        <EventsSection
+          status={calendar.status}
+          events={calendar.events}
+          calendarNames={calendar.calendarNames}
+          onRetry={calendar.retry}
+        />
+      )}
+
+      {calendar.status === 'granted' && (
+        <Timeline
+          dayKey={dayKey}
+          events={calendar.events}
+          dueTasks={isToday ? dueToday : []}
+          wokeAt={openDay?.wokeAt}
+          sleptAt={openDay?.sleptAt}
+          isToday={isToday}
+        />
+      )}
 
       {isToday && (
         <DueSection overdue={dueOverdue} dueToday={dueToday} contextFor={contextFor} listProps={listProps} />
       )}
 
-      {isToday && routines.length > 0 && (
+      {isToday && !nowMode && routines.length > 0 && (
         <View style={styles.routines}>
           <Text style={styles.sectionTitle}>Routines</Text>
           {routines.map((r) => (
@@ -131,36 +173,25 @@ export default function TodayScreen({
 
       <TaskList
         listId={dayListId}
-        title={(isToday ? "Today's tasks" : "Tomorrow's tasks") + (filterName ? ` for ${filterName}` : '')}
-        subtitle={daySummary}
-        emptyText={isToday ? 'Nothing planned yet.' : 'Nothing lined up for tomorrow.'}
-        {...listProps}
+        title={listTitle}
+        subtitle={nowMode ? 'Now mode · open tasks only' : daySummary}
+        emptyText={isToday ? 'Nothing planned yet.' : dayOffset === 1 ? 'Nothing lined up for tomorrow.' : 'Nothing on ' + dayName + ' yet.'}
+        emptyHint={isToday ? 'Add one small thing, or tap Just one thing to pick from your lists.' : 'Add something here and it waits for that day.'}
+        {...nowListProps}
       />
     </Screen>
-  );
-}
-
-function SegmentButton({ label, active, onPress }) {
-  return (
-    <TouchableOpacity
-      style={[styles.segmentButton, active && styles.segmentButtonActive]}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-    >
-      <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{label}</Text>
-    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   kicker: { fontSize: 13, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', color: colors.accent },
   title: { fontSize: 26, fontWeight: '700', color: colors.ink, marginTop: 4 },
-  segment: { flexDirection: 'row', marginTop: 16, backgroundColor: colors.accentSoft, borderRadius: 10, padding: 3 },
-  segmentButton: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
-  segmentButtonActive: { backgroundColor: colors.bg },
-  segmentText: { fontSize: 14, fontWeight: '600', color: colors.accent },
-  segmentTextActive: { color: colors.ink },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  headerText: { flex: 1, marginRight: 10 },
+  nowToggle: { borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, marginTop: 4 },
+  nowToggleOn: { backgroundColor: colors.ink, borderColor: colors.ink },
+  nowToggleText: { fontSize: 13, fontWeight: '700', color: colors.muted },
+  nowToggleTextOn: { color: colors.bg },
   people: { marginTop: 12 },
   routines: { marginTop: 28 },
   oneThing: {
@@ -169,7 +200,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: colors.accent,
   },
-  oneThingText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  oneThingText: { color: colors.onAccent, fontSize: 16, fontWeight: '700' },
   oneThingHint: { color: colors.accentSoft, fontSize: 12, marginTop: 2 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.ink },
 });

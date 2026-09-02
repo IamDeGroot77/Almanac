@@ -1,6 +1,10 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Appearance } from 'react-native';
 
-export const colors = {
+// Two palettes. Which one is active is decided once, before any component's
+// StyleSheet is created (see index.js), because StyleSheet.create bakes the
+// values in. Changing the theme therefore takes effect on the next launch.
+
+const LIGHT = {
   bg: '#FFFFFF',
   ink: '#1B1F24',
   muted: '#6B7280',
@@ -10,7 +14,32 @@ export const colors = {
   warnSoft: '#FFF7E6',
   warn: '#B45309',
   danger: '#B91C1C',
+  onAccent: '#FFFFFF',
+  scheme: 'light',
 };
+
+const DARK = {
+  bg: '#0F141A',
+  ink: '#ECEFF3',
+  muted: '#9AA3AF',
+  line: '#2A3340',
+  accent: '#6FB1FF',
+  accentSoft: '#173052',
+  warnSoft: '#3A2A10',
+  warn: '#F4B860',
+  danger: '#FF7B7B',
+  onAccent: '#0F141A',
+  scheme: 'dark',
+};
+
+// Mutable in place so every module that imported `colors` sees the palette.
+export const colors = { ...LIGHT };
+
+export function applyTheme(preference) {
+  const scheme = preference === 'dark' || preference === 'light' ? preference : Appearance.getColorScheme() || 'light';
+  Object.assign(colors, scheme === 'dark' ? DARK : LIGHT);
+  return scheme;
+}
 
 export const shared = StyleSheet.create({
   muted: { color: colors.muted, fontSize: 15, marginBottom: 8 },
@@ -46,5 +75,5 @@ export const shared = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  primaryButtonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 15 },
+  primaryButtonText: { color: colors.onAccent, fontWeight: '600', fontSize: 15 },
 });

@@ -34,6 +34,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
-  text: { color: '#FFFFFF', fontSize: 14, flex: 1, marginRight: 12 },
+  text: { color: colors.bg, fontSize: 14, flex: 1, marginRight: 12 },
   action: { color: colors.accentSoft, fontWeight: '700', fontSize: 14 },
 });

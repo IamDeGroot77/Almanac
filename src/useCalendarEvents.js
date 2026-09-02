@@ -44,6 +44,8 @@ export default function useCalendarEvents(offset, baseKey) {
           title: ev.title || '(Untitled)',
           allDay: !!ev.allDay,
           time: ev.allDay ? 'All day' : formatTime(ev.startDate),
+          startMs: new Date(ev.startDate).getTime(),
+          endMs: ev.endDate ? new Date(ev.endDate).getTime() : null,
           location: ev.location || null,
         }))
       );

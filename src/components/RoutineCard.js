@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   },
   boxQuota: { borderRadius: 11 },
   boxDone: { backgroundColor: colors.accent },
-  check: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  check: { color: colors.onAccent, fontSize: 13, fontWeight: '700' },
   quotaNum: { color: colors.accent, fontSize: 11, fontWeight: '700' },
   text: { fontSize: 15, color: colors.ink, flex: 1 },
   textDone: { color: colors.muted, textDecorationLine: 'line-through' },

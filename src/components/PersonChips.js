@@ -55,5 +55,5 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
   chipAdd: { borderStyle: 'dashed' },
   chipText: { fontSize: 14, fontWeight: '600', color: colors.ink },
-  chipTextActive: { color: '#FFFFFF' },
+  chipTextActive: { color: colors.onAccent },
 });

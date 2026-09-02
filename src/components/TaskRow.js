@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   circleDone: { backgroundColor: colors.accent },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
   pauseMark: { width: 8, height: 8, borderRadius: 1, backgroundColor: colors.muted },
-  check: { color: '#FFFFFF', fontSize: 13, lineHeight: 15, fontWeight: '700' },
+  check: { color: colors.onAccent, fontSize: 13, lineHeight: 15, fontWeight: '700' },
   body: { flex: 1 },
   textRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
   text: { fontSize: 16, color: colors.ink, flexShrink: 1 },

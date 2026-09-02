@@ -1,5 +1,8 @@
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import { geocode } from '../weather';
 import { colors, shared } from '../theme';
 import Screen from '../components/Screen';
 import GoogleSection from '../components/GoogleSection';
@@ -27,8 +30,32 @@ export default function SettingsScreen({
   canvasCourses,
   onToggleAssignmentCalendar,
   linkedEventCount,
+  weather,
   onStageReview,
 }) {
+  // Appearance: stored outside the store because index.js reads it before anything loads.
+  const [theme, setTheme] = useState('system');
+  useEffect(() => {
+    AsyncStorage.getItem('almanac:theme').then((v) => v && setTheme(v)).catch(() => {});
+  }, []);
+  const pickTheme = (v) => {
+    setTheme(v);
+    AsyncStorage.setItem('almanac:theme', v).catch(() => {});
+  };
+  // Weather place lookup.
+  const [placeQuery, setPlaceQuery] = useState('');
+  const [placeOptions, setPlaceOptions] = useState([]);
+  const [placeError, setPlaceError] = useState(null);
+  const lookupPlace = async () => {
+    setPlaceError(null);
+    try {
+      const results = await geocode(placeQuery);
+      setPlaceOptions(results);
+      if (results.length === 0) setPlaceError('No match. Try a city name or postcode.');
+    } catch (err) {
+      setPlaceError(err.message);
+    }
+  };
   const version = Constants.expoConfig?.version || '';
   const lastSleep = sleep.segments.length ? sleep.segments[sleep.segments.length - 1] : null;
   const focusApps = [{ id: null, name: 'None' }, ...APP_CATALOG.filter((a) => a.kind === 'focus')];
@@ -37,6 +64,52 @@ export default function SettingsScreen({
   return (
     <Screen>
       <Text style={styles.title}>Settings</Text>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Appearance</Text>
+        <PersonChips
+          people={[
+            { id: 'system', name: 'Match phone' },
+            { id: 'light', name: 'Light' },
+            { id: 'dark', name: 'Dark' },
+          ]}
+          selected={theme}
+          onSelect={pickTheme}
+          compact
+        />
+        <Text style={styles.detail}>Takes effect the next time the app opens.</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Weather and daylight</Text>
+        {prefs.weatherPlace ? (
+          <View>
+            <Text style={shared.muted}>Showing weather for {prefs.weatherPlace.name}.</Text>
+            <SmallButton label="Change place" onPress={() => onSetPref('weatherPlace', null)} />
+          </View>
+        ) : (
+          <View>
+            <Text style={shared.muted}>Type a city or postcode and pick a match. Free, no account.</Text>
+            <View style={styles.inputRow}>
+              <TextInput
+                style={[shared.input, styles.input]}
+                value={placeQuery}
+                onChangeText={setPlaceQuery}
+                placeholder="e.g. Oshkosh or 54901"
+                placeholderTextColor={colors.muted}
+                returnKeyType="search"
+                onSubmitEditing={lookupPlace}
+              />
+              <SmallButton label="Find" onPress={lookupPlace} />
+            </View>
+            {placeOptions.map((p) => (
+              <SmallButton key={`${p.lat},${p.lon}`} label={p.name} onPress={() => onSetPref('weatherPlace', p)} style={styles.option} />
+            ))}
+            {placeError ? <Text style={styles.error}>{placeError}</Text> : null}
+          </View>
+        )}
+        {weather?.error ? <Text style={styles.error}>{weather.error}</Text> : null}
+      </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Daily brief</Text>
@@ -170,6 +243,9 @@ const styles = StyleSheet.create({
   detail: { fontSize: 13, color: colors.muted, marginTop: 4 },
   label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 12, marginBottom: 6 },
   button: { marginTop: 10 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  input: { flex: 1 },
+  option: { marginTop: 8 },
   error: { color: colors.danger, fontSize: 13, marginTop: 6 },
   footer: { marginTop: 32, fontSize: 13, color: colors.muted, textAlign: 'center' },
 });

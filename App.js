@@ -26,6 +26,7 @@ import useUndo from './src/hooks/useUndo';
 import UndoBar from './src/components/UndoBar';
 import { pickNext, nextStepOf, childrenOf } from './src/pickNext';
 import { suggestSteps, planDates } from './src/breakdown';
+import { useWeather } from './src/weather';
 
 import TabBar from './src/components/TabBar';
 import TodayScreen from './src/screens/TodayScreen';
@@ -72,6 +73,8 @@ function AlmanacApp() {
     calendarId: store.prefs.assignmentCalendarId,
   });
   const sleep = useSleepDetection(store);
+  const weather = useWeather(store.prefs.weatherPlace || null);
+  const [nowMode, setNowMode] = useState(false);
 
   // ----- notifications --------------------------------------------------------
   useNotificationRouter(store.loaded);
@@ -102,7 +105,7 @@ function AlmanacApp() {
   const [editingRoutine, setEditingRoutine] = useState(null); // null | {} (new) | routine
 
   const onRefresh = async () => {
-    await Promise.all([calendar.refresh(), sync.syncNow(), canvasSync.syncNow()]);
+    await Promise.all([calendar.refresh(), sync.syncNow(), canvasSync.syncNow(), weather.refresh({ force: true })]);
   };
 
   const showReview = dayOffset === 0 && store.loaded && !reviewDismissed && derived.reviewTasks.length > 0;
@@ -235,6 +238,10 @@ function AlmanacApp() {
             wrapUp={wrapUp}
             onJustOneThing={justOneThing}
             listProps={listProps}
+            forecast={weather.forecast}
+            nowMode={nowMode}
+            setNowMode={setNowMode}
+            allTasks={people.visibleTasks}
           />
         )}
         {tab === 'lists' && (
@@ -281,6 +288,7 @@ function AlmanacApp() {
               if (!on) await assignmentCalendar.removeAll();
             }}
             linkedEventCount={Object.keys(store.calendarEvents || {}).length}
+            weather={weather}
             onStageReview={() => {
               store.devBackdateOpenTasks();
               setReviewDismissed(false);
@@ -372,7 +380,7 @@ function AlmanacApp() {
         onClose={() => setSheetTaskId(null)}
       />
 
-      <StatusBar style="dark" />
+      <StatusBar style={colors.scheme === 'dark' ? 'light' : 'dark'} />
     </SafeAreaView>
   );
 }

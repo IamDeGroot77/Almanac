@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   },
   dayActive: { backgroundColor: colors.accent, borderColor: colors.accent },
   dayText: { fontSize: 12, fontWeight: '700', color: colors.ink },
-  dayTextActive: { color: '#FFFFFF' },
+  dayTextActive: { color: colors.onAccent },
   daysHint: { fontSize: 12, color: colors.muted, marginLeft: 6 },
   quotaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
   stepper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.line, borderRadius: 8 },

@@ -42,5 +42,5 @@ const styles = StyleSheet.create({
   chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.bg },
   chipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
   chipText: { fontSize: 13, fontWeight: '600', color: colors.ink },
-  chipTextActive: { color: '#FFFFFF' },
+  chipTextActive: { color: colors.onAccent },
 });
