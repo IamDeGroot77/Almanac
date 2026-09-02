@@ -18,6 +18,7 @@ import { formatTime } from '../dates';
 import { isWeb } from '../platform';
 import DriveSection from '../components/DriveSection';
 import CalendarRulesSection from '../components/CalendarRulesSection';
+import DayPlanSection from '../components/DayPlanSection';
 
 export default function SettingsScreen({
   google,
@@ -29,6 +30,10 @@ export default function SettingsScreen({
   prefs,
   onSetPref,
   lists = [],
+  categories = [],
+  onAddCategory,
+  onRenameCategory,
+  onDeleteCategory,
   canvas,
   canvasSync,
   canvasCourses,
@@ -84,6 +89,16 @@ export default function SettingsScreen({
         />
         <Text style={styles.detail}>Takes effect the next time the app opens.</Text>
       </View>
+
+      <DayPlanSection
+        categories={categories}
+        lists={lists}
+        blocks={prefs.dayBlocks || []}
+        onAddCategory={onAddCategory}
+        onRenameCategory={onRenameCategory}
+        onDeleteCategory={onDeleteCategory}
+        onSetBlocks={(blocks) => onSetPref('dayBlocks', blocks)}
+      />
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Weather and daylight</Text>

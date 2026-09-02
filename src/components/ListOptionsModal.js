@@ -5,7 +5,7 @@ import { personOf } from '../store';
 import { HORIZONS, horizonFor } from '../consider';
 
 // Options for a named list: who it's for, rename, delete.
-export default function ListOptionsModal({ list, people, onSetPerson, onSetHorizon, onRename, onDelete, onClose }) {
+export default function ListOptionsModal({ list, people, categories = [], onSetPerson, onSetHorizon, onSetCategory, onRename, onDelete, onClose }) {
   if (!list) return null;
 
   const confirmDelete = () =>
@@ -37,6 +37,10 @@ export default function ListOptionsModal({ list, people, onSetPerson, onSetHoriz
             compact
           />
           <Text style={styles.help}>New tasks added here are tagged for this person.</Text>
+
+          <Text style={styles.label}>Category</Text>
+          <PersonChips people={[{ id: 'none', name: 'None' }, ...categories.map((c) => ({ id: c.id, name: c.name }))]} selected={list.categoryId || 'none'} onSelect={(id) => onSetCategory(list.id, id === 'none' ? null : id)} compact />
+          <Text style={styles.help}>Day blocks draw tasks from every list in a category. Add categories in Settings.</Text>
 
           <Text style={styles.label}>Timeline</Text>
           <PersonChips people={HORIZONS.map((h) => ({ id: h.id, name: h.name }))} selected={horizonFor(list).id} onSelect={(id) => onSetHorizon(list.id, HORIZONS.find((h) => h.id === id)?.days || null)} compact />

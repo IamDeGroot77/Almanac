@@ -37,6 +37,7 @@ export default function ListsScreen({
   google,
   onImport,
   allRoutines = [],
+  categories = [],
 }) {
   const [query, setQuery] = useState('');
   const searchResults = query ? allTasks.filter((t) => matchesQuery(t, query, allLists)).slice(0, 50) : [];
@@ -75,9 +76,10 @@ export default function ListsScreen({
         </Text>
       )}
 
-      {lists.map((list) => (
+      {groupedLists(lists, categories).map(({ list, caption }) => (
         <TaskList
           key={list.id}
+          caption={caption}
           listId={list.id}
           title={list.name}
           subtitle={
@@ -127,10 +129,27 @@ export default function ListsScreen({
       ))}
         </View>
       )}
-      <ImportBox people={people} lists={allLists} routines={allRoutines} onImport={onImport} />
+      <ImportBox people={people} lists={allLists} routines={allRoutines} categories={categories} onImport={onImport} />
       {!isWeb && google ? <DropBoxSection google={google} /> : null}
     </Screen>
   );
+}
+
+// Lists sorted by category then name; the first list of each category carries a caption.
+function groupedLists(lists, categories) {
+  const catName = (id) => categories.find((c) => c.id === id)?.name || '';
+  const sorted = [...lists].sort((a, b) => {
+    const ca = a.categoryId ? catName(a.categoryId) : '￿';
+    const cb = b.categoryId ? catName(b.categoryId) : '￿';
+    return ca.localeCompare(cb) || (a.createdAt || 0) - (b.createdAt || 0);
+  });
+  let last = null;
+  return sorted.map((list) => {
+    const key = list.categoryId || null;
+    const caption = key !== last ? (key ? catName(key) : lists.some((l) => l.categoryId) ? 'Other' : null) : null;
+    last = key;
+    return { list, caption };
+  });
 }
 
 const styles = StyleSheet.create({

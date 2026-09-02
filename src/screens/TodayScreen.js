@@ -9,6 +9,7 @@ import TaskList from '../components/TaskList';
 import DueSection from '../components/DueSection';
 import RoutineCard from '../components/RoutineCard';
 import ConsiderSection from '../components/ConsiderSection';
+import BlockCard from '../components/BlockCard';
 import WrapUpCard from '../components/WrapUpCard';
 import DayBracket from '../components/DayBracket';
 import WeekStrip from '../components/WeekStrip';
@@ -62,6 +63,7 @@ export default function TodayScreen({
   onConsiderToday,
   onConsiderLater,
   allRoutines,
+  blockInfo,
 }) {
   const isToday = dayOffset === 0;
   const dayKey = almanacDayKeyFromOffset(dayOffset);
@@ -146,8 +148,25 @@ export default function TodayScreen({
           wokeAt={openDay?.wokeAt}
           sleptAt={openDay?.sleptAt}
           isToday={isToday}
+          blocks={blockInfo?.dayBlocks || []}
+          blockColor={blockInfo?.colorFor}
         />
       )}
+
+      {isToday && blockInfo ? (
+        <BlockCard
+          block={blockInfo.current}
+          next={blockInfo.next}
+          category={blockInfo.category}
+          nextCategory={blockInfo.nextCategory}
+          color={blockInfo.color}
+          picks={blockInfo.picks}
+          contextFor={contextFor}
+          onStart={listProps.onStart}
+          onOpen={listProps.onMove}
+          onJustOneThing={onJustOneThing}
+        />
+      ) : null}
 
       {isToday && (
         <DueSection overdue={dueOverdue} dueToday={dueToday} contextFor={contextFor} listProps={listProps} />

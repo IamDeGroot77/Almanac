@@ -69,6 +69,11 @@ snapshots, and native features hide behind small modules.
 - Routine quotas can count another routine's ticks (`{ type: 'quota', routineId, count }`), so a daily checklist can say "1 from Exercise" where Exercise is a weekly routine of workouts.
 - Calendar rules (`src/calendarRules.js` pure, `src/useCalendarRules.js` on the phone, Settings → Calendar rules, pref `calendarRules` shared across devices): when an event whose title contains a keyword has ended, a task is made from a template ("Write article: {title}") on a chosen list, due N days later; `eventTasks` remembers which events were handled.
 
+## Categories and day blocks
+
+- `categories` in the store group lists (`list.categoryId`); set in list options, Settings → Categories and day blocks, or an import header "(in Work)". They merge across devices like lists.
+- Day blocks (`prefs.dayBlocks`, shared): a category plus a start/end time and weekdays. `src/blocks.js` (pure, tested by `scripts/test-blocks.mjs`) finds the current and next block; Today shows a BlockCard with the three best tasks from every list in the category (`pickNext` over `categoryTasks`), the timeline shades the blocks, and "Just one thing" prefers the current block's category.
+
 ## Adherence (the phone does the initiating)
 
 - The morning brief follows the alarm clock: `modules/almanac-alarm` reads `AlarmManager.getNextAlarmClock`; `scheduleMorningBrief` in `src/notifications.js` schedules a one-off a minute after an alarm within 20 hours, else the brief is sent when the day auto-starts (`sendBriefIfDue`, once per day). Re-checked whenever the app comes to the foreground or goes to the background, so set the alarm before closing Almanac for the night if you want the brief tied to it.

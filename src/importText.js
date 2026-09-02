@@ -9,6 +9,7 @@ import { HORIZONS } from './consider.js';
 //   Groceries:                     <- a list (a line ending in ":" or starting with #)
 //   Within 3 months (3 months):    <- a timeline list: due in 3 months, nudges after 3 weeks
 //   Zeke (for Zeke):               <- a list tagged for a person
+//   GFD (in Work):                 <- a list in a category (created if new)
 //   Daily checklist (daily):       <- a routine that starts over every day
 //   Exercise (weekly, for me):     <- a routine that starts over every week
 //   - milk                         <- a task (or a routine item)
@@ -24,7 +25,7 @@ import { HORIZONS } from './consider.js';
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-export function parseImport(text, { people = [], lists = [], routines = [], now = new Date() } = {}) {
+export function parseImport(text, { people = [], lists = [], routines = [], categories = [], now = new Date() } = {}) {
   const plan = { lists: [], routines: [], counts: { lists: 0, newLists: 0, tasks: 0, steps: 0, routines: 0, items: 0 } };
   let current = null; // { kind: 'list' | 'routine', ... }
   let lastTask = null;
@@ -52,6 +53,7 @@ export function parseImport(text, { people = [], lists = [], routines = [], now 
         isNew: !dayId && !existing,
         personId: options.personId ?? null,
         horizonDays: options.horizonDays ?? null,
+        categoryName: options.categoryName ? categories.find((c) => c.name.toLowerCase() === options.categoryName.toLowerCase())?.name || options.categoryName : null,
         tasks: [],
       };
       plan.lists.push(current);
@@ -113,6 +115,7 @@ export function parseHeader(rawLine, findPerson = () => undefined) {
     for (const part of m[2].split(',').map((p) => p.trim().toLowerCase()).filter(Boolean)) {
       if (part === 'daily' || part === 'every day') options.cadence = 'daily';
       else if (part === 'weekly' || part === 'every week') options.cadence = 'weekly';
+      else if (/^in\s+/.test(part)) options.categoryName = part.replace(/^in\s+/, '').replace(/\b\w/g, (ch) => ch.toUpperCase());
       else if (/^for\s+/.test(part)) {
         const id = findPerson(part.replace(/^for\s+/, ''));
         if (id !== undefined) options.personId = id;

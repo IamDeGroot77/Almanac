@@ -20,7 +20,7 @@ const BOOKKEEPING = [
   'canvasId', 'canvasCourse', 'canvasUrl', 'canvasDueAt', 'canvasPoints', 'canvasScore',
   'canvas',
 ];
-export const SHARED_PREFS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep', 'bedtimeHour', 'calendarRules'];
+export const SHARED_PREFS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep', 'bedtimeHour', 'calendarRules', 'dayBlocks'];
 
 const ts = (x) => x?.updatedAt || x?.createdAt || 0;
 
@@ -80,6 +80,7 @@ export function mergeStates(a, b, now = Date.now()) {
   const tasks = mergeEntities(a.tasks, b.tasks, a.deleted?.tasks, b.deleted?.tasks);
   const lists = mergeEntities(a.lists, b.lists, a.deleted?.lists, b.deleted?.lists);
   const routines = mergeEntities(a.routines, b.routines, a.deleted?.routines, b.deleted?.routines);
+  const categories = mergeEntities(a.categories, b.categories, {}, {});
 
   const people = [...new Map([...(a.people || []), ...(b.people || [])].map((p) => [p.id, p])).values()];
 
@@ -129,6 +130,7 @@ export function mergeStates(a, b, now = Date.now()) {
     tasks,
     lists,
     routines,
+    categories,
     people,
     routineDone,
     timeLog,
@@ -151,6 +153,7 @@ export function shareable(state) {
     tasks: state.tasks || [],
     lists: state.lists || [],
     routines: state.routines || [],
+    categories: state.categories || [],
     people: state.people || [],
     routineDone: state.routineDone || {},
     timeLog: state.timeLog || [],

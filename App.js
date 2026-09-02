@@ -26,6 +26,7 @@ import useEnergyCheckins from './src/energy';
 import useDayBracketNotifications, { DEFAULT_BEDTIME_HOUR } from './src/dayBracket';
 import { planAutoStart, describeAutoStart } from './src/dayAuto';
 import { considerations } from './src/consider';
+import { currentBlock, nextBlock, categoryTasks, colorForCategory, blocksForDay } from './src/blocks';
 import useCalendarRules from './src/useCalendarRules';
 import { dayListId } from './src/store';
 import useUndo from './src/hooks/useUndo';
@@ -60,6 +61,34 @@ export default function App() {
       <AlmanacApp />
     </SafeAreaProvider>
   );
+}
+
+// What the Today screen needs to draw the current block and its picks.
+function blockInfoFor(store, block, candidates) {
+  const blocks = store.prefs.dayBlocks || [];
+  if (!blocks.length) return null;
+  const categories = store.categories || [];
+  const now = Date.now();
+  const next = nextBlock(blocks, now);
+  const running = store.tasks.filter((t) => !t.done && t.startedAt).map((t) => t.id);
+  const picks = [];
+  let pool = candidates;
+  while (block && picks.length < 3) {
+    const p = pickNext(pool, { running: [...running, ...picks.map((t) => t.id)] });
+    if (!p) break;
+    picks.push(p);
+    pool = pool.filter((t) => t.id !== p.id);
+  }
+  return {
+    current: block,
+    next,
+    category: block ? categories.find((c) => c.id === block.categoryId) : null,
+    nextCategory: next ? categories.find((c) => c.id === next.categoryId) : null,
+    color: block ? colorForCategory(categories, block.categoryId) : null,
+    colorFor: (id) => colorForCategory(categories, id),
+    dayBlocks: blocksForDay(blocks, new Date(now)),
+    picks,
+  };
 }
 
 function AlmanacApp() {
@@ -224,9 +253,11 @@ function AlmanacApp() {
   };
 
   // "Just one thing": pick the next task worth starting and open Focus on it.
+  const block = currentBlock(store.prefs.dayBlocks, Date.now());
+  const blockPicksAll = block ? categoryTasks(people.visibleTasks, store.lists, block.categoryId) : [];
   const justOneThing = () => {
     const running = store.tasks.filter((t) => !t.done && t.startedAt).map((t) => t.id);
-    const pick = pickNext(people.visibleTasks, { running });
+    const pick = (blockPicksAll.length ? pickNext(blockPicksAll, { running }) : null) || pickNext(people.visibleTasks, { running });
     if (!pick) return;
     store.startTask(pick.id);
     setFocusTaskId(pick.id);
@@ -322,6 +353,7 @@ function AlmanacApp() {
             onConsiderToday={(id) => store.moveTask(id, dayListId(day.today))}
             onConsiderLater={(id) => store.snoozeConsideration(id)}
             allRoutines={store.routines}
+            blockInfo={blockInfoFor(store, block, blockPicksAll)}
           />
         )}
         {tab === 'lists' && (
@@ -349,12 +381,14 @@ function AlmanacApp() {
             listProps={listProps}
             google={google}
             allRoutines={store.routines}
+            categories={store.categories || []}
             onImport={(plan) => {
               const added = store.importPlan(plan);
               const bits = [];
               if (added.tasks) bits.push(`${added.tasks} ${added.tasks === 1 ? 'task' : 'tasks'}`);
               if (added.lists) bits.push(`${added.lists} new ${added.lists === 1 ? 'list' : 'lists'}`);
               if (added.routines) bits.push(`${added.routines} new ${added.routines === 1 ? 'routine' : 'routines'}`);
+              if (added.categories) bits.push(`${added.categories} new ${added.categories === 1 ? 'category' : 'categories'}`);
               setToast({ text: bits.length ? `Added ${bits.join(', ')}.` : 'Nothing new to add.', at: Date.now() });
             }}
           />
@@ -382,6 +416,10 @@ function AlmanacApp() {
             sync={sync}
             reminderStatus={reminderStatus}
             lists={store.lists}
+            categories={store.categories || []}
+            onAddCategory={store.addCategory}
+            onRenameCategory={store.renameCategory}
+            onDeleteCategory={store.deleteCategory}
             people={store.people}
             onAddPerson={() => setAddingPerson(true)}
             sleep={sleep}
@@ -437,6 +475,8 @@ function AlmanacApp() {
         people={store.people}
         onSetPerson={store.setListPerson}
         onSetHorizon={store.setListHorizon}
+        onSetCategory={store.setListCategory}
+        categories={store.categories || []}
         onRename={setRenamingListId}
         onDelete={store.deleteList}
         onClose={() => setOptionsListId(null)}

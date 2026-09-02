@@ -42,6 +42,7 @@ const emptyState = () => ({
     { id: 'zeke', name: 'Zeke' },
   ],
   routines: [], // see routines.js
+  categories: [], // { id, name, color?, createdAt, updatedAt } — lists carry categoryId; see blocks.js
   routineDone: {}, // routineId -> periodKey -> itemId -> true
   dayNotes: {}, // dayKey -> end-of-day note
   days: {}, // dayKey -> { wokeAt, sleptAt, implicit?, autoClosed?, lastActiveAt?, sleep?: { start, end } }
@@ -132,7 +133,7 @@ function markDeleted(deleted, kind, ids) {
   return { ...base, [kind]: next };
 }
 
-const SHARED_PREF_KEYS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep', 'bedtimeHour', 'calendarRules'];
+const SHARED_PREF_KEYS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep', 'bedtimeHour', 'calendarRules', 'dayBlocks'];
 
 const TIME_LOG_MAX = 2000;
 
@@ -248,6 +249,32 @@ export function useAlmanacStore() {
           };
         });
         return id;
+      },
+      // ----- categories -----
+      addCategory(name) {
+        const trimmed = name.trim();
+        if (!trimmed) return null;
+        const now = Date.now();
+        const id = newId('c');
+        edit((s) => (s.categories?.some((c) => c.name.toLowerCase() === trimmed.toLowerCase()) ? {} : { categories: [...(s.categories || []), { id, name: trimmed, createdAt: now, updatedAt: now }] }));
+        return id;
+      },
+      renameCategory(id, name) {
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        edit((s) => ({ categories: (s.categories || []).map((c) => (c.id === id ? { ...c, name: trimmed, updatedAt: Date.now() } : c)) }));
+      },
+      deleteCategory(id) {
+        const now = Date.now();
+        edit((s) => ({
+          categories: (s.categories || []).filter((c) => c.id !== id),
+          lists: s.lists.map((l) => (l.categoryId === id ? { ...l, categoryId: null, updatedAt: now } : l)),
+          prefs: { ...s.prefs, dayBlocks: (s.prefs.dayBlocks || []).filter((b) => b.categoryId !== id) },
+          prefsUpdatedAt: now,
+        }));
+      },
+      setListCategory(id, categoryId) {
+        edit((s) => ({ lists: s.lists.map((l) => (l.id === id ? { ...l, categoryId: categoryId || null, updatedAt: Date.now() } : l)) }));
       },
       // Timeline lists: 30/90/180-day horizon (null clears it). Open tasks
       // without a date get one at the horizon.
@@ -723,15 +750,30 @@ export function useAlmanacStore() {
           const routines = [...s.routines];
           let order = now;
           const byName = (arr, name) => arr.find((x) => x.name.toLowerCase() === name.toLowerCase());
-          // Lists first (routines may quota from them), then routines, then tasks.
+          const categories = [...(s.categories || [])];
+          const categoryIdFor = (name) => {
+            if (!name) return null;
+            let c = byName(categories, name);
+            if (!c) {
+              c = { id: newId('c'), name, createdAt: now, updatedAt: now };
+              categories.push(c);
+              added.categories = (added.categories || 0) + 1;
+            }
+            return c.id;
+          };
+          // Categories and lists first (routines may quota from lists), then routines, then tasks.
           for (const l of plan.lists) {
             if (l.id) continue;
+            const categoryId = categoryIdFor(l.categoryName);
             const existing = byName(lists, l.name);
             if (existing) {
-              if (l.horizonDays && !existing.horizonDays) Object.assign(existing, { horizonDays: l.horizonDays, updatedAt: now });
+              const patchExisting = {};
+              if (l.horizonDays && !existing.horizonDays) patchExisting.horizonDays = l.horizonDays;
+              if (categoryId && !existing.categoryId) patchExisting.categoryId = categoryId;
+              if (Object.keys(patchExisting).length) lists[lists.indexOf(existing)] = { ...existing, ...patchExisting, updatedAt: now };
               continue;
             }
-            lists.push({ id: newId('l'), name: l.name, personId: l.personId || null, horizonDays: l.horizonDays || null, createdAt: now, updatedAt: now });
+            lists.push({ id: newId('l'), name: l.name, personId: l.personId || null, horizonDays: l.horizonDays || null, categoryId, createdAt: now, updatedAt: now });
             added.lists += 1;
           }
           for (const r of plan.routines || []) {
@@ -797,7 +839,7 @@ export function useAlmanacStore() {
               }
             }
           }
-          return { lists, tasks, routines };
+          return { lists, tasks, routines, categories };
         });
         return added;
       },

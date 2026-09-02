@@ -7,7 +7,7 @@ import { parseDayKey } from '../dates';
 // The day as a bar, so the size of the afternoon is visible rather than
 // imagined. Events and deadlines are marks; a line shows now. Runs from the
 // wake time (or 6 AM) to bedtime (or midnight).
-export default function Timeline({ dayKey, events, dueTasks, wokeAt, sleptAt, isToday }) {
+export default function Timeline({ dayKey, events, dueTasks, wokeAt, sleptAt, isToday, blocks = [], blockColor = () => colors.accentSoft }) {
   const now = useNow(isToday, 60000);
   const dayStart = parseDayKey(dayKey).getTime();
   const start = wokeAt && isToday ? Math.min(wokeAt, dayStart + 6 * 3600000) : dayStart + 6 * 3600000;
@@ -35,6 +35,9 @@ export default function Timeline({ dayKey, events, dueTasks, wokeAt, sleptAt, is
   return (
     <View style={styles.wrap}>
       <View style={styles.track}>
+        {blocks.map((b) => (
+          <View key={b.id} style={[styles.block, { left: `${pct(b.startMs)}%`, width: `${Math.max(1, pct(b.endMs) - pct(b.startMs))}%`, backgroundColor: blockColor(b.categoryId) }]} />
+        ))}
         {isToday && now >= start && now <= end ? (
           <View style={[styles.past, { width: `${pct(now)}%` }]} />
         ) : null}
@@ -63,6 +66,7 @@ export default function Timeline({ dayKey, events, dueTasks, wokeAt, sleptAt, is
 }
 
 const styles = StyleSheet.create({
+  block: { position: 'absolute', top: 0, bottom: 0, opacity: 0.35, borderRadius: 3 },
   wrap: { marginTop: 14 },
   track: { height: 10, borderRadius: 5, backgroundColor: colors.line, overflow: 'visible' },
   past: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: colors.accentSoft, borderRadius: 5 },

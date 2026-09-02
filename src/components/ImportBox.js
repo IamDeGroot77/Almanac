@@ -5,10 +5,10 @@ import { PrimaryButton, SmallButton } from './Buttons';
 import { parseImport, describePlan } from '../importText';
 
 // Paste a brain dump; it becomes lists and tasks in one tap.
-export default function ImportBox({ people, lists, routines = [], onImport, onDone }) {
+export default function ImportBox({ people, lists, routines = [], categories = [], onImport, onDone }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
-  const plan = useMemo(() => parseImport(text, { people, lists, routines }), [text, people, lists, routines]);
+  const plan = useMemo(() => parseImport(text, { people, lists, routines, categories }), [text, people, lists, routines, categories]);
 
   if (!open) {
     return (
@@ -31,7 +31,7 @@ export default function ImportBox({ people, lists, routines = [], onImport, onDo
       <Text style={shared.muted}>
         A line ending in a colon starts a list; Today, Tomorrow, and weekdays go to that day. Add options in
         parentheses: "Exercise (weekly):" or "Zeke's day (daily, for Zeke):" make routines, "Soon (3 months):" makes
-        a timeline list. "- task by fri 3pm for Zeke" sets a date, time, and person; "- 1 from Exercise" in a
+        a timeline list, "GFD (in Work):" puts a list in a category. "- task by fri 3pm for Zeke" sets a date, time, and person; "- 1 from Exercise" in a
         routine is a quota. Indent a dash under a task to make it a step. "// note" adds a note.
       </Text>
       <TextInput
@@ -48,7 +48,7 @@ export default function ImportBox({ people, lists, routines = [], onImport, onDo
       {plan.lists.map((l) => (
         <Text key={l.name + (l.id || '')} style={styles.previewLine}>
           {l.name}
-          {l.isNew ? ' (new list)' : ''}: {l.tasks.map((t) => t.text).join(' · ') || 'empty'}
+          {l.isNew ? ' (new list)' : ''}{l.categoryName ? ` in ${l.categoryName}` : ''}: {l.tasks.map((t) => t.text).join(' · ') || 'empty'}
         </Text>
       ))}
       {plan.routines.map((r) => (

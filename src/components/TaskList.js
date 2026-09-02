@@ -9,6 +9,7 @@ import { childrenOf } from '../pickNext';
 // One list of tasks with its own add box. Used for the day list and for each
 // standing list. Steps (sub-tasks) render indented under their parent.
 export default function TaskList({
+  caption,
   listId,
   title,
   subtitle,
@@ -46,6 +47,7 @@ export default function TaskList({
 
   return (
     <View style={styles.section}>
+      {caption ? <Text style={{ fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: colors.muted, marginTop: 18, marginBottom: -6 }}>{caption}</Text> : null}
       <View style={styles.header}>
         {renaming ? (
           <TextInput
