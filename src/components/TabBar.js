@@ -3,8 +3,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-// The phone keeps four tabs. The laptop adds the planning views that want a
-// big screen and a keyboard.
+// The phone keeps its tabs short. On the laptop, Today, Week, Month, and
+// Semester live inside one Calendar tab with a view switch.
 const PHONE_TABS = [
   { id: 'home', label: 'Home', icon: 'home' },
   { id: 'today', label: 'Today', icon: 'sunny' },
@@ -16,10 +16,7 @@ const PHONE_TABS = [
 
 const WEB_TABS = [
   { id: 'home', label: 'Home', icon: 'home' },
-  { id: 'today', label: 'Today', icon: 'sunny' },
-  { id: 'planner', label: 'Week', icon: 'grid' },
   { id: 'calendar', label: 'Calendar', icon: 'calendar' },
-  { id: 'semester', label: 'Semester', icon: 'school' },
   { id: 'lists', label: 'Lists', icon: 'list' },
   { id: 'journal', label: 'Journal', icon: 'book' },
   { id: 'insights', label: 'Dashboard', icon: 'stats-chart' },

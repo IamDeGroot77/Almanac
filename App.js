@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { Alert, StyleSheet, View, AppState } from 'react-native';
+import { Alert, StyleSheet, View, AppState, TouchableOpacity, Text } from 'react-native';
 import { useEffect, useRef, useState } from 'react';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
@@ -106,6 +106,27 @@ function AlmanacApp() {
   const day = useAlmanacDay(store);
   const people = usePeopleFilter(store);
   const [tab, setTab] = useState('home');
+  // On the laptop the Calendar tab holds Today, Week, Month, and Semester.
+  const [calView, setCalView] = useState(() => {
+    try {
+      return (isWeb && globalThis.localStorage?.getItem('almanac:calView')) || 'today';
+    } catch {
+      return 'today';
+    }
+  });
+  const pickCalView = (v) => {
+    setCalView(v);
+    try {
+      globalThis.localStorage?.setItem('almanac:calView', v);
+    } catch {}
+  };
+  const go = (id) => {
+    if (isWeb && (id === 'today' || id === 'planner' || id === 'semester' || id === 'month')) {
+      pickCalView(id === 'month' ? 'calendar' : id);
+      setTab('calendar');
+    } else setTab(id);
+  };
+  const view = isWeb && tab === 'calendar' ? calView : tab;
   const [journalPrompt, setJournalPrompt] = useState(null);
   const [dayOffset, setDayOffset] = useState(0); // 0 = today, 1 = tomorrow
   const derived = useTodayDerived({
@@ -379,10 +400,13 @@ function AlmanacApp() {
             onFinish={finishTask}
             onOpenTask={(task) => setSheetTaskId(task.id)}
             onJustOneThing={justOneThing}
-            onGo={setTab}
+            onGo={go}
           />
         )}
-        {tab === 'today' && (
+        {isWeb && tab === 'calendar' ? (
+          <CalendarViewSwitch value={calView} onChange={pickCalView} />
+        ) : null}
+        {view === 'today' && (
           <TodayScreen
             dayOffset={dayOffset}
             setDayOffset={setDayOffset}
@@ -531,7 +555,7 @@ function AlmanacApp() {
           />
         )}
         {tab === 'insights' && <InsightsScreen store={store} />}
-        {tab === 'planner' && (
+        {view === 'planner' && (
           <PlannerScreen
             store={store}
             people={people}
@@ -544,8 +568,8 @@ function AlmanacApp() {
             }}
           />
         )}
-        {tab === 'semester' && <SemesterScreen store={store} onOpenTask={(task) => setSheetTaskId(task.id)} />}
-        {tab === 'calendar' && <CalendarScreen store={store} google={google} onOpenTask={(task) => setSheetTaskId(task.id)} />}
+        {view === 'semester' && <SemesterScreen store={store} onOpenTask={(task) => setSheetTaskId(task.id)} />}
+        {view === 'calendar' && <CalendarScreen store={store} google={google} onOpenTask={(task) => setSheetTaskId(task.id)} />}
         {tab === 'files' && <FilesScreen google={google} />}
         {tab === 'settings' && (
           <SettingsScreen
@@ -704,4 +728,30 @@ function AlmanacApp() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   body: { flex: 1 },
+});
+
+// Laptop only: Today / Week / Month / Semester inside the Calendar tab.
+function CalendarViewSwitch({ value, onChange }) {
+  const views = [
+    { id: 'today', label: 'Today' },
+    { id: 'planner', label: 'Week' },
+    { id: 'calendar', label: 'Month' },
+    { id: 'semester', label: 'Semester' },
+  ];
+  return (
+    <View style={switchStyles.wrap}>
+      {views.map((v) => (
+        <TouchableOpacity key={v.id} onPress={() => onChange(v.id)} style={[switchStyles.item, value === v.id && switchStyles.itemOn]} accessibilityRole="tab" accessibilityState={{ selected: value === v.id }}>
+          <Text style={[switchStyles.text, value === v.id && switchStyles.textOn]}>{v.label}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+const switchStyles = StyleSheet.create({
+  wrap: { flexDirection: 'row', alignSelf: 'center', gap: 4, marginTop: 10, padding: 3, borderRadius: 999, backgroundColor: colors.accentSoft },
+  item: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999 },
+  itemOn: { backgroundColor: colors.bg },
+  text: { fontSize: 13, fontWeight: '600', color: colors.muted },
+  textOn: { color: colors.ink },
 });
