@@ -39,6 +39,10 @@ import TodayScreen from './src/screens/TodayScreen';
 import ListsScreen from './src/screens/ListsScreen';
 import InsightsScreen from './src/screens/InsightsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import PlannerScreen from './src/screens/web/PlannerScreen';
+import SemesterScreen from './src/screens/web/SemesterScreen';
+import CalendarScreen from './src/screens/web/CalendarScreen';
+import FilesScreen from './src/screens/web/FilesScreen';
 import FocusModal from './src/components/FocusModal';
 import TaskSheet from './src/components/TaskSheet';
 import ListOptionsModal from './src/components/ListOptionsModal';
@@ -292,6 +296,22 @@ function AlmanacApp() {
           />
         )}
         {tab === 'insights' && <InsightsScreen store={store} />}
+        {tab === 'planner' && (
+          <PlannerScreen
+            store={store}
+            people={people}
+            events={[]}
+            forecast={weather.forecast}
+            onOpenTask={(task) => setSheetTaskId(task.id)}
+            onStart={(id) => {
+              store.startTask(id);
+              setFocusTaskId(id);
+            }}
+          />
+        )}
+        {tab === 'semester' && <SemesterScreen store={store} onOpenTask={(task) => setSheetTaskId(task.id)} />}
+        {tab === 'calendar' && <CalendarScreen store={store} google={google} onOpenTask={(task) => setSheetTaskId(task.id)} />}
+        {tab === 'files' && <FilesScreen google={google} />}
         {tab === 'settings' && (
           <SettingsScreen
             google={google}

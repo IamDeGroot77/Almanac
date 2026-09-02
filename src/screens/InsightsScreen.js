@@ -7,6 +7,8 @@ import { estimateAccuracy, timeByList, timeByPerson, carryOvers, dayStats, track
 import { energyLabel } from '../components/EnergyPrompt';
 import { composeWeeklyLetter } from '../weeklyLetter';
 import { almanacToday } from '../clock';
+import { isWeb } from '../platform';
+import DashboardSections from './web/DashboardSections';
 
 // Reality vs perception, and where things slip. Every section explains what
 // it needs when there isn't enough data yet, so the tab is never blank.
@@ -27,6 +29,8 @@ export default function InsightsScreen({ store }) {
       <Text style={shared.muted}>
         {store.timeLog.length} timed {store.timeLog.length === 1 ? 'task' : 'tasks'} · {formatDuration(totalTracked) || '0m'} tracked
       </Text>
+
+      {isWeb ? <DashboardSections store={store} /> : null}
 
       <Section title="This week's letter">
         <Text style={styles.letter}>{composeWeeklyLetter(store)}</Text>
