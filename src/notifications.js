@@ -26,8 +26,10 @@ export async function scheduleDailyReminder() {
     });
   }
 
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  // Replace only the daily brief; task reminders have their own identifiers.
+  await Notifications.cancelScheduledNotificationAsync('daily-brief').catch(() => {});
   await Notifications.scheduleNotificationAsync({
+    identifier: 'daily-brief',
     content: {
       title: 'Your Almanac',
       body: "Your day is ready. Review yesterday's list and see what's ahead.",

@@ -36,6 +36,10 @@ const emptyState = () => ({
     { id: 'me', name: 'Me' },
     { id: 'zeke', name: 'Zeke' },
   ],
+  routines: [], // see routines.js
+  routineDone: {}, // routineId -> periodKey -> itemId -> true
+  dayNotes: {}, // dayKey -> end-of-day note
+  days: {}, // dayKey -> { wokeAt, sleptAt } from the "I'm up" / "Going to bed" taps
   localVersion: 0,
   sync: emptySync(),
 });
@@ -107,6 +111,8 @@ function finishIn(s, id, now) {
     startedAt: target.startedAt,
     doneAt: now,
     durationMs,
+    estimateMs: target.estimateMs ?? null,
+    personId: target.personId || null,
   };
   return { tasks, timeLog: [...(s.timeLog || []), entry].slice(-TIME_LOG_MAX) };
 }
@@ -179,6 +185,73 @@ export function useAlmanacStore() {
         const trimmed = name.trim();
         if (!trimmed) return;
         edit((s) => ({ people: [...s.people, { id: newId('p'), name: trimmed }] }));
+      },
+      // ----- due dates & estimates -----
+      setTaskDue(id, due, dueTime) {
+        const now = Date.now();
+        edit((s) => ({
+          tasks: s.tasks.map((t) =>
+            t.id === id ? { ...t, due: due || null, dueTime: due ? dueTime || null : null, updatedAt: now } : t
+          ),
+        }));
+      },
+      setTaskEstimate(id, estimateMs) {
+        edit((s) => ({
+          tasks: s.tasks.map((t) => (t.id === id ? { ...t, estimateMs: estimateMs || null } : t)),
+        }));
+      },
+      // ----- routines -----
+      saveRoutine(routine) {
+        edit((s) => {
+          const exists = s.routines.some((r) => r.id === routine.id);
+          const clean = { ...routine, personId: routine.personId === 'me' ? null : routine.personId || null };
+          return {
+            routines: exists
+              ? s.routines.map((r) => (r.id === routine.id ? clean : r))
+              : [...s.routines, { ...clean, id: clean.id || newId('r'), createdAt: Date.now() }],
+          };
+        });
+      },
+      deleteRoutine(id) {
+        edit((s) => {
+          const { [id]: _gone, ...rest } = s.routineDone || {};
+          return { routines: s.routines.filter((r) => r.id !== id), routineDone: rest };
+        });
+      },
+      toggleRoutineItem(routineId, periodKey, itemId) {
+        edit((s) => {
+          const forRoutine = s.routineDone?.[routineId] || {};
+          const forPeriod = { ...(forRoutine[periodKey] || {}) };
+          if (forPeriod[itemId]) delete forPeriod[itemId];
+          else forPeriod[itemId] = Date.now();
+          return {
+            routineDone: { ...s.routineDone, [routineId]: { ...forRoutine, [periodKey]: forPeriod } },
+          };
+        });
+      },
+      // ----- day bracket -----
+      startDay(key) {
+        edit((s) => ({ days: { ...s.days, [key]: { ...(s.days[key] || {}), wokeAt: Date.now(), sleptAt: null } } }));
+      },
+      endDay(key) {
+        edit((s) => ({ days: { ...s.days, [key]: { ...(s.days[key] || {}), sleptAt: Date.now() } } }));
+      },
+      reopenDay(key) {
+        edit((s) => ({ days: { ...s.days, [key]: { ...(s.days[key] || {}), sleptAt: null } } }));
+      },
+      // ----- end of day -----
+      setDayNote(key, text) {
+        edit((s) => ({ dayNotes: { ...s.dayNotes, [key]: text } }));
+      },
+      pushOpenToTomorrow(fromKey) {
+        const from = dayListId(fromKey);
+        const to = dayListId(dayKey(dayFromOffset(1)));
+        const now = Date.now();
+        edit((s) => ({
+          tasks: s.tasks.map((t) =>
+            t.listId === from && !t.done ? { ...t, listId: to, startedAt: null, updatedAt: now } : t
+          ),
+        }));
       },
       // Instant check-off (or undo). Works whether or not the task was started.
       toggleTask(id) {

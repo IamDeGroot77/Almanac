@@ -269,4 +269,31 @@ assert.equal(zekeList.personId, 'zeke', 'list tagged from its name');
 assert.equal(find('permission slip').personId, 'zeke', 'task inherits list person');
 console.log('10. person guessed from Google list name ok');
 
+// 11. Due dates travel both ways; a due time set locally survives a remote
+//     edit that keeps the same date, and is cleared when the date changes.
+const dentistId = remote.addTask('gl_default', 'dentist');
+lists.get('gl_default').tasks.get(dentistId).due = '2026-09-10T00:00:00.000Z';
+await sync();
+assert.equal(find('dentist').due, '2026-09-10', 'due pulled from Google');
+const t6 = Date.now();
+state.tasks = state.tasks.map((t) => (t.text === 'dentist' ? { ...t, dueTime: '15:00', updatedAt: t6 } : t));
+state.localVersion = 10;
+await sync();
+assert.equal(lists.get('gl_default').tasks.get(dentistId).due, '2026-09-10T00:00:00.000Z', 'date pushed back unchanged');
+await sleep(5);
+Object.assign(lists.get('gl_default').tasks.get(dentistId), { title: 'dentist (moved)', updated: nowIso() });
+await sync();
+assert.equal(find('dentist (moved)').dueTime, '15:00', 'time kept when date unchanged');
+await sleep(5);
+Object.assign(lists.get('gl_default').tasks.get(dentistId), { due: '2026-09-12T00:00:00.000Z', updated: nowIso() });
+await sync();
+assert.equal(find('dentist (moved)').due, '2026-09-12');
+assert.equal(find('dentist (moved)').dueTime, null, 'time cleared when date changed remotely');
+const t7 = Date.now();
+state.tasks = state.tasks.map((t) => (t.text === 'dentist (moved)' ? { ...t, due: '2026-09-20', updatedAt: t7 } : t));
+state.localVersion = 11;
+await sync();
+assert.equal(lists.get('gl_default').tasks.get(dentistId).due, '2026-09-20T00:00:00.000Z', 'local due pushed');
+console.log('11. due dates both ways ok');
+
 console.log('\nAll sync scenarios passed.');

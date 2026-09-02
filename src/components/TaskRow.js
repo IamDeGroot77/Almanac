@@ -1,20 +1,37 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, shared } from '../theme';
 import { formatDuration, useNow } from '../durations';
+import { describeDue, dueStatus } from '../due';
 
 // A task is not started, in progress (startedAt set), or done.
 //  - tapping the circle toggles done / not started (instant check-off)
 //  - Start begins timing, Finish completes it and records the duration
-export default function TaskRow({ task, tag, onToggle, onStart, onFinish, onDelete, onLongPress }) {
+//  - long press opens the task sheet
+export default function TaskRow({ task, tag, context, onToggle, onStart, onFinish, onDelete, onLongPress }) {
   const inProgress = !task.done && !!task.startedAt;
   const now = useNow(inProgress);
 
-  const elapsed = task.done
-    ? task.durationMs
-    : inProgress
-      ? now - task.startedAt
-      : null;
-  const elapsedLabel = elapsed != null ? formatDuration(elapsed) : null;
+  const elapsed = task.done ? task.durationMs : inProgress ? now - task.startedAt : null;
+  const meta = [];
+  if (context) meta.push({ text: context });
+  if (task.done && elapsed != null) {
+    meta.push({
+      text: task.estimateMs ? `${formatDuration(elapsed)} (est ${formatDuration(task.estimateMs)})` : formatDuration(elapsed),
+    });
+  } else if (inProgress) {
+    meta.push({
+      text: task.estimateMs
+        ? `${formatDuration(elapsed)} of ~${formatDuration(task.estimateMs)}`
+        : `${formatDuration(elapsed)} so far`,
+      active: true,
+    });
+  } else if (task.estimateMs) {
+    meta.push({ text: `~${formatDuration(task.estimateMs)}` });
+  }
+  const due = dueStatus(task);
+  if (task.due && !task.done) {
+    meta.push({ text: `Due ${describeDue(task)}`, overdue: due === 'overdue', today: due === 'today' });
+  }
 
   return (
     <View style={[styles.row, shared.hairline]}>
@@ -25,15 +42,9 @@ export default function TaskRow({ task, tag, onToggle, onStart, onFinish, onDele
         delayLongPress={350}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: task.done }}
-        accessibilityHint="Long press to move this task"
+        accessibilityHint="Long press for options"
       >
-        <View
-          style={[
-            styles.circle,
-            inProgress && styles.circleActive,
-            task.done && styles.circleDone,
-          ]}
-        >
+        <View style={[styles.circle, inProgress && styles.circleActive, task.done && styles.circleDone]}>
           {task.done ? <Text style={styles.check}>✓</Text> : null}
           {inProgress ? <View style={styles.dot} /> : null}
         </View>
@@ -42,9 +53,17 @@ export default function TaskRow({ task, tag, onToggle, onStart, onFinish, onDele
             <Text style={[styles.text, task.done && styles.textDone]}>{task.text}</Text>
             {tag ? <Text style={styles.tag}>{tag}</Text> : null}
           </View>
-          {elapsedLabel ? (
-            <Text style={[styles.elapsed, inProgress && styles.elapsedActive]}>
-              {inProgress ? `${elapsedLabel} so far` : elapsedLabel}
+          {meta.length > 0 ? (
+            <Text style={styles.meta} numberOfLines={1}>
+              {meta.map((m, i) => (
+                <Text
+                  key={i}
+                  style={[m.active && styles.metaActive, m.overdue && styles.metaOverdue, m.today && styles.metaToday]}
+                >
+                  {i > 0 ? ' · ' : ''}
+                  {m.text}
+                </Text>
+              ))}
             </Text>
           ) : null}
         </View>
@@ -98,13 +117,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-  circleActive: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
+  circleActive: { backgroundColor: colors.accentSoft },
   circleDone: { backgroundColor: colors.accent },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
   check: { color: '#FFFFFF', fontSize: 13, lineHeight: 15, fontWeight: '700' },
   body: { flex: 1 },
   textRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
   text: { fontSize: 16, color: colors.ink, flexShrink: 1 },
+  textDone: { textDecorationLine: 'line-through', color: colors.muted },
   tag: {
     fontSize: 11,
     fontWeight: '700',
@@ -115,16 +135,11 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: 'hidden',
   },
-  textDone: { textDecorationLine: 'line-through', color: colors.muted },
-  elapsed: { fontSize: 12, color: colors.muted, marginTop: 1 },
-  elapsedActive: { color: colors.accent },
-  action: {
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
+  meta: { fontSize: 12, color: colors.muted, marginTop: 1 },
+  metaActive: { color: colors.accent },
+  metaOverdue: { color: colors.danger, fontWeight: '600' },
+  metaToday: { color: colors.warn, fontWeight: '600' },
+  action: { borderWidth: 1, borderColor: colors.line, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
   actionPrimary: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
   actionText: { fontSize: 13, fontWeight: '600', color: colors.muted },
   actionTextPrimary: { color: colors.accent },

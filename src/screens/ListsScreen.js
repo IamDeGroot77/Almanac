@@ -1,5 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { colors } from '../theme';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { colors, shared } from '../theme';
 import Screen from '../components/Screen';
 import PersonChips from '../components/PersonChips';
 import TaskList from '../components/TaskList';
@@ -20,6 +20,9 @@ export default function ListsScreen({
   renamingListId,
   onRename,
   onCancelRename,
+  routines,
+  onNewRoutine,
+  onEditRoutine,
   onRefresh,
   refreshing,
   listProps,
@@ -72,6 +75,33 @@ export default function ListsScreen({
           {...listProps}
         />
       ))}
+
+      <View style={styles.routinesHeader}>
+        <Text style={styles.routinesTitle}>Routines</Text>
+        <SmallButton label="+ New routine" onPress={onNewRoutine} />
+      </View>
+      <Text style={styles.hint}>
+        Daily and weekly lists that start over each period. Quotas like "3 from Groceries" count
+        themselves. They show on Today.
+      </Text>
+      {routines.map((r) => (
+        <TouchableOpacity
+          key={r.id}
+          style={[styles.routineRow, shared.hairline]}
+          onPress={() => onEditRoutine(r)}
+          accessibilityRole="button"
+        >
+          <View style={styles.routineBody}>
+            <Text style={styles.routineName}>{r.name}</Text>
+            <Text style={styles.routineMeta}>
+              {r.cadence === 'weekly' ? 'Every week' : 'Every day'} · {r.items.length}{' '}
+              {r.items.length === 1 ? 'item' : 'items'}
+              {personOf(r) !== 'me' ? ` · for ${personName(people, r.personId)}` : ''}
+            </Text>
+          </View>
+          <Text style={styles.chev}>›</Text>
+        </TouchableOpacity>
+      ))}
     </Screen>
   );
 }
@@ -80,5 +110,20 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 26, fontWeight: '700', color: colors.ink },
   people: { marginTop: 14 },
-  hint: { marginTop: 20, fontSize: 14, color: colors.muted },
+  hint: { marginTop: 8, fontSize: 13, color: colors.muted },
+  routinesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 36,
+    paddingTop: 20,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
+  },
+  routinesTitle: { fontSize: 15, fontWeight: '700', color: colors.muted, letterSpacing: 0.5, textTransform: 'uppercase' },
+  routineRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
+  routineBody: { flex: 1 },
+  routineName: { fontSize: 16, color: colors.ink, fontWeight: '600' },
+  routineMeta: { fontSize: 12, color: colors.muted, marginTop: 1 },
+  chev: { fontSize: 22, color: colors.muted, paddingHorizontal: 6 },
 });

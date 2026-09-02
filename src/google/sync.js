@@ -8,18 +8,24 @@ import { newId, DONE_RETENTION_MS } from '../ids.js';
 //   Lists that exist only on one side get created on the other.
 // - Day lists stay local. A task moved from a standing list onto a day list
 //   is removed from Google; a task moved the other way gets created there.
-// - Per task, the side that changed more recently wins. Local edits are
-//   detected by updatedAt > lastSyncAt; remote edits by Google's `updated`.
+// - Per task, the side that changed more recently wins. A local edit is one
+//   whose updatedAt is past the syncedUpdatedAt recorded at the last sync;
+//   a remote edit is one whose Google `updated` is past googleUpdated.
 // - Deletions are carried as tombstones in state.sync until they're pushed.
 //
 // runSync is pure with respect to the snapshot it's given: it returns the new
 // lists/tasks/sync and never touches React state itself.
+
+// Google stores `due` as a date-only RFC3339 timestamp at midnight UTC.
+const dueToRemote = (due) => (due ? `${due}T00:00:00.000Z` : null);
+const dueFromRemote = (due) => (due ? String(due).slice(0, 10) : null);
 
 function toRemote(task) {
   return {
     title: task.text,
     status: task.done ? 'completed' : 'needsAction',
     completed: task.done ? new Date(task.doneAt || Date.now()).toISOString() : null,
+    due: dueToRemote(task.due),
   };
 }
 
@@ -44,9 +50,14 @@ function fromRemote(local, remote, googleListId) {
     doneAt,
     startedAt,
     durationMs,
+    due: dueFromRemote(remote.due),
+    // Google has no due time; keep ours unless the date went away or changed.
+    dueTime: remote.due && dueFromRemote(remote.due) === local.due ? local.dueTime ?? null : null,
     googleId: remote.id,
     googleListId,
     googleUpdated: Date.parse(remote.updated) || Date.now(),
+    // Everything up to this local edit has now been reconciled with Google.
+    syncedUpdatedAt: local.updatedAt || 0,
   };
 }
 
@@ -67,7 +78,6 @@ export async function runSync(snapshot, accessToken) {
   };
   const api = makeApi(accessToken);
   const now = Date.now();
-  const lastSyncAt = sync.lastSyncAt || 0;
 
   // 1. Push pending deletions.
   for (const d of sync.deletedTasks) {
@@ -103,12 +113,14 @@ export async function runSync(snapshot, accessToken) {
     claimed.add(remote.id);
 
     let name = list.name;
-    const localRenamed = (list.updatedAt || 0) > lastSyncAt;
+    // A local rename is one not yet reconciled: updatedAt moved past the
+    // value we recorded at the last sync. No wall-clock comparisons.
+    const localRenamed = (list.updatedAt || 0) > (list.syncedUpdatedAt || 0);
     if (remote.title !== list.name) {
       if (localRenamed) await api.patchTaskList(remote.id, { title: list.name });
       else if (remote.title?.trim()) name = remote.title;
     }
-    nextLists.push({ ...list, name, googleListId: remote.id });
+    nextLists.push({ ...list, name, googleListId: remote.id, syncedUpdatedAt: list.updatedAt || 0 });
   }
 
   for (const r of remoteLists) {
@@ -176,7 +188,7 @@ export async function runSync(snapshot, accessToken) {
       seenRemote.add(remote.id);
 
       const remoteUpdated = Date.parse(remote.updated) || 0;
-      const localChanged = (t.updatedAt || 0) > lastSyncAt;
+      const localChanged = (t.updatedAt || 0) > (t.syncedUpdatedAt || 0);
       const remoteChanged = remoteUpdated > (t.googleUpdated || 0);
 
       if (localChanged && (!remoteChanged || (t.updatedAt || 0) >= remoteUpdated)) {
@@ -202,6 +214,8 @@ export async function runSync(snapshot, accessToken) {
         done,
         listId: list.id,
         personId: list.personId || null,
+        due: dueFromRemote(r.due),
+        dueTime: null,
         createdAt: Date.parse(r.updated) || now,
         doneAt: done ? completedAt || now : null,
         updatedAt: 0,
