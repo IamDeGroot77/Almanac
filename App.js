@@ -12,11 +12,10 @@ import {
 } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { isRunningInExpoGo } from 'expo';
-// The modern class-based expo-calendar API (Calendar@next) is stubbed out in
-// Expo Go, so we stay on the legacy async API until the app only runs from
-// the EAS development build. Docs: https://docs.expo.dev/versions/v57.0.0/sdk/calendar/
-import * as Calendar from 'expo-calendar/legacy';
+// Current class-based expo-calendar API. It only works in a development or
+// production build (not Expo Go), which is what this app targets.
+// Docs: https://docs.expo.dev/versions/v57.0.0/sdk/calendar/
+import * as Calendar from 'expo-calendar';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -25,20 +24,14 @@ const REMINDER_HOUR = 6;
 const REMINDER_MINUTE = 30;
 const REMINDER_CHANNEL = 'daily-brief';
 
-// Only wire up the notification handler outside Expo Go. Expo Go dropped
-// notification support in SDK 53; the development build restores it.
-const notificationsSupported = !isRunningInExpoGo();
-
-if (notificationsSupported) {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
-  });
-}
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 function dayBounds(offset) {
   const start = new Date();
@@ -107,22 +100,20 @@ function AlmanacScreen() {
   const [tasksLoaded, setTasksLoaded] = useState(false);
   const [input, setInput] = useState('');
 
-  const [reminderStatus, setReminderStatus] = useState(
-    notificationsSupported ? 'pending' : 'unsupported'
-  );
+  const [reminderStatus, setReminderStatus] = useState('pending');
 
   const loadEvents = useCallback(async (offset) => {
     try {
-      const { status } = await Calendar.requestCalendarPermissionsAsync();
+      const { status } = await Calendar.requestCalendarPermissions();
       if (status !== 'granted') {
         setCalendarStatus('denied');
         setEvents([]);
         return;
       }
 
-      const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+      const calendars = await Calendar.getCalendars(Calendar.EntityTypes.EVENT);
       const { start, end } = dayBounds(offset);
-      const found = await Calendar.getEventsAsync(calendars.map((c) => c.id), start, end);
+      const found = await Calendar.listEvents(calendars, start, end);
 
       const sorted = [...found].sort((a, b) => {
         if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
@@ -157,9 +148,8 @@ function AlmanacScreen() {
     setRefreshing(false);
   }, [dayOffset, loadEvents]);
 
-  // Daily 6:30 AM reminder (development build only).
+  // Daily 6:30 AM reminder.
   useEffect(() => {
-    if (!notificationsSupported) return;
     scheduleDailyReminder()
       .then(setReminderStatus)
       .catch((err) => {
@@ -321,8 +311,6 @@ function reminderMessage(status) {
       return 'Daily brief arrives at 6:30 AM.';
     case 'denied':
       return 'Notifications are off. Enable them in Settings to get the 6:30 AM brief.';
-    case 'unsupported':
-      return 'The 6:30 AM brief needs the development build (not available in Expo Go).';
     case 'error':
       return "Couldn't set up the daily brief.";
     default:
