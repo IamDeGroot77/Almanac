@@ -1,4 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
+import UsageTable from '../../components/UsageTable';
+import { usageStats } from '../../insights';
 import { colors, shared } from '../../theme';
 import { BarChart, LineChart, Scatter } from '../../components/web/Charts';
 import { formatDuration } from '../../durations';
@@ -11,6 +13,7 @@ import { energyLabel } from '../../components/EnergyPrompt';
 const DAY = 86400000;
 
 export default function DashboardSections({ store }) {
+  const usage = usageStats(store, 6);
   const log = store.timeLog || [];
   const days = store.days || {};
 
@@ -55,6 +58,9 @@ export default function DashboardSections({ store }) {
 
   return (
     <View style={styles.grid}>
+      <Panel title="Am I using this?" hint="Opens are counted per device, so this is the laptop's own record; the phone keeps its own on Insights.">
+        <UsageTable weeks={usage} />
+      </Panel>
       <Panel title="Estimates over time" hint="100% means it took exactly as long as you guessed. Above the line took longer.">
         {ratios.length < 2 ? <Text style={shared.muted}>Needs a couple of timed tasks with estimates.</Text> : <LineChart points={ratios} baseline={100} yLabel={(v) => `${v}%`} />}
       </Panel>

@@ -130,6 +130,27 @@ export default function SettingsScreen({
       </View>
 
       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Bedtime nudge</Text>
+        <Text style={shared.muted}>
+          A notification with "Going to bed" and "Not yet" buttons, so closing the day is one tap from the
+          shade or the watch. Not yet asks again in half an hour.
+        </Text>
+        <PersonChips
+          people={[
+            { id: '-1', name: 'Off' },
+            { id: '21', name: '9 PM' },
+            { id: '22', name: '10 PM' },
+            { id: '23', name: '11 PM' },
+            { id: '0', name: 'Midnight' },
+            { id: '1', name: '1 AM' },
+          ]}
+          selected={String(prefs.bedtimeHour ?? 23)}
+          onSelect={(id) => onSetPref('bedtimeHour', Number(id))}
+          compact
+        />
+      </View>
+
+      <View style={styles.section}>
         <View style={styles.switchRow}>
           <Text style={styles.sectionTitle}>Quick add from the shade and watch</Text>
           <Switch value={!!prefs.quickAddNotification} onValueChange={(v) => onSetPref('quickAddNotification', v)} />

@@ -62,6 +62,43 @@ export function carryOvers(tasks) {
 }
 
 // Days: awake hours, tracked share, sleep.
+// One row per week (Monday start), newest last: did the app get used?
+export function usageStats(state, weeks = 4, now = Date.now()) {
+  const DAY = 86400000;
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // this Monday
+  const rows = [];
+  for (let w = weeks - 1; w >= 0; w--) {
+    const from = start.getTime() - w * 7 * DAY;
+    const to = from + 7 * DAY;
+    const keys = Array.from({ length: 7 }, (_, i) => dayKeyOf(new Date(from + i * DAY)));
+    const opened = keys.filter((k) => (state.usage?.[k]?.opens || 0) > 0).length;
+    const bracketed = keys.filter((k) => state.days?.[k]?.wokeAt && !state.days[k].implicit).length;
+    const inWeek = (t) => t >= from && t < to;
+    const captured = state.tasks.filter((t) => !t.parentId && inWeek(t.createdAt || 0)).length;
+    const startedIds = new Set();
+    for (const t of state.tasks) for (const s of t.sessions || []) if (inWeek(s.start || s.startedAt || 0)) startedIds.add(t.id);
+    for (const e of state.timeLog || []) if (inWeek(e.startedAt || 0)) startedIds.add(e.taskId);
+    const finished = state.tasks.filter((t) => t.done && inWeek(t.doneAt || 0)).length + (state.timeLog || []).filter((e) => inWeek(e.doneAt || 0) && !state.tasks.some((t) => t.id === e.taskId)).length;
+    const d = new Date(from);
+    rows.push({
+      key: keys[0],
+      label: w === 0 ? 'This week' : w === 1 ? 'Last week' : d.toLocaleDateString([], { month: 'short', day: 'numeric' }),
+      opened,
+      bracketed,
+      captured,
+      started: startedIds.size,
+      finished,
+    });
+  }
+  return rows;
+}
+
+function dayKeyOf(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export function dayStats(days) {
   const rows = Object.entries(days)
     .map(([key, d]) => ({ key, ...d }))

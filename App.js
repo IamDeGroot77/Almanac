@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import { Alert, StyleSheet, View } from 'react-native';
-import { useEffect, useState } from 'react';
+import { Alert, StyleSheet, View, AppState } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors } from './src/theme';
@@ -23,6 +23,7 @@ import useAssignmentCalendar from './src/assignmentCalendar';
 import { useQuickAdd } from './src/quickAdd';
 import useTaskCheckins from './src/checkins';
 import useEnergyCheckins from './src/energy';
+import useDayBracketNotifications, { DEFAULT_BEDTIME_HOUR } from './src/dayBracket';
 import useUndo from './src/hooks/useUndo';
 import UndoBar from './src/components/UndoBar';
 import { pickNext, nextStepOf, childrenOf } from './src/pickNext';
@@ -86,6 +87,17 @@ function AlmanacApp() {
   const sleep = useSleepDetection(store);
   const weather = useWeather(store.prefs.weatherPlace || null);
   const [nowMode, setNowMode] = useState(false);
+  // The app's own usage record, and the "one thing on screen" default: when
+  // today has more than a handful open, start in Now mode.
+  useEffect(() => {
+    if (!store.loaded) return;
+    store.noteAppOpen();
+    const openToday = store.tasks.filter((t) => !t.done && !t.parentId && t.listId === `day:${day.today}`).length;
+    if (openToday > 5) setNowMode(true);
+    const sub = AppState.addEventListener('change', (s) => s === 'active' && store.noteAppOpen());
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.loaded]);
 
   // ----- notifications --------------------------------------------------------
   useNotificationRouter(store.loaded);
@@ -93,6 +105,8 @@ function AlmanacApp() {
   useQuickAdd(store, { enabled: !!store.prefs.quickAddNotification });
   useTaskCheckins(store, { minutes: store.prefs.checkinMinutes ?? 30 });
   useEnergyCheckins(store, { enabled: store.prefs.energyCheckins !== false });
+  const justOneRef = useRef(null);
+  useDayBracketNotifications(store, { bedtimeHour: store.prefs.bedtimeHour ?? DEFAULT_BEDTIME_HOUR, onJustOneThing: () => justOneRef.current?.() });
   const { undo, offer: offerUndo } = useUndo();
   const focusSession = useFocusSession();
   const [toast, setToast] = useState(null);
@@ -182,6 +196,7 @@ function AlmanacApp() {
     store.startTask(pick.id);
     setFocusTaskId(pick.id);
   };
+  justOneRef.current = justOneThing;
 
   const listProps = {
     tasks: people.visibleTasks,

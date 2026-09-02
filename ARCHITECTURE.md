@@ -58,3 +58,9 @@ snapshots, and native features hide behind small modules.
 - `src/drive/` keeps devices in step through a private file in Drive's app-data folder: `merge.js` (pure, tested by `scripts/test-merge.mjs`), `driveApi.js`, `useDriveSync.js`. The phone stays the hub for Google Tasks, Canvas, and the calendar; the laptop receives those through Drive.
 - Laptop-only tabs live in `src/screens/web/`: `PlannerScreen` (week columns, drag and drop), `SemesterScreen` (courses × weeks), `DashboardSections` (charts), `CalendarScreen` (month grid over the Google Calendar API, `src/google/calendarApi.js`, needs the `calendar.events` scope on the web client), and `FilesScreen` (the drop box).
 - The drop box is a normal Drive folder called "Almanac Drop" (`src/drive/filesApi.js`, `drive.file` scope, so the app only sees files it made). The laptop uploads by drag and drop; the phone lists the folder at the bottom of Lists (`DropBoxSection`) and opens files in Drive. Sending from the phone needs a file picker native module, planned for the next build.
+
+## Adherence (the phone does the initiating)
+
+- `src/dayBracket.js`: the morning brief carries "I'm up" and "Just one thing" buttons; a bedtime nudge (pref `bedtimeHour`, -1 = off) carries "Going to bed" and "Not yet" (asks again in 30 minutes). Handlers run through `notificationRouter.js`, so the buttons work from the shade and the watch without opening the app.
+- Today starts in Now mode when more than five tasks are open (App.js).
+- `usage` in the store counts app opens per calendar day, per device, never synced; `usageStats` in `src/insights.js` turns it into the "Am I using this?" table (`components/UsageTable.js`) shown on Insights and the laptop Dashboard.

@@ -3,7 +3,8 @@ import { colors, shared } from '../theme';
 import Screen from '../components/Screen';
 import { formatDuration } from '../durations';
 import { formatTime, describeDayKey } from '../dates';
-import { estimateAccuracy, timeByList, timeByPerson, carryOvers, dayStats, trackedShare, energyStats } from '../insights';
+import { estimateAccuracy, timeByList, timeByPerson, carryOvers, dayStats, trackedShare, energyStats, usageStats } from '../insights';
+import UsageTable from '../components/UsageTable';
 import { energyLabel } from '../components/EnergyPrompt';
 import { composeWeeklyLetter } from '../weeklyLetter';
 import { almanacToday } from '../clock';
@@ -22,6 +23,7 @@ export default function InsightsScreen({ store }) {
   const energy = energyStats(store.days, store.timeLog, store.tasks);
   const totalTracked = store.timeLog.reduce((s, e) => s + (e.durationMs || 0), 0);
   const today = almanacToday();
+  const usage = usageStats(store);
 
   return (
     <Screen>
@@ -31,6 +33,12 @@ export default function InsightsScreen({ store }) {
       </Text>
 
       {isWeb ? <DashboardSections store={store} /> : null}
+
+      {!isWeb ? (
+        <Section title="Am I using this?">
+          <UsageTable weeks={usage} />
+        </Section>
+      ) : null}
 
       <Section title="This week's letter">
         <Text style={styles.letter}>{composeWeeklyLetter(store)}</Text>

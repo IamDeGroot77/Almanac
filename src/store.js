@@ -51,6 +51,7 @@ const emptyState = () => ({
   dayNoteMeta: {}, // dayKey -> updatedAt
   prefsUpdatedAt: 0, // when a shared preference last changed
   driveRevision: 0, // revision of the Drive file this device last wrote
+  usage: {}, // dayKey -> { opens } — this device only, never synced
   prefs: {
     focusApp: 'focusFriend', // hand-off apps, see apps.js
     timerApp: null,
@@ -129,7 +130,7 @@ function markDeleted(deleted, kind, ids) {
   return { ...base, [kind]: next };
 }
 
-const SHARED_PREF_KEYS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep'];
+const SHARED_PREF_KEYS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep', 'bedtimeHour'];
 
 const TIME_LOG_MAX = 2000;
 
@@ -386,6 +387,16 @@ export function useAlmanacStore() {
           prefsUpdatedAt: SHARED_PREF_KEYS.includes(key) ? Date.now() : s.prefsUpdatedAt || 0,
           localVersion: SHARED_PREF_KEYS.includes(key) ? s.localVersion + 1 : s.localVersion,
         }));
+      },
+      // Stamps an app open on today's calendar date without bumping
+      // localVersion, so opening the app never triggers a sync by itself.
+      noteAppOpen() {
+        const key = dayKey(new Date());
+        setState((s) => {
+          const usage = s.usage || {};
+          const cur = usage[key] || { opens: 0 };
+          return { ...s, usage: { ...usage, [key]: { ...cur, opens: cur.opens + 1, lastAt: Date.now() } } };
+        });
       },
       setDriveRevision(revision) {
         setState((s) => ({ ...s, driveRevision: revision }));

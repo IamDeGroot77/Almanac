@@ -20,7 +20,7 @@ const BOOKKEEPING = [
   'canvasId', 'canvasCourse', 'canvasUrl', 'canvasDueAt', 'canvasPoints', 'canvasScore',
   'canvas',
 ];
-export const SHARED_PREFS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep'];
+export const SHARED_PREFS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep', 'bedtimeHour'];
 
 const ts = (x) => x?.updatedAt || x?.createdAt || 0;
 
