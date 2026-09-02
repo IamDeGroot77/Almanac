@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Almanac",
-    "slug": "almanac",
+    "slug": "iamdegroot77",
     "version": "1.0.0",
     "scheme": "almanac",
     "orientation": "portrait",
@@ -18,7 +18,11 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "permissions": [
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -38,6 +42,12 @@
         }
       ],
       "expo-dev-client"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "729e1faa-0a56-4a1c-86bd-c9c72242b5fc"
+      }
+    },
+    "owner": "iamdegroot77s-team"
   }
 }
