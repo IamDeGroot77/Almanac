@@ -19,17 +19,19 @@ export function forgivingRun(met, now = Date.now(), maxDays = 120) {
   const keys = keysBack(now, maxDays);
   let i = met(keys[0]) ? 0 : 1; // today may still be in progress
   let run = 0;
+  let pending = 0; // a forgiven miss counts only if a hit follows it
   let missesInWindow = [];
   for (; i < keys.length; i++) {
     const hit = met(keys[i]);
     if (hit) {
-      run += 1;
+      run += 1 + pending;
+      pending = 0;
       continue;
     }
     missesInWindow = missesInWindow.filter((m) => i - m < 7);
     if (missesInWindow.length >= 1 || run === 0) break;
     missesInWindow.push(i);
-    run += 1; // a forgiven day still counts toward the run's length
+    pending = 1;
   }
   return run;
 }
@@ -38,14 +40,18 @@ export function bestRun(met, now = Date.now(), maxDays = 365) {
   const keys = keysBack(now, maxDays).reverse();
   let best = 0;
   let run = 0;
+  let pending = 0;
   let lastMiss = -99;
   keys.forEach((k, i) => {
-    if (met(k)) run += 1;
-    else if (run > 0 && i - lastMiss >= 7) {
+    if (met(k)) {
+      run += 1 + pending;
+      pending = 0;
+    } else if (run > 0 && i - lastMiss >= 7 && !pending) {
       lastMiss = i;
-      run += 1;
+      pending = 1;
     } else {
       run = 0;
+      pending = 0;
     }
     if (run > best) best = run;
   });
