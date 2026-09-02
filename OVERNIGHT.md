@@ -6,7 +6,7 @@ adds the native pieces.
 
 ## What to look at first
 
-1. **Install build 1.2.0** (link in the chat). It adds Health Connect sleep.
+1. **Install build 1.2.0**: https://expo.dev/artifacts/eas/-qg26hvsMaqv86bm1u4XMG2QOx4ueW-kRoheil7Lxfo.apk (adds Health Connect sleep; the app now needs Android 8 or newer).
 2. **Settings**: pick a weather place, choose Light/Dark, turn on "Quick add
    from the shade", set the check-in interval, connect Health Connect if
    Samsung Health syncs sleep to it.
