@@ -23,6 +23,7 @@ export default function TaskRow({ task, tag, context, onToggle, onStart, onPause
           : task.canvasCourse,
     });
   }
+  if (task.notes?.trim()) meta.push({ text: `≡ ${task.notes.trim().split('\n')[0].slice(0, 40)}` });
   if (task.done && elapsed != null) {
     meta.push({
       text: task.estimateMs ? `${formatDuration(elapsed)} (est ${formatDuration(task.estimateMs)})` : formatDuration(elapsed),

@@ -26,6 +26,7 @@ function toRemote(task) {
     status: task.done ? 'completed' : 'needsAction',
     completed: task.done ? new Date(task.doneAt || Date.now()).toISOString() : null,
     due: dueToRemote(task.due),
+    notes: task.notes || '',
   };
 }
 
@@ -49,6 +50,7 @@ function fromRemote(local, remote, googleListId) {
   return {
     ...local,
     text: remote.title?.trim() ? remote.title : local.text,
+    notes: remote.notes ?? local.notes ?? '',
     done,
     doneAt,
     startedAt,
@@ -214,6 +216,7 @@ export async function runSync(snapshot, accessToken) {
       nextTasks.push({
         id: newId('t'),
         text: r.title,
+        notes: r.notes || '',
         done,
         listId: list.id,
         personId: list.personId || null,

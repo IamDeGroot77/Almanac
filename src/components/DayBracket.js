@@ -3,6 +3,7 @@ import { colors } from '../theme';
 import { PrimaryButton, SmallButton } from './Buttons';
 import { formatTime } from '../dates';
 import { formatDuration } from '../durations';
+import EnergyPrompt from './EnergyPrompt';
 
 const LONG_DAY_MS = 20 * 60 * 60 * 1000;
 const REOPEN_WINDOW_MS = 4 * 60 * 60 * 1000;
@@ -26,6 +27,8 @@ export default function DayBracket({
   onBed,
   onReopen,
   onStartFresh,
+  energy,
+  onEnergy,
 }) {
   const now = Date.now();
 
@@ -67,11 +70,16 @@ export default function DayBracket({
   }
 
   return (
-    <View style={styles.line}>
-      <Text style={styles.lineText}>
-        {pastMidnight ? `Still ${dayLabel} · ` : ''}Up since {formatTime(openDay.wokeAt)}
-      </Text>
-      <SmallButton label="Going to bed" onPress={onBed} />
+    <View>
+      <View style={styles.line}>
+        <Text style={styles.lineText}>
+          {pastMidnight ? `Still ${dayLabel} · ` : ''}Up since {formatTime(openDay.wokeAt)}
+        </Text>
+        <SmallButton label="Going to bed" onPress={onBed} />
+      </View>
+      {onEnergy && energy?.wake == null ? (
+        <EnergyPrompt question="How's your energy this morning?" value={null} onSelect={(v) => onEnergy('wake', v)} compact />
+      ) : null}
     </View>
   );
 }

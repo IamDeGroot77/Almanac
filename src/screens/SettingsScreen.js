@@ -56,6 +56,17 @@ export default function SettingsScreen({
       </View>
 
       <View style={styles.section}>
+        <View style={styles.switchRow}>
+          <Text style={styles.sectionTitle}>Midday energy check</Text>
+          <Switch value={prefs.energyCheckins !== false} onValueChange={(v) => onSetPref('energyCheckins', v)} />
+        </View>
+        <Text style={shared.muted}>
+          A 1 PM notification asking how your energy is, answered with one tap. Morning and evening
+          checks are on the Today screen. Insights compares energy with what got done.
+        </Text>
+      </View>
+
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Check-ins while a task runs</Text>
         <Text style={shared.muted}>
           Every so often the phone asks "Still working on this?" with Still on it, Pause, and Finish

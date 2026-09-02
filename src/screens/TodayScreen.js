@@ -28,6 +28,8 @@ export default function TodayScreen({
   onGoingToBed,
   onReopenDay,
   onStartFresh,
+  energy,
+  onEnergy,
   showReview,
   reviewTasks,
   onApplyReview,
@@ -81,6 +83,8 @@ export default function TodayScreen({
           onBed={onGoingToBed}
           onReopen={onReopenDay}
           onStartFresh={onStartFresh}
+          energy={energy}
+          onEnergy={onEnergy}
         />
       )}
 

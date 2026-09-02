@@ -1,13 +1,16 @@
+import { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, shared } from '../theme';
 import Screen from '../components/Screen';
 import PersonChips from '../components/PersonChips';
 import TaskList from '../components/TaskList';
 import { SmallButton } from '../components/Buttons';
+import SearchBox, { matchesQuery } from '../components/SearchBox';
 import { personOf, personName } from '../store';
 
 export default function ListsScreen({
   lists,
+  allLists,
   allListsCount,
   people,
   personFilter,
@@ -26,7 +29,11 @@ export default function ListsScreen({
   onRefresh,
   refreshing,
   listProps,
+  allTasks,
+  contextFor,
 }) {
+  const [query, setQuery] = useState('');
+  const searchResults = query ? allTasks.filter((t) => matchesQuery(t, query, allLists)).slice(0, 50) : [];
   return (
     <Screen refreshing={refreshing} onRefresh={onRefresh}>
       <View style={styles.header}>
@@ -44,6 +51,16 @@ export default function ListsScreen({
         />
       </View>
 
+      <SearchBox
+        query={query}
+        onChange={setQuery}
+        results={searchResults}
+        contextFor={contextFor}
+        listProps={listProps}
+      />
+
+      {query ? null : (
+        <View>
       {lists.length === 0 && (
         <Text style={styles.hint}>
           {allListsCount === 0
@@ -102,6 +119,8 @@ export default function ListsScreen({
           <Text style={styles.chev}>›</Text>
         </TouchableOpacity>
       ))}
+        </View>
+      )}
     </Screen>
   );
 }

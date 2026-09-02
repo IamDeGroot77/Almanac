@@ -3,7 +3,8 @@ import { colors, shared } from '../theme';
 import Screen from '../components/Screen';
 import { formatDuration } from '../durations';
 import { formatTime, describeDayKey } from '../dates';
-import { estimateAccuracy, timeByList, timeByPerson, carryOvers, dayStats, trackedShare } from '../insights';
+import { estimateAccuracy, timeByList, timeByPerson, carryOvers, dayStats, trackedShare, energyStats } from '../insights';
+import { energyLabel } from '../components/EnergyPrompt';
 import { almanacToday } from '../clock';
 
 // Reality vs perception, and where things slip. Every section explains what
@@ -15,6 +16,7 @@ export default function InsightsScreen({ store }) {
   const carries = carryOvers(store.tasks);
   const days = dayStats(store.days);
   const share = trackedShare(store.days, store.timeLog);
+  const energy = energyStats(store.days, store.timeLog, store.tasks);
   const totalTracked = store.timeLog.reduce((s, e) => s + (e.durationMs || 0), 0);
   const today = almanacToday();
 
@@ -125,6 +127,27 @@ export default function InsightsScreen({ store }) {
           })()}
         </Section>
       )}
+
+      <Section title="Energy">
+        {!energy ? (
+          <Text style={shared.muted}>
+            Answer the morning energy check for a couple of days and this shows what low, okay, and good
+            mornings tend to produce.
+          </Text>
+        ) : (
+          <View>
+            {energy.levels
+              .filter((l) => l.days > 0)
+              .map((l) => (
+                <Row
+                  key={l.level}
+                  left={`${energyLabel(l.level)} mornings (${l.days})`}
+                  right={`${l.avgDone.toFixed(1)} done · ${formatDuration(l.avgTrackedMs) || '0m'} tracked${l.avgSleepMs ? ` · slept ${formatDuration(l.avgSleepMs)}` : ''}`}
+                />
+              ))}
+          </View>
+        )}
+      </Section>
 
       <Section title="Days">
         {!days ? (

@@ -54,6 +54,7 @@ const emptyState = () => ({
     assignmentCalendarId: null,
     quickAddNotification: false, // keep a "speak a task / note" notification in the shade
     checkinMinutes: 30, // "still working on this?" interval while a task runs; 0 = off
+    energyCheckins: true, // midday energy notification
   },
   localVersion: 0,
   sync: emptySync(),
@@ -433,15 +434,42 @@ export function useAlmanacStore() {
       finishTask(id) {
         edit((s) => finishIn(s, id, Date.now()));
       },
+      // Returns the removed task so it can be restored (Undo).
       deleteTask(id) {
+        let removed = null;
         edit((s) => {
           const gone = s.tasks.find((t) => t.id === id);
+          removed = gone || null;
           const stone = gone && tombstone(gone);
           return {
             tasks: s.tasks.filter((t) => t.id !== id),
             sync: stone ? { ...s.sync, deletedTasks: [...s.sync.deletedTasks, stone] } : s.sync,
           };
         });
+        return removed;
+      },
+      // Put deleted tasks back and drop their pending Google deletions.
+      restoreTasks(tasks) {
+        if (!tasks?.length) return;
+        const ids = new Set(tasks.map((t) => t.id));
+        const googleIds = new Set(tasks.map((t) => t.googleId).filter(Boolean));
+        edit((s) => ({
+          tasks: [...s.tasks.filter((t) => !ids.has(t.id)), ...tasks],
+          sync: { ...s.sync, deletedTasks: s.sync.deletedTasks.filter((d) => !googleIds.has(d.googleId)) },
+        }));
+      },
+      setTaskNotes(id, notes) {
+        const now = Date.now();
+        edit((s) => ({
+          tasks: s.tasks.map((t) => (t.id === id ? { ...t, notes: notes || '', updatedAt: now } : t)),
+        }));
+      },
+      // Energy check-in: slot is 'wake' | 'midday' | 'bed', value 1..3.
+      setEnergy(key, slot, value) {
+        setState((s) => ({
+          ...s,
+          days: { ...s.days, [key]: { ...(s.days[key] || {}), energy: { ...(s.days[key]?.energy || {}), [slot]: value } } },
+        }));
       },
       moveTask(id, listId) {
         const now = Date.now();
@@ -449,15 +477,19 @@ export function useAlmanacStore() {
           tasks: s.tasks.map((t) => (t.id === id ? { ...t, listId, updatedAt: now } : t)),
         }));
       },
+      // Returns the removed tasks so they can be restored (Undo).
       clearCompleted(listId) {
+        let removed = [];
         edit((s) => {
           const gone = s.tasks.filter((t) => t.listId === listId && t.done);
+          removed = gone;
           const stones = gone.map(tombstone).filter(Boolean);
           return {
             tasks: s.tasks.filter((t) => !(t.listId === listId && t.done)),
             sync: { ...s.sync, deletedTasks: [...s.sync.deletedTasks, ...stones] },
           };
         });
+        return removed;
       },
       addList(name, personId = null) {
         const trimmed = name.trim();

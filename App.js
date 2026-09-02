@@ -21,6 +21,9 @@ import useCanvasSync from './src/canvas/useCanvasSync';
 import useAssignmentCalendar from './src/assignmentCalendar';
 import { useQuickAdd } from './src/quickAdd';
 import useTaskCheckins from './src/checkins';
+import useEnergyCheckins from './src/energy';
+import useUndo from './src/hooks/useUndo';
+import UndoBar from './src/components/UndoBar';
 
 import TabBar from './src/components/TabBar';
 import TodayScreen from './src/screens/TodayScreen';
@@ -73,6 +76,8 @@ function AlmanacApp() {
   useTaskReminders(store.tasks, store.loaded);
   useQuickAdd(store, { enabled: !!store.prefs.quickAddNotification });
   useTaskCheckins(store, { minutes: store.prefs.checkinMinutes ?? 30 });
+  useEnergyCheckins(store, { enabled: store.prefs.energyCheckins !== false });
+  const { undo, offer: offerUndo } = useUndo();
   const [reminderStatus, setReminderStatus] = useState('pending');
   useEffect(() => {
     scheduleDailyReminder()
@@ -112,6 +117,8 @@ function AlmanacApp() {
             setWrapOpen(false);
           },
           onClose: () => setWrapOpen(false),
+          energy: store.days[day.today]?.energy || null,
+          onEnergy: (slot, value) => store.setEnergy(day.today, slot, value),
         }
       : null;
 
@@ -126,9 +133,15 @@ function AlmanacApp() {
     },
     onPause: store.pauseTask,
     onFinish: store.finishTask,
-    onDelete: store.deleteTask,
+    onDelete: (id) => {
+      const removed = store.deleteTask(id);
+      if (removed) offerUndo(`Deleted "${removed.text}"`, () => store.restoreTasks([removed]));
+    },
     onMove: (task) => setSheetTaskId(task.id),
-    onClearCompleted: store.clearCompleted,
+    onClearCompleted: (listId) => {
+      const removed = store.clearCompleted(listId);
+      if (removed.length) offerUndo(`Cleared ${removed.length} done`, () => store.restoreTasks(removed));
+    },
   };
 
   const personProps = {
@@ -163,6 +176,8 @@ function AlmanacApp() {
             }}
             onGoingToBed={() => setWrapOpen(true)}
             onReopenDay={(key) => store.reopenDay(key)}
+            energy={store.days[day.today]?.energy || null}
+            onEnergy={(slot, value) => store.setEnergy(day.today, slot, value)}
             onStartFresh={() => {
               if (day.openKey) store.endDay(day.openKey);
               store.startDay(day.calendarToday);
@@ -192,7 +207,10 @@ function AlmanacApp() {
         {tab === 'lists' && (
           <ListsScreen
             lists={people.visibleLists}
+            allLists={store.lists}
             allListsCount={store.lists.length}
+            allTasks={people.visibleTasks}
+            contextFor={derived.contextFor}
             {...personProps}
             googleConnected={!!google.account}
             onNewList={() => setAddingList(true)}
@@ -240,6 +258,7 @@ function AlmanacApp() {
         )}
       </View>
 
+      <UndoBar undo={undo} />
       <TabBar active={tab} onSelect={setTab} />
 
       <NameModal
@@ -300,6 +319,7 @@ function AlmanacApp() {
         onSetPerson={store.setTaskPerson}
         onSetDue={store.setTaskDue}
         onSetEstimate={store.setTaskEstimate}
+        onSetNotes={store.setTaskNotes}
         onMove={(id, listId) => {
           store.moveTask(id, listId);
           setSheetTaskId(null);

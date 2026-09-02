@@ -97,4 +97,34 @@ export function trackedShare(days, timeLog) {
   return { awakeMs: awake, trackedMs: tracked, share: awake ? tracked / awake : 0 };
 }
 
+// Energy against output: for each morning energy level, what an average day
+// looked like (tasks finished, time tracked, sleep the night before).
+export function energyStats(days, timeLog, tasks) {
+  const rows = Object.entries(days)
+    .map(([key, d]) => ({ key, ...d }))
+    .filter((d) => d.energy?.wake && d.wokeAt);
+  if (rows.length < 2) return null;
+  const byLevel = { 1: [], 2: [], 3: [] };
+  for (const d of rows) {
+    const start = d.wokeAt;
+    const end = d.sleptAt || start + 18 * 3600000;
+    const done = tasks.filter((t) => t.done && t.doneAt >= start && t.doneAt < end).length;
+    const tracked = sum(timeLog.filter((e) => e.doneAt >= start && e.doneAt < end), (e) => e.durationMs);
+    const slept = d.sleep ? d.sleep.end - d.sleep.start : null;
+    byLevel[d.energy.wake].push({ done, tracked, slept, bed: d.energy.bed ?? null });
+  }
+  const levels = [1, 2, 3].map((level) => {
+    const list = byLevel[level];
+    return {
+      level,
+      days: list.length,
+      avgDone: avg(list, (x) => x.done),
+      avgTrackedMs: avg(list, (x) => x.tracked),
+      avgSleepMs: list.some((x) => x.slept) ? avg(list.filter((x) => x.slept), (x) => x.slept) : null,
+    };
+  });
+  const answered = rows.length;
+  return { answered, levels };
+}
+
 export const fmt = formatDuration;

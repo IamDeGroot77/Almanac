@@ -30,18 +30,27 @@ export default function TaskSheet({
   onSetPerson,
   onSetDue,
   onSetEstimate,
+  onSetNotes,
   onMove,
   onClose,
 }) {
   const [customDue, setCustomDue] = useState('');
   const [customTime, setCustomTime] = useState('');
   const [dueError, setDueError] = useState('');
+  const [notes, setNotes] = useState('');
 
   useEffect(() => {
     setCustomDue('');
     setCustomTime('');
     setDueError('');
+    setNotes(task?.notes || '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task?.id]);
+
+  const close = () => {
+    if (task && (notes || '') !== (task.notes || '')) onSetNotes(task.id, notes);
+    onClose();
+  };
 
   if (!task) return null;
 
@@ -77,9 +86,9 @@ export default function TaskSheet({
   };
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible transparent animationType="fade" onRequestClose={close}>
       <KeyboardAvoidingView style={styles.wrap} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close">
+        <Pressable style={styles.backdrop} onPress={close} accessibilityLabel="Close">
           <Pressable style={styles.sheet} onPress={() => {}}>
             <ScrollView keyboardShouldPersistTaps="handled" style={styles.scroll}>
               <Text style={styles.title} numberOfLines={2}>
@@ -164,6 +173,18 @@ export default function TaskSheet({
                 ))}
               </View>
 
+              <Text style={[styles.label, styles.spaced]}>Notes</Text>
+              <TextInput
+                style={[shared.input, styles.notes]}
+                value={notes}
+                onChangeText={setNotes}
+                onBlur={() => onSetNotes(task.id, notes)}
+                onEndEditing={() => onSetNotes(task.id, notes)}
+                placeholder="Details, links, where things are…"
+                placeholderTextColor={colors.muted}
+                multiline
+              />
+
               <Text style={[styles.label, styles.spaced]}>Move to</Text>
               {destinations.map((d) => (
                 <TouchableOpacity
@@ -176,7 +197,7 @@ export default function TaskSheet({
                 </TouchableOpacity>
               ))}
 
-              <TouchableOpacity style={styles.done} onPress={onClose} accessibilityRole="button">
+              <TouchableOpacity style={styles.done} onPress={close} accessibilityRole="button">
                 <Text style={styles.doneText}>Done</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -227,6 +248,7 @@ const styles = StyleSheet.create({
   chipTextActive: { color: '#FFFFFF' },
   inputRow: { flexDirection: 'row', gap: 8, marginTop: 8, alignItems: 'center' },
   smallInput: { paddingVertical: 8, fontSize: 14 },
+  notes: { flex: 0, minHeight: 64, textAlignVertical: 'top' },
   apply: { paddingHorizontal: 12, paddingVertical: 8 },
   applyText: { color: colors.accent, fontWeight: '600' },
   error: { color: colors.danger, fontSize: 12, marginTop: 6 },

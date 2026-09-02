@@ -2,6 +2,7 @@ import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 import { colors, shared } from '../theme';
 import { PrimaryButton, SmallButton } from './Buttons';
 import { formatDuration } from '../durations';
+import EnergyPrompt from './EnergyPrompt';
 
 // End-of-day: what happened, a note for the record, and what to do with
 // anything left over.
@@ -16,6 +17,8 @@ export default function WrapUpCard({
   onPushToTomorrow,
   onGoodNight,
   onClose,
+  energy,
+  onEnergy,
 }) {
   return (
     <View style={styles.card}>
@@ -40,6 +43,10 @@ export default function WrapUpCard({
           ))}
         </View>
       )}
+
+      {onEnergy ? (
+        <EnergyPrompt question="Energy at the end of the day?" value={energy?.bed ?? null} onSelect={(v) => onEnergy('bed', v)} />
+      ) : null}
 
       <Text style={styles.label}>A line for the record</Text>
       <TextInput
