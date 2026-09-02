@@ -25,10 +25,13 @@ import { scheduleDailyReminder } from './src/notifications';
 import { useGoogleAuth } from './src/google/auth';
 import useGoogleSync from './src/google/useGoogleSync';
 
+import { useSleepDetection } from './src/sleep';
 import TabBar from './src/components/TabBar';
 import TodayScreen from './src/screens/TodayScreen';
 import ListsScreen from './src/screens/ListsScreen';
+import InsightsScreen from './src/screens/InsightsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import FocusModal from './src/components/FocusModal';
 import TaskSheet from './src/components/TaskSheet';
 import ListOptionsModal from './src/components/ListOptionsModal';
 import NameModal from './src/components/NameModal';
@@ -75,8 +78,10 @@ function AlmanacApp() {
   const google = useGoogleAuth();
   const sync = useGoogleSync(store, google);
   useTaskReminders(store.tasks, store.loaded);
+  const sleep = useSleepDetection(store);
 
   const [reminderStatus, setReminderStatus] = useState('pending');
+  const [focusTaskId, setFocusTaskId] = useState(null);
   const [reviewDismissed, setReviewDismissed] = useState(false);
   const [wrapOpen, setWrapOpen] = useState(false);
   const [sheetTaskId, setSheetTaskId] = useState(null);
@@ -181,7 +186,10 @@ function AlmanacApp() {
     tagFor,
     onAdd: addTask,
     onToggle: store.toggleTask,
-    onStart: store.startTask,
+    onStart: (id) => {
+      store.startTask(id);
+      setFocusTaskId(id);
+    },
     onFinish: store.finishTask,
     onDelete: store.deleteTask,
     onMove: (task) => setSheetTaskId(task.id),
@@ -269,6 +277,7 @@ function AlmanacApp() {
             listProps={listProps}
           />
         )}
+        {tab === 'insights' && <InsightsScreen store={store} />}
         {tab === 'settings' && (
           <SettingsScreen
             google={google}
@@ -276,6 +285,9 @@ function AlmanacApp() {
             reminderStatus={reminderStatus}
             people={store.people}
             onAddPerson={() => setAddingPerson(true)}
+            sleep={sleep}
+            prefs={store.prefs}
+            onSetPref={store.setPref}
             onStageReview={() => {
               store.devBackdateOpenTasks();
               setReviewDismissed(false);
@@ -327,6 +339,17 @@ function AlmanacApp() {
         onSave={store.saveRoutine}
         onDelete={store.deleteRoutine}
         onClose={() => setEditingRoutine(null)}
+      />
+
+      <FocusModal
+        task={focusTaskId ? store.tasks.find((t) => t.id === focusTaskId && !t.done && t.startedAt) || null : null}
+        prefs={store.prefs}
+        onPhoneFree={store.setTaskPhoneFree}
+        onFinish={(id) => {
+          store.finishTask(id);
+          setFocusTaskId(null);
+        }}
+        onClose={() => setFocusTaskId(null)}
       />
 
       <TaskSheet

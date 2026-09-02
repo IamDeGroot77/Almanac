@@ -43,7 +43,9 @@ const emptyState = () => ({
   routines: [], // see routines.js
   routineDone: {}, // routineId -> periodKey -> itemId -> true
   dayNotes: {}, // dayKey -> end-of-day note
-  days: {}, // dayKey -> { wokeAt, sleptAt } from the "I'm up" / "Going to bed" taps
+  days: {}, // dayKey -> { wokeAt, sleptAt, implicit?, autoClosed?, lastActiveAt?, sleep?: { start, end } }
+  sleepApplied: [], // detected sleep segments already folded in ("start-end")
+  prefs: { focusApp: 'focusFriend', timerApp: null }, // hand-off apps, see apps.js
   localVersion: 0,
   sync: emptySync(),
 });
@@ -117,6 +119,7 @@ function finishIn(s, id, now) {
     durationMs,
     estimateMs: target.estimateMs ?? null,
     personId: target.personId || null,
+    carriedCount: target.carriedCount || 0,
   };
   return { tasks, timeLog: [...(s.timeLog || []), entry].slice(-TIME_LOG_MAX) };
 }
@@ -272,6 +275,40 @@ export function useAlmanacStore() {
       reopenDay(key) {
         setState((s) => ({ ...s, days: { ...s.days, [key]: { ...(s.days[key] || {}), sleptAt: null } } }));
       },
+      // A detected sleep segment from the phone. Sets the bedtime on the
+      // night's day and the wake time on the morning's day, but only where
+      // the existing value was guessed or missing, or is far from the
+      // detection. Also records the segment on the wake day for insights.
+      applyDetectedSleep(seg, tolerance) {
+        setState((s) => {
+          const id = `${seg.start}-${seg.end}`;
+          if (s.sleepApplied?.includes(id)) return s;
+          const days = { ...s.days };
+          const wakeDate = new Date(seg.end);
+          const wakeKey = dayKey(wakeDate);
+          const bedDate = new Date(seg.start);
+          if (bedDate.getHours() < 6) bedDate.setDate(bedDate.getDate() - 1);
+          const bedKey = dayKey(bedDate);
+          const far = (a, b) => a == null || Math.abs(a - b) > tolerance;
+
+          const night = days[bedKey];
+          if (night?.wokeAt && (night.autoClosed || !night.sleptAt || (far(night.sleptAt, seg.start) && night.implicitClose))) {
+            days[bedKey] = { ...night, sleptAt: seg.start, autoClosed: false, sleepDetected: true };
+          }
+          const morning = days[wakeKey] || {};
+          if (!morning.wokeAt || (morning.implicit && far(morning.wokeAt, seg.end))) {
+            days[wakeKey] = { ...morning, wokeAt: seg.end, sleptAt: morning.sleptAt ?? null, implicit: false, wakeDetected: true };
+          }
+          days[wakeKey] = { ...(days[wakeKey] || {}), sleep: { start: seg.start, end: seg.end } };
+          return { ...s, days, sleepApplied: [...(s.sleepApplied || []), id].slice(-200) };
+        });
+      },
+      setPref(key, value) {
+        setState((s) => ({ ...s, prefs: { ...s.prefs, [key]: value } }));
+      },
+      setTaskPhoneFree(id, phoneFree) {
+        setState((s) => ({ ...s, tasks: s.tasks.map((t) => (t.id === id ? { ...t, phoneFree: !!phoneFree } : t)) }));
+      },
       // Forgot Good night: close a day that's been open 20h+ once the date
       // has moved on, using the last activity as the bedtime.
       autoCloseStaleDay() {
@@ -282,7 +319,7 @@ export function useAlmanacStore() {
           const now = Date.now();
           if (now - d.wokeAt < LONG_DAY_MS || open >= dayKey(new Date())) return s;
           const sleptAt = Math.max(d.lastActiveAt || 0, d.wokeAt + 60000);
-          return { ...s, days: { ...s.days, [open]: { ...d, sleptAt, autoClosed: true } } };
+          return { ...s, days: { ...s.days, [open]: { ...d, sleptAt, autoClosed: true, implicitClose: true } } };
         });
       },
       // ----- end of day -----
@@ -411,9 +448,12 @@ export function useAlmanacStore() {
         edit((s) => ({
           tasks: s.tasks
             .filter((t) => !drop.has(t.id))
-            // A timer left running overnight is meaningless; carried tasks start fresh.
+            // A timer left running overnight is meaningless; carried tasks start
+            // fresh. carriedCount feeds the "what keeps slipping" insight.
             .map((t) =>
-              carry.has(t.id) ? { ...t, listId: today, startedAt: null, updatedAt: now } : t
+              carry.has(t.id)
+                ? { ...t, listId: today, startedAt: null, updatedAt: now, carriedCount: (t.carriedCount || 0) + 1 }
+                : t
             ),
         }));
       },

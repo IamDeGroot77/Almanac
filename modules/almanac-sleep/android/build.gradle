@@ -1,0 +1,20 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'org.almanac'
+version = '1.0.0'
+
+android {
+  namespace "org.almanac.sleep"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // Google's Sleep API lives in play-services-location (ActivityRecognition).
+  implementation "com.google.android.gms:play-services-location:21.3.0"
+}

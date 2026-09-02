@@ -5,6 +5,7 @@ import { colors } from '../theme';
 export const TABS = [
   { id: 'today', label: 'Today', icon: '☀' },
   { id: 'lists', label: 'Lists', icon: '☰' },
+  { id: 'insights', label: 'Insights', icon: '◔' },
   { id: 'settings', label: 'Settings', icon: '⚙' },
 ];
 
