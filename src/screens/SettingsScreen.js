@@ -3,6 +3,7 @@ import Constants from 'expo-constants';
 import { colors, shared } from '../theme';
 import Screen from '../components/Screen';
 import GoogleSection from '../components/GoogleSection';
+import CanvasSection from '../components/CanvasSection';
 import DevSection from '../components/DevSection';
 import PersonChips from '../components/PersonChips';
 import { SmallButton } from '../components/Buttons';
@@ -20,6 +21,9 @@ export default function SettingsScreen({
   sleep,
   prefs,
   onSetPref,
+  canvas,
+  canvasSync,
+  canvasCourses,
   onStageReview,
 }) {
   const version = Constants.expoConfig?.version || '';
@@ -93,6 +97,8 @@ export default function SettingsScreen({
       </View>
 
       <GoogleSection auth={google} sync={sync} />
+
+      <CanvasSection auth={canvas} sync={canvasSync} courses={canvasCourses} />
 
       {__DEV__ && <DevSection onStageReview={onStageReview} />}
 

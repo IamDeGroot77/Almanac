@@ -27,7 +27,7 @@
     "build:dev:android": "eas build --platform android --profile development",
     "build:dev:ios": "eas build --platform ios --profile development",
     "build:preview": "eas build --platform all --profile preview",
-    "test": "node scripts/test-sync.mjs"
+    "test": "node scripts/test-sync.mjs && node scripts/test-canvas.mjs"
   },
   "private": true,
   "expo": {

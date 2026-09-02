@@ -14,6 +14,14 @@ export default function TaskRow({ task, tag, context, onToggle, onStart, onFinis
   const elapsed = task.done ? task.durationMs : inProgress ? now - task.startedAt : null;
   const meta = [];
   if (context) meta.push({ text: context });
+  if (task.canvasCourse) {
+    meta.push({
+      text:
+        task.canvasScore != null && task.canvasPoints
+          ? `${task.canvasCourse} · ${task.canvasScore}/${task.canvasPoints}`
+          : task.canvasCourse,
+    });
+  }
   if (task.done && elapsed != null) {
     meta.push({
       text: task.estimateMs ? `${formatDuration(elapsed)} (est ${formatDuration(task.estimateMs)})` : formatDuration(elapsed),

@@ -26,6 +26,8 @@ import { useGoogleAuth } from './src/google/auth';
 import useGoogleSync from './src/google/useGoogleSync';
 
 import { useSleepDetection } from './src/sleep';
+import { useCanvasAuth } from './src/canvas/auth';
+import useCanvasSync from './src/canvas/useCanvasSync';
 import TabBar from './src/components/TabBar';
 import TodayScreen from './src/screens/TodayScreen';
 import ListsScreen from './src/screens/ListsScreen';
@@ -79,6 +81,8 @@ function AlmanacApp() {
   const sync = useGoogleSync(store, google);
   useTaskReminders(store.tasks, store.loaded);
   const sleep = useSleepDetection(store);
+  const canvas = useCanvasAuth();
+  const canvasSync = useCanvasSync(store, canvas);
 
   const [reminderStatus, setReminderStatus] = useState('pending');
   const [focusTaskId, setFocusTaskId] = useState(null);
@@ -101,7 +105,7 @@ function AlmanacApp() {
   }, []);
 
   const onRefresh = async () => {
-    await Promise.all([calendar.refresh(), sync.syncNow()]);
+    await Promise.all([calendar.refresh(), sync.syncNow(), canvasSync.syncNow()]);
   };
 
   const dayListId = dayListIdForOffset(dayOffset);
@@ -288,6 +292,9 @@ function AlmanacApp() {
             sleep={sleep}
             prefs={store.prefs}
             onSetPref={store.setPref}
+            canvas={canvas}
+            canvasSync={canvasSync}
+            canvasCourses={store.canvas?.courses || []}
             onStageReview={() => {
               store.devBackdateOpenTasks();
               setReviewDismissed(false);

@@ -45,6 +45,7 @@ const emptyState = () => ({
   dayNotes: {}, // dayKey -> end-of-day note
   days: {}, // dayKey -> { wokeAt, sleptAt, implicit?, autoClosed?, lastActiveAt?, sleep?: { start, end } }
   sleepApplied: [], // detected sleep segments already folded in ("start-end")
+  canvas: { courses: [], lastSyncAt: null }, // course grades from Canvas, see canvas/sync.js
   prefs: { focusApp: 'focusFriend', timerApp: null }, // hand-off apps, see apps.js
   localVersion: 0,
   sync: emptySync(),
@@ -302,6 +303,18 @@ export function useAlmanacStore() {
           days[wakeKey] = { ...(days[wakeKey] || {}), sleep: { start: seg.start, end: seg.end } };
           return { ...s, days, sleepApplied: [...(s.sleepApplied || []), id].slice(-200) };
         });
+      },
+      // Result of a Canvas pull computed from an earlier snapshot; same merge
+      // rules as applySyncResult. Counts as a local edit so Google sync
+      // carries the School list across.
+      applyCanvasResult(result) {
+        const snapTasks = new Set(result.snapshotTaskIds);
+        const snapLists = new Set(result.snapshotListIds);
+        edit((prev) => ({
+          lists: [...result.lists, ...prev.lists.filter((l) => !snapLists.has(l.id))],
+          tasks: [...result.tasks, ...prev.tasks.filter((t) => !snapTasks.has(t.id))],
+          canvas: result.canvas,
+        }));
       },
       setPref(key, value) {
         setState((s) => ({ ...s, prefs: { ...s.prefs, [key]: value } }));

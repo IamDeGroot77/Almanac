@@ -4,6 +4,7 @@ import Screen from '../components/Screen';
 import { formatDuration } from '../durations';
 import { formatTime, describeDayKey } from '../dates';
 import { estimateAccuracy, timeByList, timeByPerson, carryOvers, dayStats, trackedShare } from '../insights';
+import { almanacToday } from '../clock';
 
 // Reality vs perception, and where things slip. Every section explains what
 // it needs when there isn't enough data yet, so the tab is never blank.
@@ -15,6 +16,7 @@ export default function InsightsScreen({ store }) {
   const days = dayStats(store.days);
   const share = trackedShare(store.days, store.timeLog);
   const totalTracked = store.timeLog.reduce((s, e) => s + (e.durationMs || 0), 0);
+  const today = almanacToday();
 
   return (
     <Screen>
@@ -95,6 +97,34 @@ export default function InsightsScreen({ store }) {
           </View>
         )}
       </Section>
+
+      {store.canvas?.courses?.length > 0 && (
+        <Section title="Coursework">
+          {store.canvas.courses.map((c) => (
+            <Row
+              key={c.id}
+              left={c.name}
+              right={`${c.score != null ? `${Math.round(c.score)}%` : '—'} · ${c.done}/${c.total} done`}
+            />
+          ))}
+          {(() => {
+            const school = store.tasks.filter((t) => t.canvasId);
+            const timed = school.filter((t) => t.durationMs);
+            const open = school.filter((t) => !t.done);
+            const overdue = open.filter((t) => t.due && t.due < today);
+            return (
+              <Text style={styles.detail}>
+                {open.length} open assignment{open.length === 1 ? '' : 's'}
+                {overdue.length ? `, ${overdue.length} overdue` : ''}
+                {timed.length
+                  ? ` · ${formatDuration(timed.reduce((s, t) => s + t.durationMs, 0))} tracked on coursework`
+                  : ''}
+                .
+              </Text>
+            );
+          })()}
+        </Section>
+      )}
 
       <Section title="Days">
         {!days ? (
