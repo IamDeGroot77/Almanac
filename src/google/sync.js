@@ -59,7 +59,12 @@ async function ignoreMissing(promise) {
 }
 
 export async function runSync(snapshot, accessToken) {
-  const { lists, tasks, sync, localVersion } = snapshot;
+  const { lists, tasks, sync, localVersion, people = [] } = snapshot;
+  const guessPerson = (name) => {
+    const lower = (name || '').toLowerCase();
+    const hit = people.find((p) => p.id !== 'me' && lower.includes(p.name.toLowerCase()));
+    return hit ? hit.id : null;
+  };
   const api = makeApi(accessToken);
   const now = Date.now();
   const lastSyncAt = sync.lastSyncAt || 0;
@@ -111,6 +116,7 @@ export async function runSync(snapshot, accessToken) {
     nextLists.push({
       id: newId('l'),
       name: r.title?.trim() || 'Untitled list',
+      personId: guessPerson(r.title),
       createdAt: now,
       updatedAt: 0,
       googleListId: r.id,
@@ -195,6 +201,7 @@ export async function runSync(snapshot, accessToken) {
         text: r.title,
         done,
         listId: list.id,
+        personId: list.personId || null,
         createdAt: Date.parse(r.updated) || now,
         doneAt: done ? completedAt || now : null,
         updatedAt: 0,

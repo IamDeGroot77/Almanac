@@ -5,7 +5,7 @@ import { formatDuration, useNow } from '../durations';
 // A task is not started, in progress (startedAt set), or done.
 //  - tapping the circle toggles done / not started (instant check-off)
 //  - Start begins timing, Finish completes it and records the duration
-export default function TaskRow({ task, onToggle, onStart, onFinish, onDelete, onLongPress }) {
+export default function TaskRow({ task, tag, onToggle, onStart, onFinish, onDelete, onLongPress }) {
   const inProgress = !task.done && !!task.startedAt;
   const now = useNow(inProgress);
 
@@ -38,7 +38,10 @@ export default function TaskRow({ task, onToggle, onStart, onFinish, onDelete, o
           {inProgress ? <View style={styles.dot} /> : null}
         </View>
         <View style={styles.body}>
-          <Text style={[styles.text, task.done && styles.textDone]}>{task.text}</Text>
+          <View style={styles.textRow}>
+            <Text style={[styles.text, task.done && styles.textDone]}>{task.text}</Text>
+            {tag ? <Text style={styles.tag}>{tag}</Text> : null}
+          </View>
           {elapsedLabel ? (
             <Text style={[styles.elapsed, inProgress && styles.elapsedActive]}>
               {inProgress ? `${elapsedLabel} so far` : elapsedLabel}
@@ -100,7 +103,18 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
   check: { color: '#FFFFFF', fontSize: 13, lineHeight: 15, fontWeight: '700' },
   body: { flex: 1 },
-  text: { fontSize: 16, color: colors.ink },
+  textRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
+  text: { fontSize: 16, color: colors.ink, flexShrink: 1 },
+  tag: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.accent,
+    backgroundColor: colors.accentSoft,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
   textDone: { textDecorationLine: 'line-through', color: colors.muted },
   elapsed: { fontSize: 12, color: colors.muted, marginTop: 1 },
   elapsedActive: { color: colors.accent },

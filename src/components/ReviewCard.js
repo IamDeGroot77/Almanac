@@ -7,7 +7,7 @@ import { describeDayKey } from '../dates';
 
 // Start-of-day review: every unfinished task from earlier days, each with a
 // Carry / Drop choice. Nothing changes until Apply is pressed.
-export default function ReviewCard({ tasks, onApply, onLater }) {
+export default function ReviewCard({ tasks, tagFor, onApply, onLater }) {
   // Set of task ids marked Drop. Everything else carries over.
   const [dropped, setDropped] = useState(() => new Set());
 
@@ -60,7 +60,10 @@ export default function ReviewCard({ tasks, onApply, onLater }) {
                 accessibilityState={{ checked: !isDrop }}
                 accessibilityLabel={`${t.text}. ${isDrop ? 'Will be dropped' : 'Will carry over'}`}
               >
-                <Text style={[styles.text, isDrop && styles.textDrop]}>{t.text}</Text>
+                <Text style={[styles.text, isDrop && styles.textDrop]}>
+                  {t.text}
+                  {tagFor && tagFor(t) ? <Text style={styles.tag}>  {tagFor(t)}</Text> : null}
+                </Text>
                 <Text style={[styles.pill, isDrop ? styles.pillDrop : styles.pillCarry]}>
                   {isDrop ? 'Drop' : 'Carry'}
                 </Text>
@@ -115,6 +118,7 @@ const styles = StyleSheet.create({
   },
   text: { flex: 1, fontSize: 16, color: colors.ink, marginRight: 12 },
   textDrop: { color: colors.muted, textDecorationLine: 'line-through' },
+  tag: { fontSize: 12, fontWeight: '700', color: colors.accent },
   pill: {
     fontSize: 13,
     fontWeight: '600',

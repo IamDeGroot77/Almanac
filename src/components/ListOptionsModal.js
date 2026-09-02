@@ -1,0 +1,80 @@
+import { Alert, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { colors, shared } from '../theme';
+import PersonChips from './PersonChips';
+import { personOf } from '../store';
+
+// Options for a named list: who it's for, rename, delete.
+export default function ListOptionsModal({ list, people, onSetPerson, onRename, onDelete, onClose }) {
+  if (!list) return null;
+
+  const confirmDelete = () =>
+    Alert.alert(`Delete "${list.name}"?`, 'Its tasks will be deleted too.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          onDelete(list.id);
+          onClose();
+        },
+      },
+    ]);
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close">
+        <Pressable style={styles.sheet} onPress={() => {}}>
+          <Text style={styles.title} numberOfLines={1}>
+            {list.name}
+          </Text>
+
+          <Text style={styles.label}>Who is this list for?</Text>
+          <PersonChips
+            people={people}
+            selected={personOf(list)}
+            onSelect={(id) => onSetPerson(list.id, id)}
+            compact
+          />
+          <Text style={styles.help}>New tasks added here are tagged for this person.</Text>
+
+          <TouchableOpacity
+            style={[styles.option, shared.hairline]}
+            onPress={() => {
+              onRename(list.id);
+              onClose();
+            }}
+            accessibilityRole="button"
+          >
+            <Text style={styles.optionText}>Rename</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.option} onPress={confirmDelete} accessibilityRole="button">
+            <Text style={[styles.optionText, styles.danger]}>Delete list</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.cancel} onPress={onClose} accessibilityRole="button">
+            <Text style={styles.cancelText}>Done</Text>
+          </TouchableOpacity>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: colors.bg,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 20,
+    paddingBottom: 32,
+  },
+  title: { fontSize: 18, fontWeight: '700', color: colors.ink, marginBottom: 14 },
+  label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginBottom: 8 },
+  help: { fontSize: 12, color: colors.muted, marginTop: 8, marginBottom: 12 },
+  option: { paddingVertical: 14 },
+  optionText: { fontSize: 17, color: colors.ink },
+  danger: { color: colors.danger },
+  cancel: { marginTop: 12, alignItems: 'center', paddingVertical: 10 },
+  cancelText: { fontSize: 16, color: colors.accent, fontWeight: '600' },
+});

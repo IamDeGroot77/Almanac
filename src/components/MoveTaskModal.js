@@ -1,9 +1,10 @@
 import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, shared } from '../theme';
-import { dayListIdForOffset } from '../store';
+import { dayListIdForOffset, personOf } from '../store';
+import PersonChips from './PersonChips';
 
-// Bottom sheet listing every place a task can be moved to.
-export default function MoveTaskModal({ task, lists, onMove, onClose }) {
+// Bottom sheet for a long-pressed task: who it's for, and where to move it.
+export default function MoveTaskModal({ task, lists, people, onSetPerson, onMove, onClose }) {
   if (!task) return null;
 
   const destinations = [
@@ -17,8 +18,18 @@ export default function MoveTaskModal({ task, lists, onMove, onClose }) {
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close">
         <Pressable style={styles.sheet} onPress={() => {}}>
           <Text style={styles.title} numberOfLines={2}>
-            Move "{task.text}" to…
+            {task.text}
           </Text>
+
+          <Text style={styles.label}>For</Text>
+          <PersonChips
+            people={people}
+            selected={personOf(task)}
+            onSelect={(id) => onSetPerson(task.id, id)}
+            compact
+          />
+
+          <Text style={[styles.label, styles.labelSpaced]}>Move to</Text>
           {destinations.map((d) => (
             <TouchableOpacity
               key={d.id}
@@ -33,7 +44,7 @@ export default function MoveTaskModal({ task, lists, onMove, onClose }) {
             <Text style={shared.muted}>No other lists yet. Create one with "+ New list" under Lists.</Text>
           )}
           <TouchableOpacity style={styles.cancel} onPress={onClose} accessibilityRole="button">
-            <Text style={styles.cancelText}>Cancel</Text>
+            <Text style={styles.cancelText}>Done</Text>
           </TouchableOpacity>
         </Pressable>
       </Pressable>
@@ -50,7 +61,9 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 32,
   },
-  title: { fontSize: 15, fontWeight: '600', color: colors.muted, marginBottom: 8 },
+  title: { fontSize: 17, fontWeight: '700', color: colors.ink, marginBottom: 14 },
+  label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginBottom: 8 },
+  labelSpaced: { marginTop: 18 },
   option: { paddingVertical: 14 },
   optionText: { fontSize: 17, color: colors.ink },
   cancel: { marginTop: 12, alignItems: 'center', paddingVertical: 10 },

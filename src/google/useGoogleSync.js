@@ -35,6 +35,7 @@ export default function useGoogleSync(store, auth) {
         tasks: current.tasks,
         sync: current.sync,
         localVersion: current.localVersion,
+        people: current.people,
       };
       const result = await runSync(snapshot, token);
       current.applySyncResult(result);

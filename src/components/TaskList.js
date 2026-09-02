@@ -14,6 +14,7 @@ export default function TaskList({
   tasks,
   emptyText,
   onAdd,
+  tagFor,
   onToggle,
   onStart,
   onFinish,
@@ -91,6 +92,7 @@ export default function TaskList({
         <TaskRow
           key={t.id}
           task={t}
+          tag={tagFor ? tagFor(t) : null}
           onToggle={onToggle}
           onStart={onStart}
           onFinish={onFinish}

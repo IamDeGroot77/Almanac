@@ -31,6 +31,11 @@ const emptyState = () => ({
   lists: [],
   tasks: [],
   timeLog: [], // finished, timed tasks: { id, taskId, text, listId, startedAt, doneAt, durationMs }
+  // Who a task or list is for. Tasks/lists carry personId; null means "me".
+  people: [
+    { id: 'me', name: 'Me' },
+    { id: 'zeke', name: 'Zeke' },
+  ],
   localVersion: 0,
   sync: emptySync(),
 });
@@ -135,16 +140,45 @@ export function useAlmanacStore() {
 
   const actions = useMemo(
     () => ({
-      addTask(text, listId) {
+      addTask(text, listId, personId = null) {
         const trimmed = text.trim();
         if (!trimmed) return;
         const now = Date.now();
         edit((s) => ({
           tasks: [
             ...s.tasks,
-            { id: newId('t'), text: trimmed, done: false, listId, createdAt: now, doneAt: null, updatedAt: now },
+            {
+              id: newId('t'),
+              text: trimmed,
+              done: false,
+              listId,
+              personId: personId === 'me' ? null : personId,
+              createdAt: now,
+              doneAt: null,
+              updatedAt: now,
+            },
           ],
         }));
+      },
+      setTaskPerson(id, personId) {
+        const now = Date.now();
+        edit((s) => ({
+          tasks: s.tasks.map((t) =>
+            t.id === id ? { ...t, personId: personId === 'me' ? null : personId, updatedAt: now } : t
+          ),
+        }));
+      },
+      setListPerson(id, personId) {
+        edit((s) => ({
+          lists: s.lists.map((l) =>
+            l.id === id ? { ...l, personId: personId === 'me' ? null : personId } : l
+          ),
+        }));
+      },
+      addPerson(name) {
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        edit((s) => ({ people: [...s.people, { id: newId('p'), name: trimmed }] }));
       },
       // Instant check-off (or undo). Works whether or not the task was started.
       toggleTask(id) {
@@ -201,12 +235,21 @@ export function useAlmanacStore() {
           };
         });
       },
-      addList(name) {
+      addList(name, personId = null) {
         const trimmed = name.trim();
         if (!trimmed) return;
         const now = Date.now();
         edit((s) => ({
-          lists: [...s.lists, { id: newId('l'), name: trimmed, createdAt: now, updatedAt: now }],
+          lists: [
+            ...s.lists,
+            {
+              id: newId('l'),
+              name: trimmed,
+              personId: personId === 'me' ? null : personId,
+              createdAt: now,
+              updatedAt: now,
+            },
+          ],
         }));
       },
       renameList(id, name) {
@@ -290,6 +333,22 @@ export function pastUnfinished(tasks) {
       (a, b) =>
         dayOfList(a.listId).localeCompare(dayOfList(b.listId)) || a.createdAt - b.createdAt
     );
+}
+
+// Effective person id for a task or list (null means "me").
+export const personOf = (item) => item.personId || 'me';
+
+export function personName(people, personId) {
+  const p = people.find((x) => x.id === (personId || 'me'));
+  return p ? p.name : 'Me';
+}
+
+// Guess a person from a list name, e.g. "Zeke School" -> zeke. Used for lists
+// that arrive from Google, where there's no other signal.
+export function guessPersonFromName(people, name) {
+  const lower = (name || '').toLowerCase();
+  const hit = people.find((p) => p.id !== 'me' && lower.includes(p.name.toLowerCase()));
+  return hit ? hit.id : null;
 }
 
 export function tasksForList(tasks, listId) {

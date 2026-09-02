@@ -258,4 +258,15 @@ assert.equal(find('paint fence').durationMs, null);
 assert.equal(find('paint fence').startedAt, null);
 console.log('9. timing survives remote completion ok');
 
+// 10. A list created in Google whose name mentions a person is tagged for them,
+//     and tasks arriving on it inherit the tag.
+state.people = [{ id: 'me', name: 'Me' }, { id: 'zeke', name: 'Zeke' }];
+const zekeListId = remote.addList('Zeke School');
+remote.addTask(zekeListId, 'permission slip');
+await sync();
+const zekeList = state.lists.find((l) => l.googleListId === zekeListId);
+assert.equal(zekeList.personId, 'zeke', 'list tagged from its name');
+assert.equal(find('permission slip').personId, 'zeke', 'task inherits list person');
+console.log('10. person guessed from Google list name ok');
+
 console.log('\nAll sync scenarios passed.');
