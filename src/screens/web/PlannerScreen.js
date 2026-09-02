@@ -7,6 +7,7 @@ import { dayKey, parseDayKey } from '../../dates';
 import { almanacToday } from '../../clock';
 import { formatDuration } from '../../durations';
 import { describeCode } from '../../weather';
+import { blocksForDay, colorForCategory, describeBlockTime } from '../../blocks';
 
 // The week as seven columns. Drag a task onto a day to move it (day-list
 // tasks) or to give it a due date (tasks from named lists). Click a task
@@ -44,8 +45,9 @@ export default function PlannerScreen({ store, people, events, forecast, onOpenT
         const due = visible.filter((t) => t.due === d.key && t.listId !== `day:${d.key}`);
         const est = [...onDay, ...due].filter((t) => !t.done).reduce((s, t) => s + (t.estimateMs || 0), 0);
         const dayEvents = (events || []).filter((e) => e.dayKey === d.key);
+        const blocks = blocksForDay(store.prefs.dayBlocks, d.date).map((b) => ({ ...b, name: (store.categories || []).find((c) => c.id === b.categoryId)?.name || 'Block', color: colorForCategory(store.categories || [], b.categoryId) }));
         const weather = forecast?.days?.find((w) => w.date === d.key);
-        return { ...d, onDay, due, est, events: dayEvents, weather };
+        return { ...d, onDay, due, est, events: dayEvents, blocks, weather };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [visible, events, forecast, weekOffset]
@@ -128,6 +130,12 @@ export default function PlannerScreen({ store, people, events, forecast, onOpenT
                   ) : null}
                 </div>
                 {c.est > 0 ? <div style={{ fontSize: 11, color: colors.muted, marginBottom: 4 }}>~{formatDuration(c.est)} planned</div> : <div style={{ height: 17 }} />}
+
+                {c.blocks.map((b) => (
+                  <div key={b.id} title={`${b.name} time, ${describeBlockTime(b)}`} style={{ fontSize: 11, color: '#fff', padding: '2px 6px', marginBottom: 3, borderRadius: 4, background: b.color, opacity: 0.85, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {b.name} · {describeBlockTime(b)}
+                  </div>
+                ))}
 
                 {c.events.map((e) => (
                   <div key={e.id} style={{ fontSize: 12, color: colors.muted, padding: '3px 0', borderBottom: `1px solid ${colors.line}` }}>
