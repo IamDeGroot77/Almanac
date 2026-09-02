@@ -7,6 +7,15 @@ import { applyTheme, colors } from './src/theme';
 // App and its components, whose StyleSheets bake the palette in at import.
 const THEME_KEY = 'almanac:theme';
 
+// Uncaught JS errors: log them to the dev server before the default handler runs.
+if (globalThis.ErrorUtils?.setGlobalHandler) {
+  const previous = globalThis.ErrorUtils.getGlobalHandler?.();
+  globalThis.ErrorUtils.setGlobalHandler((err, isFatal) => {
+    console.error('Uncaught', isFatal ? '(fatal)' : '', err?.message || err, err?.stack || '');
+    previous?.(err, isFatal);
+  });
+}
+
 export default function Root() {
   const [App, setApp] = useState(null);
 

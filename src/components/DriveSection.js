@@ -40,8 +40,8 @@ export default function DriveSection({ auth, drive }) {
       {auth.configured && auth.account && (
         <View>
           <Text style={shared.muted}>Signed in as {auth.account}.</Text>
-          <Text style={[shared.muted, drive.state === 'error' && styles.error]}>
-            {drive.state === 'syncing' ? 'Syncing…' : drive.state === 'error' ? `Sync failed: ${drive.error}` : describeLastSync(drive.lastSyncAt)}
+          <Text style={[shared.muted, (drive.state === 'error' || drive.state === 'reconnect') && styles.error]}>
+            {drive.state === 'syncing' ? 'Syncing…' : drive.state === 'reconnect' ? drive.error : drive.state === 'error' ? `Sync failed: ${drive.error}` : describeLastSync(drive.lastSyncAt)}
           </Text>
           <View style={shared.row}>
             <SmallButton label="Sync now" onPress={drive.syncNow} />

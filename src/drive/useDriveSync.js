@@ -6,6 +6,7 @@ import { mergeStates, shareable, sameShareable } from './merge';
 
 const DEBOUNCE_MS = 5000;
 const MIN_INTERVAL_MS = 20000;
+const BACKOFF_MS = [30000, 60000, 120000, 300000, 900000]; // after repeated failures
 
 // Keeps this device and the private Drive file in step: download, merge,
 // apply locally, upload if anything changed. Runs on sign-in, on
@@ -19,6 +20,9 @@ export default function useDriveSync(store, auth) {
   const lastRun = useRef(0);
   const fileId = useRef(null);
   const lastSyncedVersion = useRef(-1);
+  const failures = useRef(0);
+  const blockedUntil = useRef(0);
+  const needsReconnect = useRef(false);
 
   const syncNow = useCallback(
     async ({ force = false } = {}) => {
@@ -28,6 +32,8 @@ export default function useDriveSync(store, auth) {
         queued.current = true;
         return;
       }
+      if (needsReconnect.current && !force) return; // the token lacks the Drive scope; only a reconnect fixes it
+      if (!force && Date.now() < blockedUntil.current) return;
       if (!force && Date.now() - lastRun.current < MIN_INTERVAL_MS && current.localVersion === lastSyncedVersion.current) return;
       inFlight.current = true;
       setStatus((s) => ({ ...s, state: 'syncing', error: null }));
@@ -51,16 +57,23 @@ export default function useDriveSync(store, auth) {
         }
         lastRun.current = Date.now();
         lastSyncedVersion.current = storeRef.current.localVersion;
+        failures.current = 0;
+        blockedUntil.current = 0;
+        needsReconnect.current = false;
         setStatus({ state: 'idle', error: null, lastSyncAt: Date.now() });
       } catch (err) {
-        console.warn('Drive sync failed', err);
-        setStatus((s) => ({ ...s, state: 'error', error: err.message || 'Sync failed' }));
+        const scope = /insufficient authentication scopes/i.test(err.message || '');
+        failures.current += 1;
+        blockedUntil.current = Date.now() + BACKOFF_MS[Math.min(failures.current - 1, BACKOFF_MS.length - 1)];
+        if (scope) needsReconnect.current = true;
+        if (failures.current <= 3 || scope) console.warn('Drive sync failed', err.message || err);
+        setStatus((s) => ({ ...s, state: scope ? 'reconnect' : 'error', error: scope ? 'Google needs to be connected again so Almanac can use Drive. Settings → Google → Disconnect, then Connect.' : err.message || 'Sync failed' }));
         if (err instanceof DriveApiError && err.status === 401) await auth.signOut();
       } finally {
         inFlight.current = false;
         if (queued.current) {
           queued.current = false;
-          syncNow();
+          if (!failures.current) syncNow();
         }
       }
     },
