@@ -46,7 +46,13 @@ const emptyState = () => ({
   days: {}, // dayKey -> { wokeAt, sleptAt, implicit?, autoClosed?, lastActiveAt?, sleep?: { start, end } }
   sleepApplied: [], // detected sleep segments already folded in ("start-end")
   canvas: { courses: [], lastSyncAt: null }, // course grades from Canvas, see canvas/sync.js
-  prefs: { focusApp: 'focusFriend', timerApp: null }, // hand-off apps, see apps.js
+  calendarEvents: {}, // taskId -> { eventId, key } for assignments mirrored to the calendar
+  prefs: {
+    focusApp: 'focusFriend', // hand-off apps, see apps.js
+    timerApp: null,
+    assignmentsToCalendar: false, // mirror Canvas assignments into a calendar
+    assignmentCalendarId: null,
+  },
   localVersion: 0,
   sync: emptySync(),
 });
@@ -84,7 +90,13 @@ async function load() {
   const raw = await AsyncStorage.getItem(STORAGE_KEY);
   if (raw) {
     const parsed = JSON.parse(raw);
-    return prune({ ...emptyState(), ...parsed, sync: { ...emptySync(), ...(parsed.sync || {}) } });
+    const base = emptyState();
+    return prune({
+      ...base,
+      ...parsed,
+      sync: { ...emptySync(), ...(parsed.sync || {}) },
+      prefs: { ...base.prefs, ...(parsed.prefs || {}) },
+    });
   }
   const legacy = await AsyncStorage.getItem(LEGACY_TASKS_KEY);
   if (legacy) {
@@ -318,6 +330,15 @@ export function useAlmanacStore() {
       },
       setPref(key, value) {
         setState((s) => ({ ...s, prefs: { ...s.prefs, [key]: value } }));
+      },
+      linkCalendarEvent(taskId, eventId, key) {
+        setState((s) => ({ ...s, calendarEvents: { ...(s.calendarEvents || {}), [taskId]: { eventId, key } } }));
+      },
+      unlinkCalendarEvent(taskId) {
+        setState((s) => {
+          const { [taskId]: _gone, ...rest } = s.calendarEvents || {};
+          return { ...s, calendarEvents: rest };
+        });
       },
       setTaskPhoneFree(id, phoneFree) {
         setState((s) => ({ ...s, tasks: s.tasks.map((t) => (t.id === id ? { ...t, phoneFree: !!phoneFree } : t)) }));

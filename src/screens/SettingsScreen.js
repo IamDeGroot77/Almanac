@@ -4,6 +4,7 @@ import { colors, shared } from '../theme';
 import Screen from '../components/Screen';
 import GoogleSection from '../components/GoogleSection';
 import CanvasSection from '../components/CanvasSection';
+import AssignmentCalendarSection from '../components/AssignmentCalendarSection';
 import DevSection from '../components/DevSection';
 import PersonChips from '../components/PersonChips';
 import { SmallButton } from '../components/Buttons';
@@ -24,6 +25,8 @@ export default function SettingsScreen({
   canvas,
   canvasSync,
   canvasCourses,
+  onToggleAssignmentCalendar,
+  linkedEventCount,
   onStageReview,
 }) {
   const version = Constants.expoConfig?.version || '';
@@ -99,6 +102,15 @@ export default function SettingsScreen({
       <GoogleSection auth={google} sync={sync} />
 
       <CanvasSection auth={canvas} sync={canvasSync} courses={canvasCourses} />
+
+      <AssignmentCalendarSection
+        connected={canvas.connected}
+        enabled={!!prefs.assignmentsToCalendar}
+        calendarId={prefs.assignmentCalendarId}
+        onToggle={onToggleAssignmentCalendar}
+        onPickCalendar={(id) => onSetPref('assignmentCalendarId', id)}
+        linkedCount={linkedEventCount}
+      />
 
       {__DEV__ && <DevSection onStageReview={onStageReview} />}
 

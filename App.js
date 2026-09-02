@@ -28,6 +28,7 @@ import useGoogleSync from './src/google/useGoogleSync';
 import { useSleepDetection } from './src/sleep';
 import { useCanvasAuth } from './src/canvas/auth';
 import useCanvasSync from './src/canvas/useCanvasSync';
+import useAssignmentCalendar from './src/assignmentCalendar';
 import TabBar from './src/components/TabBar';
 import TodayScreen from './src/screens/TodayScreen';
 import ListsScreen from './src/screens/ListsScreen';
@@ -83,6 +84,14 @@ function AlmanacApp() {
   const sleep = useSleepDetection(store);
   const canvas = useCanvasAuth();
   const canvasSync = useCanvasSync(store, canvas);
+  const assignmentCalendar = useAssignmentCalendar(store, {
+    enabled: !!store.prefs.assignmentsToCalendar && canvas.connected,
+    calendarId: store.prefs.assignmentCalendarId,
+  });
+  const toggleAssignmentCalendar = async (on) => {
+    store.setPref('assignmentsToCalendar', on);
+    if (!on) await assignmentCalendar.removeAll();
+  };
 
   const [reminderStatus, setReminderStatus] = useState('pending');
   const [focusTaskId, setFocusTaskId] = useState(null);
@@ -295,6 +304,8 @@ function AlmanacApp() {
             canvas={canvas}
             canvasSync={canvasSync}
             canvasCourses={store.canvas?.courses || []}
+            onToggleAssignmentCalendar={toggleAssignmentCalendar}
+            linkedEventCount={Object.keys(store.calendarEvents || {}).length}
             onStageReview={() => {
               store.devBackdateOpenTasks();
               setReviewDismissed(false);
