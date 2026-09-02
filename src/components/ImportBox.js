@@ -53,7 +53,7 @@ export default function ImportBox({ people, lists, routines = [], categories = [
       ))}
       {plan.routines.map((r) => (
         <Text key={'r' + r.name} style={styles.previewLine}>
-          {r.name} ({r.cadence} routine{r.isNew ? ', new' : ''}): {r.items.map((it) => (it.type === 'task' ? it.text : `${it.count} from ${it.fromName}`)).join(' · ') || 'empty'}
+          {r.name} ({r.cadence} routine{r.isNew ? ', new' : ''}{r.minutesPerDay ? `, ${r.minutesPerDay} min a day` : ''}{r.warmup ? ', stretch first' : ''}): {r.items.map((it) => (it.type === 'task' ? it.text : it.type === 'minutes' ? `${it.minutes} min from ${it.fromName}` : `${it.count} from ${it.fromName}`)).join(' · ') || 'empty'}
         </Text>
       ))}
       <View style={styles.row}>

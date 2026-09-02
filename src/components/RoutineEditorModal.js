@@ -30,6 +30,9 @@ export default function RoutineEditorModal({ routine, lists, routines = [], peop
   const [itemDays, setItemDays] = useState([]);
   const [quotaListId, setQuotaListId] = useState(null);
   const [quotaCount, setQuotaCount] = useState(1);
+  const [quotaMode, setQuotaMode] = useState('items'); // items | minutes
+  const [minutesPerDay, setMinutesPerDay] = useState(0);
+  const [warmup, setWarmup] = useState(false);
 
   useEffect(() => {
     if (!routine) return;
@@ -37,6 +40,8 @@ export default function RoutineEditorModal({ routine, lists, routines = [], peop
     setCadence(routine.cadence || 'daily');
     setPersonId(routine.personId || 'me');
     setItems(routine.items || []);
+    setMinutesPerDay(routine.minutesPerDay || 0);
+    setWarmup(!!routine.warmup);
     setItemText('');
     setItemDays([]);
     setQuotaListId(lists[0]?.id || null);
@@ -56,7 +61,9 @@ export default function RoutineEditorModal({ routine, lists, routines = [], peop
   const addQuota = () => {
     if (!quotaListId) return;
     const item = quotaListId.startsWith('r:')
-      ? { id: newId('ri'), type: 'quota', routineId: quotaListId.slice(2), count: quotaCount }
+      ? quotaMode === 'minutes'
+        ? { id: newId('ri'), type: 'minutes', routineId: quotaListId.slice(2), minutes: quotaCount }
+        : { id: newId('ri'), type: 'quota', routineId: quotaListId.slice(2), count: quotaCount }
       : { id: newId('ri'), type: 'quota', listId: quotaListId, count: quotaCount };
     setItems([...items, item]);
     setQuotaCount(1);
@@ -69,7 +76,7 @@ export default function RoutineEditorModal({ routine, lists, routines = [], peop
 
   const save = () => {
     if (!name.trim()) return;
-    onSave({ ...routine, name: name.trim(), cadence, personId, items });
+    onSave({ ...routine, name: name.trim(), cadence, personId, items, minutesPerDay: minutesPerDay || null, warmup });
     onClose();
   };
 
@@ -132,13 +139,25 @@ export default function RoutineEditorModal({ routine, lists, routines = [], peop
               <Text style={styles.label}>For</Text>
               <PersonChips people={people} selected={personId} onSelect={setPersonId} compact />
 
+              <Text style={styles.label}>Minutes a day (a minute is a point; 0 = untimed)</Text>
+              <PersonChips
+                people={[0, 10, 15, 20, 30, 45, 60].map((m) => ({ id: String(m), name: m ? `${m} min` : 'Off' }))}
+                selected={String(minutesPerDay)}
+                onSelect={(id) => setMinutesPerDay(Number(id))}
+                compact
+              />
+              <TouchableOpacity onPress={() => setWarmup(!warmup)} style={styles.toggleRow} accessibilityRole="checkbox" accessibilityState={{ checked: warmup }}>
+                <View style={[styles.toggleBox, warmup && styles.toggleBoxOn]}>{warmup ? <Text style={styles.toggleCheck}>✓</Text> : null}</View>
+                <Text style={styles.toggleText}>Suggest a stretch before the first item in an hour</Text>
+              </TouchableOpacity>
+
               <Text style={styles.label}>Items</Text>
               {items.length === 0 && <Text style={shared.muted}>No items yet.</Text>}
               {items.map((it) => (
                 <View key={it.id} style={[styles.itemRow, shared.hairline]}>
                   <View style={styles.itemBody}>
                     <Text style={styles.itemText}>
-                      {it.type === 'task' ? it.text : `${it.count} from ${sourceName(it)}`}
+                      {it.type === 'task' ? it.text : it.type === 'minutes' ? `${it.minutes} min from ${sourceName(it)}` : `${it.count} from ${sourceName(it)}`}
                     </Text>
                     {it.type === 'task' && cadence === 'daily' ? (
                       <Text style={styles.itemMeta}>{describeDays(it.days)}</Text>
@@ -196,7 +215,10 @@ export default function RoutineEditorModal({ routine, lists, routines = [], peop
                         <Text style={styles.stepText}>+</Text>
                       </TouchableOpacity>
                     </View>
-                    <Text style={styles.from}>from</Text>
+                    <Text style={styles.from}>{quotaMode === 'minutes' ? 'min from' : 'from'}</Text>
+                    {quotaListId?.startsWith('r:') ? (
+                      <SmallButton label={quotaMode === 'minutes' ? 'Count minutes' : 'Count items'} onPress={() => setQuotaMode(quotaMode === 'minutes' ? 'items' : 'minutes')} />
+                    ) : null}
                   </View>
                   <PersonChips
                     people={[...lists.map((l) => ({ id: l.id, name: l.name })), ...otherRoutines.map((r) => ({ id: `r:${r.id}`, name: `${r.name} (routine)` }))]}
@@ -242,6 +264,11 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 16, marginBottom: 8 },
   spaced: { marginTop: 22 },
   segment: { flexDirection: 'row', backgroundColor: colors.accentSoft, borderRadius: 10, padding: 3 },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
+  toggleBox: { width: 20, height: 20, borderRadius: 5, borderWidth: 1.5, borderColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  toggleBoxOn: { backgroundColor: colors.accent },
+  toggleCheck: { color: colors.onAccent, fontSize: 12, fontWeight: '700' },
+  toggleText: { fontSize: 14, color: colors.ink, flex: 1 },
   segmentButton: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
   segmentActive: { backgroundColor: colors.bg },
   segmentText: { fontSize: 14, fontWeight: '600', color: colors.accent },

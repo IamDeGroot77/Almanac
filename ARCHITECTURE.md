@@ -66,6 +66,7 @@ snapshots, and native features hide behind small modules.
 ## Lists that do something
 
 - Timeline lists (`src/consider.js`, tested by `scripts/test-lists.mjs`): a named list with a horizon (30/90/180 days, set in list options or via "(3 months)" in an import header) gives every task a due date that far out; after the nudge period (7/21/30 days) a task shows on Today under "Worth considering" with Today / Not yet (`snoozeConsideration` stamps `nudgedAt`).
+- Timed routine items: a routine with `minutesPerDay` (a points goal, a minute is a point) or `warmup` shows Start on each item; Start hands off to the timer app (pref `timerApp`) and coming back to Almanac logs the elapsed time to `routineLog` (shared, merged by id) and ticks the item. Under a minute or over three hours logs nothing. `warmup` suggests a stretch when nothing on that routine finished in the last hour. A daily item `{ type: 'minutes', routineId, minutes }` reads today's minutes (`minutesToday`). Tested by `scripts/test-routines.mjs`.
 - Routine quotas can count another routine's ticks (`{ type: 'quota', routineId, count }`), so a daily checklist can say "1 from Exercise" where Exercise is a weekly routine of workouts.
 - Calendar rules (`src/calendarRules.js` pure, `src/useCalendarRules.js` on the phone, Settings → Calendar rules, pref `calendarRules` shared across devices): when an event whose title contains a keyword has ended, a task is made from a template ("Write article: {title}") on a chosen list, due N days later; `eventTasks` remembers which events were handled.
 

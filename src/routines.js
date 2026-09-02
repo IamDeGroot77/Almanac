@@ -7,6 +7,10 @@ import { almanacToday } from './clock.js';
 //   { id, type: 'task',  text, days?: number[] }   // days: 0=Sun..6=Sat, daily only
 //   { id, type: 'quota', listId, count }           // "count tasks from listId"
 //   { id, type: 'quota', routineId, count }        // "count items ticked on routineId" (e.g. 1 workout a day)
+//   { id, type: 'minutes', routineId, minutes }    // "minutes logged today on routineId" (a minute is a point)
+// A routine may carry minutesPerDay (a points goal) and warmup (suggest a
+// stretch before the first timed item in an hour). Timed items are logged in
+// state.routineLog: { id, routineId, itemId, text, startedAt, endedAt, durationMs }.
 // Plain items are ticked per period in state.routineDone[routineId][periodKey][itemId].
 // Quota progress is derived from tasks finished in the period.
 //
@@ -67,11 +71,35 @@ export function activeItems(routine, date) {
 }
 
 // Progress for one item in the period containing the anchored day.
-export function itemProgress(routine, item, { tasks, routineDone }, date) {
+export function minutesToday(routineId, routineLog, date) {
+  const a = anchor(date);
+  const start = new Date(a).setHours(0, 0, 0, 0);
+  const end = start + 86400000;
+  let ms = 0;
+  for (const e of routineLog || []) {
+    if (e.routineId !== routineId) continue;
+    const at = e.endedAt || e.startedAt || 0;
+    if (at >= start && at < end) ms += e.durationMs || 0;
+  }
+  return Math.round(ms / 60000);
+}
+
+// Stretch first when nothing on this routine finished in the last hour.
+export function needsWarmup(routineId, routineLog, now = Date.now()) {
+  const last = (routineLog || []).filter((e) => e.routineId === routineId).reduce((m, e) => Math.max(m, e.endedAt || 0), 0);
+  return now - last > 3600000;
+}
+
+export function itemProgress(routine, item, { tasks, routineDone, routineLog }, date) {
   if (item.type === 'task') {
     const key = periodKey(routine, date);
     const done = !!routineDone?.[routine.id]?.[key]?.[item.id];
     return { done: done ? 1 : 0, target: 1, complete: done };
+  }
+  if (item.type === 'minutes') {
+    const done = minutesToday(item.routineId, routineLog, date);
+    const complete = done >= item.minutes;
+    return { done: complete ? 1 : 0, target: 1, complete, minutes: { done: Math.min(done, item.minutes), target: item.minutes } };
   }
   const { start, end } = periodBounds(routine, date);
   let done = 0;

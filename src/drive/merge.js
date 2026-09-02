@@ -94,6 +94,9 @@ export function mergeStates(a, b, now = Date.now()) {
     }
   }
 
+  const routineLog = [...new Map([...(a.routineLog || []), ...(b.routineLog || [])].map((e) => [e.id, e])).values()]
+    .sort((p, q) => (p.endedAt || 0) - (q.endedAt || 0))
+    .slice(-2000);
   const timeLog = [...new Map([...(a.timeLog || []), ...(b.timeLog || [])].map((e) => [e.id, e])).values()]
     .sort((p, q) => (p.doneAt || 0) - (q.doneAt || 0))
     .slice(-TIME_LOG_MAX);
@@ -134,6 +137,7 @@ export function mergeStates(a, b, now = Date.now()) {
     people,
     routineDone,
     timeLog,
+    routineLog,
     days,
     dayNotes,
     dayNoteMeta,
@@ -157,6 +161,7 @@ export function shareable(state) {
     people: state.people || [],
     routineDone: state.routineDone || {},
     timeLog: state.timeLog || [],
+    routineLog: state.routineLog || [],
     days: state.days || {},
     dayNotes: state.dayNotes || {},
     dayNoteMeta: state.dayNoteMeta || {},

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dayKey, todayKey } from './dates';
 import { almanacToday, almanacDayKeyFromOffset, openDayKey } from './clock.js';
 import { newId, DONE_RETENTION_MS } from './ids';
 import { dueForHorizon } from './consider';
+import { periodKey as periodKeyFor } from './routines';
 
 export { newId, DONE_RETENTION_MS };
 
@@ -44,6 +45,8 @@ const emptyState = () => ({
   routines: [], // see routines.js
   categories: [], // { id, name, color?, createdAt, updatedAt } — lists carry categoryId; see blocks.js
   routineDone: {}, // routineId -> periodKey -> itemId -> true
+  routineLog: [], // timed routine items, see routines.js (shared)
+  routineActive: null, // { routineId, itemId, text, startedAt } while a routine item is being timed (this device)
   dayNotes: {}, // dayKey -> end-of-day note
   days: {}, // dayKey -> { wokeAt, sleptAt, implicit?, autoClosed?, lastActiveAt?, sleep?: { start, end } }
   sleepApplied: [], // detected sleep segments already folded in ("start-end")
@@ -194,6 +197,9 @@ export function useAlmanacStore() {
   // Also keeps the day bracket honest when buttons get forgotten: an edit
   // with no open day starts today implicitly, and any edit stamps the open
   // day's lastActiveAt (used as the bedtime if Good night never comes).
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
   const edit = useCallback(
     (fn) =>
       setState((prev) => {
@@ -371,6 +377,37 @@ export function useAlmanacStore() {
             routineDone: { ...s.routineDone, [routineId]: { ...forRoutine, [periodKey]: forPeriod } },
           };
         });
+      },
+      // ----- timed routine items -----
+      startRoutineItem(routineId, itemId, text) {
+        setState((s) => ({ ...s, routineActive: { routineId, itemId, text, startedAt: Date.now() } }));
+      },
+      cancelRoutineItem() {
+        setState((s) => ({ ...s, routineActive: null }));
+      },
+      // Logs the elapsed time, ticks the item, and returns the entry. Under a
+      // minute logs nothing; over three hours is a forgotten timer, also nothing.
+      finishRoutineItem({ minMs = 60000, maxMs = 3 * 3600000 } = {}) {
+        const active = stateRef.current.routineActive;
+        if (!active) return null;
+        const now = Date.now();
+        const durationMs = now - active.startedAt;
+        if (durationMs < minMs || durationMs > maxMs) {
+          setState((s) => ({ ...s, routineActive: null }));
+          return { ...active, durationMs, skipped: true };
+        }
+        const entry = { id: newId('rl'), routineId: active.routineId, itemId: active.itemId, text: active.text, startedAt: active.startedAt, endedAt: now, durationMs };
+        edit((s) => {
+          const routine = s.routines.find((r) => r.id === active.routineId);
+          const next = { routineLog: [...(s.routineLog || []), entry].slice(-2000), routineActive: null };
+          if (routine && active.itemId !== 'warmup') {
+            const key = periodKeyFor(routine);
+            const forRoutine = s.routineDone?.[routine.id] || {};
+            next.routineDone = { ...s.routineDone, [routine.id]: { ...forRoutine, [key]: { ...(forRoutine[key] || {}), [active.itemId]: now } } };
+          }
+          return next;
+        });
+        return entry;
       },
       // ----- day bracket -----
       // These bypass `edit` so they don't stamp activity or implicitly start days.
@@ -778,7 +815,11 @@ export function useAlmanacStore() {
           }
           for (const r of plan.routines || []) {
             const existing = byName(routines, r.name);
-            const target = existing || { id: newId('r'), name: r.name, cadence: r.cadence, personId: r.personId || null, items: [], createdAt: now };
+            const target = existing || { id: newId('r'), name: r.name, cadence: r.cadence, personId: r.personId || null, minutesPerDay: r.minutesPerDay || null, warmup: !!r.warmup, items: [], createdAt: now };
+            if (existing) {
+              if (r.minutesPerDay && !existing.minutesPerDay) existing.minutesPerDay = r.minutesPerDay;
+              if (r.warmup && !existing.warmup) existing.warmup = true;
+            }
             if (!existing) {
               routines.push(target);
               added.routines += 1;
@@ -787,6 +828,10 @@ export function useAlmanacStore() {
             for (const it of r.items) {
               if (it.type === 'task') {
                 if (!items.some((x) => x.type === 'task' && x.text.toLowerCase() === it.text.toLowerCase())) items.push({ id: newId('ri'), type: 'task', text: it.text, days: [] });
+              } else if (it.type === 'minutes') {
+                const routine = byName(routines, it.fromName);
+                if (!routine) continue;
+                if (!items.some((x) => x.type === 'minutes' && x.routineId === routine.id)) items.push({ id: newId('ri'), type: 'minutes', routineId: routine.id, minutes: it.minutes });
               } else {
                 const list = byName(lists, it.fromName);
                 const routine = !list && byName(routines, it.fromName);

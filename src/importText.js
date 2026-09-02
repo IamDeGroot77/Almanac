@@ -11,9 +11,10 @@ import { HORIZONS } from './consider.js';
 //   Zeke (for Zeke):               <- a list tagged for a person
 //   GFD (in Work):                 <- a list in a category (created if new)
 //   Daily checklist (daily):       <- a routine that starts over every day
-//   Exercise (weekly, for me):     <- a routine that starts over every week
+//   Exercise (weekly, 30 min/day, stretch first):  <- a weekly routine with a points goal and a warm-up
 //   - milk                         <- a task (or a routine item)
 //   - 1 from Exercise              <- in a routine: a quota, counted from that list or routine
+//   - 30 min from Exercise         <- in a routine: minutes logged today on that routine
 //   - call dentist by fri 3pm      <- "by/due/on <date>" and a time set the due date
 //   - pay rent 9/1 5pm             <- a trailing date and time also work
 //     - find the login             <- an indented line under a task is a step
@@ -41,7 +42,7 @@ export function parseImport(text, { people = [], lists = [], routines = [], cate
     if (!name) return;
     if (options.cadence) {
       const existing = routines.find((r) => r.name.toLowerCase() === name.toLowerCase());
-      current = { kind: 'routine', name: existing ? existing.name : name, id: existing?.id || null, isNew: !existing, cadence: options.cadence, personId: options.personId ?? null, items: [] };
+      current = { kind: 'routine', name: existing ? existing.name : name, id: existing?.id || null, isNew: !existing, cadence: options.cadence, personId: options.personId ?? null, minutesPerDay: options.minutesPerDay || null, warmup: !!options.warmup, items: [] };
       plan.routines.push(current);
     } else {
       const dayId = dayListFor(name, now);
@@ -76,8 +77,10 @@ export function parseImport(text, { people = [], lists = [], routines = [], cate
     if (!current) openHeader('Inbox:');
 
     if (current.kind === 'routine') {
-      const quota = body.match(/^(\d+)\s+from\s+(.+)$/i);
-      if (quota) current.items.push({ type: 'quota', count: Number(quota[1]), fromName: quota[2].trim() });
+      const mins = body.match(/^(\d+)\s*(?:min|mins|minutes)\s+from\s+(.+)$/i);
+      const quota = !mins && body.match(/^(\d+)\s+from\s+(.+)$/i);
+      if (mins) current.items.push({ type: 'minutes', minutes: Number(mins[1]), fromName: mins[2].trim() });
+      else if (quota) current.items.push({ type: 'quota', count: Number(quota[1]), fromName: quota[2].trim() });
       else {
         const item = parseTaskLine(body, findPerson);
         if (item) current.items.push({ type: 'task', text: item.text });
@@ -115,6 +118,8 @@ export function parseHeader(rawLine, findPerson = () => undefined) {
     for (const part of m[2].split(',').map((p) => p.trim().toLowerCase()).filter(Boolean)) {
       if (part === 'daily' || part === 'every day') options.cadence = 'daily';
       else if (part === 'weekly' || part === 'every week') options.cadence = 'weekly';
+      else if (/^(\d+)\s*(?:min|mins|minutes)\s*(?:\/|a|per)\s*day$/.test(part)) options.minutesPerDay = Number(part.match(/^(\d+)/)[1]);
+      else if (part === 'stretch first' || part === 'warmup' || part === 'warm-up') options.warmup = true;
       else if (/^in\s+/.test(part)) options.categoryName = part.replace(/^in\s+/, '').replace(/\b\w/g, (ch) => ch.toUpperCase());
       else if (/^for\s+/.test(part)) {
         const id = findPerson(part.replace(/^for\s+/, ''));

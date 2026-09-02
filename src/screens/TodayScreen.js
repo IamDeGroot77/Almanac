@@ -64,6 +64,11 @@ export default function TodayScreen({
   onConsiderLater,
   allRoutines,
   blockInfo,
+  routineActive,
+  timerAppName,
+  onStartRoutineItem,
+  onFinishRoutineItem,
+  onCancelRoutineItem,
 }) {
   const isToday = dayOffset === 0;
   const dayKey = almanacDayKeyFromOffset(dayOffset);
@@ -184,6 +189,11 @@ export default function TodayScreen({
               state={routineState}
               lists={lists}
               routines={allRoutines}
+              active={routineActive}
+              timerAppName={timerAppName}
+              onStartItem={onStartRoutineItem}
+              onFinishItem={onFinishRoutineItem}
+              onCancelItem={onCancelRoutineItem}
               onToggleItem={onToggleRoutineItem}
               onEdit={onEditRoutine}
             />

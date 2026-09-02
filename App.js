@@ -27,6 +27,10 @@ import useDayBracketNotifications, { DEFAULT_BEDTIME_HOUR } from './src/dayBrack
 import { planAutoStart, describeAutoStart } from './src/dayAuto';
 import { considerations } from './src/consider';
 import { currentBlock, nextBlock, categoryTasks, colorForCategory, blocksForDay } from './src/blocks';
+import * as IntentLauncher from 'expo-intent-launcher';
+import { APP_CATALOG } from './src/apps';
+import { isWeb } from './src/platform';
+import { formatDuration } from './src/durations';
 import useCalendarRules from './src/useCalendarRules';
 import { dayListId } from './src/store';
 import useUndo from './src/hooks/useUndo';
@@ -147,6 +151,11 @@ function AlmanacApp() {
   storeRef.current = store;
   const onAppOpen = () => {
     const s = storeRef.current;
+    if (s.routineActive) {
+      const entry = s.finishRoutineItem();
+      if (entry && !entry.skipped) setToast({ text: `${entry.text}: ${formatDuration(entry.durationMs) || '1m'} logged.`, at: Date.now() });
+      else if (entry?.skipped) setToast({ text: entry.durationMs < 60000 ? `${entry.text}: under a minute, nothing logged.` : `${entry.text}: timer ran too long, nothing logged.`, at: Date.now() });
+    }
     const plan = planAutoStart(s, Date.now());
     if (plan) {
       s.applyAutoStart(plan);
@@ -253,6 +262,7 @@ function AlmanacApp() {
   };
 
   // "Just one thing": pick the next task worth starting and open Focus on it.
+  const timerApp = APP_CATALOG.find((a) => a.id === store.prefs.timerApp) || null;
   const block = currentBlock(store.prefs.dayBlocks, Date.now());
   const blockPicksAll = block ? categoryTasks(people.visibleTasks, store.lists, block.categoryId) : [];
   const justOneThing = () => {
@@ -336,7 +346,7 @@ function AlmanacApp() {
             dueToday={derived.dueToday}
             contextFor={derived.contextFor}
             routines={people.visibleRoutines}
-            routineState={{ tasks: store.tasks, routineDone: store.routineDone }}
+            routineState={{ tasks: store.tasks, routineDone: store.routineDone, routineLog: store.routineLog || [] }}
             lists={store.lists}
             onToggleRoutineItem={store.toggleRoutineItem}
             onEditRoutine={setEditingRoutine}
@@ -354,6 +364,26 @@ function AlmanacApp() {
             onConsiderLater={(id) => store.snoozeConsideration(id)}
             allRoutines={store.routines}
             blockInfo={blockInfoFor(store, block, blockPicksAll)}
+            routineActive={store.routineActive}
+            timerAppName={timerApp?.name || null}
+            onStartRoutineItem={(routineId, itemId, text) => {
+              store.startRoutineItem(routineId, itemId, text);
+              if (timerApp && !isWeb) {
+                try {
+                  IntentLauncher.openApplication(timerApp.package);
+                  setToast({ text: `${text} started. Come back to Almanac when you stop and the time is logged.`, at: Date.now() });
+                } catch {
+                  setToast({ text: `${text} started. Tap Done when you stop.`, at: Date.now() });
+                }
+              } else {
+                setToast({ text: `${text} started. Tap Done when you stop.`, at: Date.now() });
+              }
+            }}
+            onFinishRoutineItem={() => {
+              const entry = store.finishRoutineItem({ minMs: 0 });
+              if (entry && !entry.skipped) setToast({ text: `${entry.text}: ${formatDuration(entry.durationMs) || '1m'} logged.`, at: Date.now() });
+            }}
+            onCancelRoutineItem={() => store.cancelRoutineItem()}
           />
         )}
         {tab === 'lists' && (
