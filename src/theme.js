@@ -53,14 +53,17 @@ export const colors = { ...LIGHT };
 export function applyTheme(preference) {
   if (preference === 'anime') {
     Object.assign(colors, ANIME);
+    Object.assign(shared, buildShared());
     return 'dark';
   }
   const scheme = preference === 'dark' || preference === 'light' ? preference : Appearance.getColorScheme() || 'light';
   Object.assign(colors, scheme === 'dark' ? DARK : LIGHT);
+  Object.assign(shared, buildShared());
   return scheme;
 }
 
-export const shared = StyleSheet.create({
+function buildShared() {
+  return StyleSheet.create({
   muted: { color: colors.muted, fontSize: 15, marginBottom: 8 },
   card: { borderRadius: 14, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.bg, padding: 14 },
   sectionTitle: { fontSize: 17, fontWeight: '700', color: colors.ink, letterSpacing: -0.2 },
@@ -97,4 +100,9 @@ export const shared = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryButtonText: { color: colors.onAccent, fontWeight: '600', fontSize: 15 },
-});
+  });
+}
+
+// Rebuilt whenever the palette changes, so shared styles follow the theme.
+export const shared = buildShared();
+
