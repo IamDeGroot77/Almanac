@@ -19,7 +19,12 @@ snapshots, and native features hide behind small modules.
 | Canvas | `src/canvas/` | `api.js`, `auth.js` (token in SecureStore), `sync.js` (one-way pull into the School list), `useCanvasSync.js`. |
 | Calendar | `src/useCalendarEvents.js`, `src/assignmentCalendar.js` | Read events for the almanac day; mirror assignments to a chosen calendar with alerts. |
 | Notifications | `src/notifications.js`, `src/reminders.js`, `src/checkins.js`, `src/quickAdd.js`, `src/notificationRouter.js` | Daily brief, due reminders, "still working?" check-ins, voice quick add. All responses go through the router. |
-| Sleep | `modules/almanac-sleep/`, `src/sleep.js` | Local Kotlin Expo module over Google's Sleep API; folded into the day bracket. |
+| Sleep | `modules/almanac-sleep/`, `modules/almanac-health/`, `src/sleep.js` | Two local Kotlin Expo modules: Google's Sleep API (phone) and Health Connect (watch). Both fold into the day bracket; watch data wins. |
+| Steps & picking | `src/pickNext.js`, `src/breakdown.js` | Sub-task helpers, "Just one thing" scoring, break-it-down templates and backward planning. |
+| Focus | `src/focusSession.js`, `src/components/FocusModal.js` | Full-screen task, next smallest step, 25/50 minute blocks, hand-off apps. |
+| Weather | `src/weather.js` | Open-Meteo forecast and daylight, geocoded place in prefs, hourly cache. |
+| Letters & rewards | `src/weeklyLetterText.js`, `src/weeklyLetter.js`, `src/rewards.js` | The Sunday letter (pure composer + reminder hook) and the occasional line on Finish. |
+| Energy | `src/energy.js`, `src/components/EnergyPrompt.js` | Three-tap energy checks; midday one is a notification. |
 | Insights | `src/insights.js`, `src/screens/InsightsScreen.js` | Pure calculations over the store. |
 | Screens & components | `src/screens/`, `src/components/` | Presentational; they receive store actions as props. |
 
