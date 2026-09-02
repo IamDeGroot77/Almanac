@@ -46,8 +46,8 @@ export function useCanvasAuth() {
     } catch (err) {
       setError(
         err.status === 401
-          ? 'Canvas rejected the token. Check it was copied completely.'
-          : `Couldn’t reach Canvas: ${err.message}`
+          ? `Canvas at ${host.replace(/^https?:\/\//, '')} rejected the token (${cleanToken.length} characters). Turn on "Show token" and compare it with the one Canvas showed you.`
+          : `Couldn’t reach ${host.replace(/^https?:\/\//, '')}: ${err.message}`
       );
       return false;
     }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { colors, shared } from '../theme';
 import { PrimaryButton, SmallButton } from './Buttons';
 
@@ -15,6 +15,7 @@ function describeLastSync(ts) {
 export default function CanvasSection({ auth, sync, courses }) {
   const [host, setHost] = useState('');
   const [token, setToken] = useState('');
+  const [showToken, setShowToken] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const connect = async () => {
@@ -52,8 +53,21 @@ export default function CanvasSection({ auth, sync, courses }) {
             placeholderTextColor={colors.muted}
             autoCapitalize="none"
             autoCorrect={false}
-            secureTextEntry
+            autoComplete="off"
+            spellCheck={false}
+            secureTextEntry={!showToken}
+            multiline={showToken}
           />
+          <View style={styles.showRow}>
+            <Text style={styles.showLabel}>Show token</Text>
+            <Switch value={showToken} onValueChange={setShowToken} />
+          </View>
+          {token.length > 0 && (
+            <Text style={styles.detail}>
+              {token.trim().length} characters{token !== token.trim() ? ', with extra spaces that will be removed' : ''}
+              {/\s/.test(token.trim()) ? '. Warning: it contains a space or line break in the middle.' : ''}
+            </Text>
+          )}
           <PrimaryButton label={busy ? 'Checking…' : 'Connect Canvas'} onPress={busy ? () => {} : connect} style={styles.button} />
           {auth.error ? <Text style={styles.error}>{auth.error}</Text> : null}
         </View>
@@ -95,6 +109,9 @@ const styles = StyleSheet.create({
   input: { flex: 0, marginTop: 8 },
   button: { alignSelf: 'flex-start', marginTop: 10 },
   error: { color: colors.danger, fontSize: 13, marginTop: 6 },
+  showRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
+  showLabel: { fontSize: 14, color: colors.ink },
+  detail: { fontSize: 12, color: colors.muted, marginTop: 2 },
   courses: { marginTop: 8, marginBottom: 6 },
   courseRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, gap: 12 },
   courseName: { flex: 1, fontSize: 14, color: colors.ink },
