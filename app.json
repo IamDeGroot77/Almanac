@@ -2,7 +2,7 @@
   "expo": {
     "name": "Almanac",
     "slug": "iamdegroot77",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "scheme": "almanac",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,7 +14,7 @@
     "android": {
       "package": "com.iamdegroot.almanac",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#176ABD",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
