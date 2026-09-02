@@ -1,3 +1,7 @@
+---
+title: Almanac Privacy Policy
+---
+
 # Almanac Privacy Policy
 
 Last updated: September 2, 2026
