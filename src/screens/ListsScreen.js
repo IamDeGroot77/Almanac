@@ -7,6 +7,8 @@ import TaskList from '../components/TaskList';
 import { SmallButton } from '../components/Buttons';
 import SearchBox, { matchesQuery } from '../components/SearchBox';
 import { personOf, personName } from '../store';
+import DropBoxSection from '../components/DropBoxSection';
+import { isWeb } from '../platform';
 
 export default function ListsScreen({
   lists,
@@ -31,6 +33,7 @@ export default function ListsScreen({
   listProps,
   allTasks,
   contextFor,
+  google,
 }) {
   const [query, setQuery] = useState('');
   const searchResults = query ? allTasks.filter((t) => matchesQuery(t, query, allLists)).slice(0, 50) : [];
@@ -121,6 +124,7 @@ export default function ListsScreen({
       ))}
         </View>
       )}
+      {!isWeb && google ? <DropBoxSection google={google} /> : null}
     </Screen>
   );
 }

@@ -11,7 +11,14 @@ import { getSecret, setSecret, deleteSecret } from '../secure';
 const TOKENS_KEY = 'google_tokens_web';
 export const webClientId = Constants.expoConfig?.extra?.googleWebClientId || '';
 export const isWebConfigured = webClientId.endsWith('.apps.googleusercontent.com') && !webClientId.startsWith('PASTE');
-export const WEB_SCOPES = ['https://www.googleapis.com/auth/drive.appdata', 'openid', 'email'];
+export const WEB_SCOPES = [
+  'https://www.googleapis.com/auth/drive.appdata',
+  'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/calendar.readonly',
+  'openid',
+  'email',
+];
 
 let gisReady = null;
 function loadGis() {

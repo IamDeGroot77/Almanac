@@ -21,7 +21,13 @@ import Constants from 'expo-constants';
 WebBrowser.maybeCompleteAuthSession();
 
 const TOKENS_KEY = 'google_tokens';
-const SCOPES = ['https://www.googleapis.com/auth/tasks', 'https://www.googleapis.com/auth/drive.appdata', 'openid', 'email'];
+const SCOPES = [
+  'https://www.googleapis.com/auth/tasks',
+  'https://www.googleapis.com/auth/drive.appdata',
+  'https://www.googleapis.com/auth/drive.file',
+  'openid',
+  'email',
+];
 const CLIENT_SUFFIX = '.apps.googleusercontent.com';
 
 export const googleClientId = Constants.expoConfig?.extra?.googleClientId || '';

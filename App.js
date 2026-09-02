@@ -293,6 +293,7 @@ function AlmanacApp() {
             onRefresh={onRefresh}
             refreshing={sync.state === 'syncing'}
             listProps={listProps}
+            google={google}
           />
         )}
         {tab === 'insights' && <InsightsScreen store={store} />}
