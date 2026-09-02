@@ -1,15 +1,18 @@
 {
   "expo": {
-    "name": "almanac",
+    "name": "Almanac",
     "slug": "almanac",
     "version": "1.0.0",
+    "scheme": "almanac",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.iamdegroot.almanac"
     },
     "android": {
+      "package": "com.iamdegroot.almanac",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -19,6 +22,22 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Almanac reads your calendar to show today's and tomorrow's events."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#E6F4FE",
+          "defaultChannel": "daily-brief"
+        }
+      ],
+      "expo-dev-client"
+    ]
   }
 }
