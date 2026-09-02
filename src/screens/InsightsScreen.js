@@ -5,6 +5,7 @@ import { formatDuration } from '../durations';
 import { formatTime, describeDayKey } from '../dates';
 import { estimateAccuracy, timeByList, timeByPerson, carryOvers, dayStats, trackedShare, energyStats, usageStats } from '../insights';
 import UsageTable from '../components/UsageTable';
+import AchievementsSection from '../components/AchievementsSection';
 import { energyLabel } from '../components/EnergyPrompt';
 import { composeWeeklyLetter } from '../weeklyLetter';
 import { almanacToday } from '../clock';
@@ -32,6 +33,10 @@ export default function InsightsScreen({ store }) {
       <Text style={shared.muted}>
         {store.timeLog.length} timed {store.timeLog.length === 1 ? 'task' : 'tasks'} · {formatDuration(totalTracked) || '0m'} tracked
       </Text>
+
+      <Section title="Runs and badges">
+        <AchievementsSection store={store} />
+      </Section>
 
       {isWeb ? <DashboardSections store={store} /> : null}
 

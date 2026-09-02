@@ -51,6 +51,7 @@ const emptyState = () => ({
   journal: {}, // dayKey -> [{ id, at, text, prompt?, source, updatedAt? }], see journal.js
   scratch: [], // working memory, see scratch.js
   stuckLog: [], // { taskId, text, reason, at } from "Why am I stuck?" (shared)
+  achievements: {}, // id -> earnedAt, see achievements.js (shared)
   days: {}, // dayKey -> { wokeAt, sleptAt, implicit?, autoClosed?, lastActiveAt?, sleep?: { start, end } }
   sleepApplied: [], // detected sleep segments already folded in ("start-end")
   canvas: { courses: [], lastSyncAt: null }, // course grades from Canvas, see canvas/sync.js
@@ -424,6 +425,15 @@ export function useAlmanacStore() {
           journal: { ...(s.journal || {}), [key]: ((s.journal || {})[key] || []).map((e) => (e.id === id ? { ...e, deleted: true, updatedAt: Date.now() } : e)) },
         }));
       },
+      awardAchievements(ids) {
+        if (!ids?.length) return;
+        const now = Date.now();
+        edit((s) => {
+          const next = { ...(s.achievements || {}) };
+          for (const id of ids) if (!next[id]) next[id] = now;
+          return { achievements: next };
+        });
+      },
       // Spend a skip token on an item (or take it back).
       skipRoutineItem(routineId, periodKey, itemId) {
         edit((s) => {
@@ -504,10 +514,13 @@ export function useAlmanacStore() {
         });
       },
       endDay(key) {
-        setState((s) => ({
-          ...s,
-          days: { ...s.days, [key]: { ...(s.days[key] || {}), sleptAt: Date.now(), autoClosed: false } },
-        }));
+        setState((s) => {
+          const openLeft = s.tasks.some((t) => !t.done && !t.parentId && t.listId === dayListId(key));
+          return {
+            ...s,
+            days: { ...s.days, [key]: { ...(s.days[key] || {}), sleptAt: Date.now(), autoClosed: false, cleanSlate: !openLeft } },
+          };
+        });
       },
       reopenDay(key) {
         setState((s) => ({ ...s, days: { ...s.days, [key]: { ...(s.days[key] || {}), sleptAt: null } } }));

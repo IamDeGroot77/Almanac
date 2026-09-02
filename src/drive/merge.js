@@ -110,6 +110,8 @@ export function mergeStates(a, b, now = Date.now()) {
 
   const journal = mergeJournals(a.journal, b.journal);
   const scratch = mergeScratch(a.scratch, b.scratch);
+  const achievements = {};
+  for (const src of [a.achievements || {}, b.achievements || {}]) for (const [id, at] of Object.entries(src)) achievements[id] = achievements[id] ? Math.min(achievements[id], at) : at;
   const stuckLog = [...new Map([...(a.stuckLog || []), ...(b.stuckLog || [])].map((e) => [`${e.taskId}:${e.at}`, e])).values()].sort((p, q) => p.at - q.at).slice(-500);
   const dayNotes = {};
   const dayNoteMeta = {};
@@ -149,6 +151,7 @@ export function mergeStates(a, b, now = Date.now()) {
     journal,
     scratch,
     stuckLog,
+    achievements,
     deleted,
     sharedPrefs,
     prefsUpdatedAt: Math.max(pa, pb),
@@ -176,6 +179,7 @@ export function shareable(state) {
     journal: state.journal || {},
     scratch: state.scratch || [],
     stuckLog: state.stuckLog || [],
+    achievements: state.achievements || {},
     deleted: state.deleted || { tasks: {}, lists: {}, routines: {} },
     sharedPrefs,
     prefsUpdatedAt: state.prefsUpdatedAt || 0,

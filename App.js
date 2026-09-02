@@ -26,6 +26,7 @@ import useEnergyCheckins from './src/energy';
 import useDayBracketNotifications, { DEFAULT_BEDTIME_HOUR } from './src/dayBracket';
 import { planAutoStart, describeAutoStart } from './src/dayAuto';
 import { considerations } from './src/consider';
+import { newlyEarned, ACHIEVEMENTS } from './src/achievements';
 import { currentBlock, nextBlock, categoryTasks, colorForCategory, blocksForDay } from './src/blocks';
 import * as IntentLauncher from 'expo-intent-launcher';
 import { APP_CATALOG } from './src/apps';
@@ -190,6 +191,19 @@ function AlmanacApp() {
   useEnergyCheckins(store, { enabled: store.prefs.energyCheckins !== false });
   const justOneRef = useRef(null);
   useCalendarRules(store);
+  // Achievements: check after edits settle, award, and say so once.
+  useEffect(() => {
+    if (!store.loaded) return;
+    const t = setTimeout(() => {
+      const ids = newlyEarned(store);
+      if (!ids.length) return;
+      store.awardAchievements(ids);
+      const first = ACHIEVEMENTS.find((a) => a.id === ids[0]);
+      setToast({ text: `★ ${first?.name || 'Achievement'}${ids.length > 1 ? ` and ${ids.length - 1} more` : ''}. ${first?.blurb || ''}`, at: Date.now() });
+    }, 1500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.loaded, store.localVersion, store.usage, store.days]);
   useDayBracketNotifications(store, { bedtimeHour: store.prefs.bedtimeHour ?? DEFAULT_BEDTIME_HOUR, onJustOneThing: () => justOneRef.current?.() });
   const { undo, offer: offerUndo } = useUndo();
   const focusSession = useFocusSession();

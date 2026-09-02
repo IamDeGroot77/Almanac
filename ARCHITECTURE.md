@@ -90,6 +90,10 @@ snapshots, and native features hide behind small modules.
 - Skip tokens: a routine item can be skipped (-1 in `routineDone`), counting as complete for the period but not toward other routines' quotas; `skipsPerWeek` (default 2) tokens per routine per week, shown on the card. Never a broken streak.
 - Words: "Slipped" instead of "Overdue".
 
+## Runs and badges
+
+- `src/achievements.js` (pure, tested by `scripts/test-achievements.mjs`): forgiving runs (one missed day in seven is absorbed, skips count as met) for opening the app, starting the day, and each daily routine, with the best run kept; a catalog of achievements with progress functions. `achievements` in the store (shared, earliest earn time wins in merge) records earn times; App checks after edits settle and toasts new ones. Shown on Insights under "Runs and badges". A day closed with nothing open sets `days[key].cleanSlate`.
+
 ## Adherence (the phone does the initiating)
 
 - The morning brief follows the alarm clock: `modules/almanac-alarm` reads `AlarmManager.getNextAlarmClock`; `scheduleMorningBrief` in `src/notifications.js` schedules a one-off a minute after an alarm within 20 hours, else the brief is sent when the day auto-starts (`sendBriefIfDue`, once per day). Re-checked whenever the app comes to the foreground or goes to the background, so set the alarm before closing Almanac for the night if you want the brief tied to it.
