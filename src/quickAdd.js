@@ -30,7 +30,7 @@ export async function ensureQuickAddCategory() {
     {
       identifier: ACTION_NOTE,
       buttonTitle: 'Speak a note',
-      textInput: { submitButtonTitle: 'Save', placeholder: 'Note for today' },
+      textInput: { submitButtonTitle: 'Save', placeholder: 'Journal entry' },
       options: { opensAppToForeground: false },
     },
   ]);
@@ -78,11 +78,7 @@ export function useQuickAdd(store, { enabled }) {
         if (!text) return;
         const s = storeRef.current;
         if (response.actionIdentifier === ACTION_TASK) applyQuickTask(s, text);
-        else if (response.actionIdentifier === ACTION_NOTE) {
-          const key = almanacToday();
-          const existing = s.dayNotes[key] || '';
-          s.setDayNote(key, existing ? `${existing}\n${text}` : text);
-        }
+        else if (response.actionIdentifier === ACTION_NOTE) s.addJournalEntry(text, { source: 'voice' });
       }),
     []
   );

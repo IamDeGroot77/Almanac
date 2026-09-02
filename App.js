@@ -47,6 +47,7 @@ import { estimateAccuracy } from './src/insights';
 import TabBar from './src/components/TabBar';
 import TodayScreen from './src/screens/TodayScreen';
 import ListsScreen from './src/screens/ListsScreen';
+import JournalScreen from './src/screens/JournalScreen';
 import InsightsScreen from './src/screens/InsightsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import PlannerScreen from './src/screens/web/PlannerScreen';
@@ -192,7 +193,7 @@ function AlmanacApp() {
   const { undo, offer: offerUndo } = useUndo();
   const focusSession = useFocusSession();
   const [toast, setToast] = useState(null);
-  useWeeklyLetterReminder(store.prefs.weeklyLetter !== false);
+  useWeeklyLetterReminder(store.prefs.weeklyLetter !== false, store);
 
   // ----- transient UI state ---------------------------------------------------
   const [focusTaskId, setFocusTaskId] = useState(null);
@@ -421,6 +422,15 @@ function AlmanacApp() {
               if (added.categories) bits.push(`${added.categories} new ${added.categories === 1 ? 'category' : 'categories'}`);
               setToast({ text: bits.length ? `Added ${bits.join(', ')}.` : 'Nothing new to add.', at: Date.now() });
             }}
+          />
+        )}
+        {tab === 'journal' && (
+          <JournalScreen
+            journal={store.journal || {}}
+            dayNotes={store.dayNotes}
+            onAdd={(text, opts) => store.addJournalEntry(text, opts)}
+            onEdit={store.editJournalEntry}
+            onDelete={store.deleteJournalEntry}
           />
         )}
         {tab === 'insights' && <InsightsScreen store={store} />}

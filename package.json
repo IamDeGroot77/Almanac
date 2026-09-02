@@ -31,7 +31,7 @@
     "build:dev:android": "eas build --platform android --profile development",
     "build:dev:ios": "eas build --platform ios --profile development",
     "build:preview": "eas build --platform all --profile preview",
-    "test": "node scripts/test-sync.mjs && node scripts/test-canvas.mjs && node scripts/test-merge.mjs && node scripts/test-dayauto.mjs && node scripts/test-import.mjs && node scripts/test-lists.mjs && node scripts/test-blocks.mjs && node scripts/test-routines.mjs",
+    "test": "node scripts/test-sync.mjs && node scripts/test-canvas.mjs && node scripts/test-merge.mjs && node scripts/test-dayauto.mjs && node scripts/test-import.mjs && node scripts/test-lists.mjs && node scripts/test-blocks.mjs && node scripts/test-routines.mjs && node scripts/test-journal.mjs",
     "build:web": "expo export --platform web --output-dir docs/app",
     "serve:web": "node scripts/serve-web.js docs/app 8090",
     "laptop": "node scripts/serve-web.js docs/app 8090"

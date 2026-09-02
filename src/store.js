@@ -48,6 +48,7 @@ const emptyState = () => ({
   routineLog: [], // timed routine items, see routines.js (shared)
   routineActive: null, // { routineId, itemId, text, startedAt } while a routine item is being timed (this device)
   dayNotes: {}, // dayKey -> end-of-day note
+  journal: {}, // dayKey -> [{ id, at, text, prompt?, source, updatedAt? }], see journal.js
   days: {}, // dayKey -> { wokeAt, sleptAt, implicit?, autoClosed?, lastActiveAt?, sleep?: { start, end } }
   sleepApplied: [], // detected sleep segments already folded in ("start-end")
   canvas: { courses: [], lastSyncAt: null }, // course grades from Canvas, see canvas/sync.js
@@ -377,6 +378,26 @@ export function useAlmanacStore() {
             routineDone: { ...s.routineDone, [routineId]: { ...forRoutine, [periodKey]: forPeriod } },
           };
         });
+      },
+      // ----- journal -----
+      addJournalEntry(text, { prompt = null, source = 'typed', at = Date.now() } = {}) {
+        const trimmed = (text || '').trim();
+        if (!trimmed) return null;
+        const key = almanacToday();
+        const entry = { id: newId('j'), at, text: trimmed, prompt, source, updatedAt: at };
+        edit((s) => ({ journal: { ...(s.journal || {}), [key]: [...((s.journal || {})[key] || []), entry] } }));
+        return entry.id;
+      },
+      editJournalEntry(key, id, text) {
+        const trimmed = (text || '').trim();
+        edit((s) => ({
+          journal: { ...(s.journal || {}), [key]: ((s.journal || {})[key] || []).map((e) => (e.id === id ? { ...e, text: trimmed || e.text, updatedAt: Date.now() } : e)) },
+        }));
+      },
+      deleteJournalEntry(key, id) {
+        edit((s) => ({
+          journal: { ...(s.journal || {}), [key]: ((s.journal || {})[key] || []).map((e) => (e.id === id ? { ...e, deleted: true, updatedAt: Date.now() } : e)) },
+        }));
       },
       // ----- timed routine items -----
       startRoutineItem(routineId, itemId, text) {

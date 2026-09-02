@@ -7,6 +7,7 @@ import { colors } from '../theme';
 const PHONE_TABS = [
   { id: 'today', label: 'Today', icon: '☀' },
   { id: 'lists', label: 'Lists', icon: '☰' },
+  { id: 'journal', label: 'Journal', icon: '✎' },
   { id: 'insights', label: 'Insights', icon: '◑' },
   { id: 'settings', label: 'Settings', icon: '⚙' },
 ];
@@ -17,6 +18,7 @@ const WEB_TABS = [
   { id: 'calendar', label: 'Calendar', icon: '▤' },
   { id: 'semester', label: 'Semester', icon: '▥' },
   { id: 'lists', label: 'Lists', icon: '☰' },
+  { id: 'journal', label: 'Journal', icon: '✎' },
   { id: 'insights', label: 'Dashboard', icon: '◑' },
   { id: 'files', label: 'Files', icon: '⇅' },
   { id: 'settings', label: 'Settings', icon: '⚙' },
