@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Switch, Text, View } from 'react-native';
 import Constants from 'expo-constants';
 import { colors, shared } from '../theme';
 import Screen from '../components/Screen';
@@ -41,6 +41,18 @@ export default function SettingsScreen({
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Daily brief</Text>
         <Text style={shared.muted}>{reminderMessage(reminderStatus) || 'Setting up the 6:30 AM reminder…'}</Text>
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.switchRow}>
+          <Text style={styles.sectionTitle}>Quick add from the shade and watch</Text>
+          <Switch value={!!prefs.quickAddNotification} onValueChange={(v) => onSetPref('quickAddNotification', v)} />
+        </View>
+        <Text style={shared.muted}>
+          Keeps an Almanac notification in the shade with "Speak a task" and "Speak a note". On a Galaxy
+          Watch or any Wear OS watch you can answer by voice. Say things like "milk to groceries",
+          "call the dentist tomorrow", or "sign the form for Zeke".
+        </Text>
       </View>
 
       <View style={styles.section}>
@@ -123,6 +135,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '700', color: colors.ink },
   section: { marginTop: 28, paddingTop: 20, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: colors.ink, marginBottom: 6 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   detail: { fontSize: 13, color: colors.muted, marginTop: 4 },
   label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 12, marginBottom: 6 },
   button: { marginTop: 10 },

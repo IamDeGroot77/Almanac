@@ -29,6 +29,7 @@ import { useSleepDetection } from './src/sleep';
 import { useCanvasAuth } from './src/canvas/auth';
 import useCanvasSync from './src/canvas/useCanvasSync';
 import useAssignmentCalendar from './src/assignmentCalendar';
+import { useQuickAdd } from './src/quickAdd';
 import TabBar from './src/components/TabBar';
 import TodayScreen from './src/screens/TodayScreen';
 import ListsScreen from './src/screens/ListsScreen';
@@ -88,6 +89,7 @@ function AlmanacApp() {
     enabled: !!store.prefs.assignmentsToCalendar && canvas.connected,
     calendarId: store.prefs.assignmentCalendarId,
   });
+  useQuickAdd(store, { enabled: !!store.prefs.quickAddNotification });
   const toggleAssignmentCalendar = async (on) => {
     store.setPref('assignmentsToCalendar', on);
     if (!on) await assignmentCalendar.removeAll();

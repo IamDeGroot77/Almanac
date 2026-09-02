@@ -52,6 +52,7 @@ const emptyState = () => ({
     timerApp: null,
     assignmentsToCalendar: false, // mirror Canvas assignments into a calendar
     assignmentCalendarId: null,
+    quickAddNotification: false, // keep a "speak a task / note" notification in the shade
   },
   localVersion: 0,
   sync: emptySync(),
