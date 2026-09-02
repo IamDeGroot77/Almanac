@@ -1,19 +1,10 @@
 import { StatusBar } from 'expo-status-bar';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors } from './src/theme';
-import { dayFromOffset, formatHeaderDate } from './src/dates';
+import { dayFromOffset } from './src/dates';
 import {
   useAlmanacStore,
   pastUnfinished,
@@ -24,29 +15,28 @@ import {
 } from './src/store';
 import { formatDuration } from './src/durations';
 import useCalendarEvents from './src/useCalendarEvents';
-import { scheduleDailyReminder, reminderMessage } from './src/notifications';
-import EventsSection from './src/components/EventsSection';
-import TaskList from './src/components/TaskList';
-import ReviewCard from './src/components/ReviewCard';
+import { scheduleDailyReminder } from './src/notifications';
+import { useGoogleAuth } from './src/google/auth';
+import useGoogleSync from './src/google/useGoogleSync';
+
+import TabBar from './src/components/TabBar';
+import TodayScreen from './src/screens/TodayScreen';
+import ListsScreen from './src/screens/ListsScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 import MoveTaskModal from './src/components/MoveTaskModal';
 import ListOptionsModal from './src/components/ListOptionsModal';
 import NameModal from './src/components/NameModal';
-import PersonChips from './src/components/PersonChips';
-import GoogleSection from './src/components/GoogleSection';
-import DevSection from './src/components/DevSection';
-import { SmallButton } from './src/components/Buttons';
-import { useGoogleAuth } from './src/google/auth';
-import useGoogleSync from './src/google/useGoogleSync';
 
 export default function App() {
   return (
     <SafeAreaProvider>
-      <AlmanacScreen />
+      <AlmanacApp />
     </SafeAreaProvider>
   );
 }
 
-function AlmanacScreen() {
+function AlmanacApp() {
+  const [tab, setTab] = useState('today');
   const [dayOffset, setDayOffset] = useState(0); // 0 = today, 1 = tomorrow
   const [personFilter, setPersonFilter] = useState('all'); // 'all' | person id
   const calendar = useCalendarEvents(dayOffset);
@@ -54,13 +44,9 @@ function AlmanacScreen() {
   const google = useGoogleAuth();
   const sync = useGoogleSync(store, google);
 
-  const onRefresh = async () => {
-    await Promise.all([calendar.refresh(), sync.syncNow()]);
-  };
-
   const [reminderStatus, setReminderStatus] = useState('pending');
   const [reviewDismissed, setReviewDismissed] = useState(false);
-  const [movingTask, setMovingTask] = useState(null);
+  const [movingTaskId, setMovingTaskId] = useState(null);
   const [optionsListId, setOptionsListId] = useState(null);
   const [renamingListId, setRenamingListId] = useState(null);
   const [addingList, setAddingList] = useState(false);
@@ -75,6 +61,10 @@ function AlmanacScreen() {
       });
   }, []);
 
+  const onRefresh = async () => {
+    await Promise.all([calendar.refresh(), sync.syncNow()]);
+  };
+
   const dayListId = dayListIdForOffset(dayOffset);
   const headerDate = dayFromOffset(dayOffset);
 
@@ -85,18 +75,16 @@ function AlmanacScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [store.tasks, personFilter]
   );
-  // Show a person tag only when looking at everyone, and only for people other than me.
   const tagFor = (t) =>
     personFilter === 'all' && personOf(t) !== 'me' ? personName(store.people, t.personId) : null;
-
   const visibleLists = store.lists.filter(
     (l) =>
       personFilter === 'all' ||
       personOf(l) === personFilter ||
       store.tasks.some((t) => t.listId === l.id && matchesFilter(t))
   );
+  const filterName = personFilter === 'all' ? null : personName(store.people, personFilter);
 
-  // New tasks are tagged for the filtered person, else the list's person.
   const addTask = (text, listId) => {
     const list = store.lists.find((l) => l.id === listId);
     const personId = personFilter !== 'all' ? personFilter : list?.personId || null;
@@ -117,9 +105,6 @@ function AlmanacScreen() {
     return parts.join(' · ');
   }, [visibleTasks, dayListId]);
 
-  const optionsList = store.lists.find((l) => l.id === optionsListId) || null;
-  const filterName = personFilter === 'all' ? null : personName(store.people, personFilter);
-
   const listProps = {
     tasks: visibleTasks,
     tagFor,
@@ -128,110 +113,78 @@ function AlmanacScreen() {
     onStart: store.startTask,
     onFinish: store.finishTask,
     onDelete: store.deleteTask,
-    onMove: setMovingTask,
+    onMove: (task) => setMovingTaskId(task.id),
     onClearCompleted: store.clearCompleted,
   };
 
+  const personProps = {
+    people: store.people,
+    personFilter,
+    setPersonFilter,
+    onAddPerson: () => setAddingPerson(true),
+    filterName,
+  };
+
+  const movingTask = movingTaskId ? store.tasks.find((t) => t.id === movingTaskId) || null : null;
+  const optionsList = store.lists.find((l) => l.id === optionsListId) || null;
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView style={styles.safe} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          contentContainerStyle={styles.container}
-          keyboardShouldPersistTaps="handled"
-          refreshControl={<RefreshControl refreshing={calendar.refreshing} onRefresh={onRefresh} />}
-        >
-          <Text style={styles.kicker}>{dayOffset === 0 ? 'Today' : 'Tomorrow'}</Text>
-          <Text style={styles.title}>{formatHeaderDate(headerDate)}</Text>
-
-          <View style={styles.segment}>
-            <SegmentButton label="Today" active={dayOffset === 0} onPress={() => setDayOffset(0)} />
-            <SegmentButton label="Tomorrow" active={dayOffset === 1} onPress={() => setDayOffset(1)} />
-          </View>
-
-          <View style={styles.people}>
-            <PersonChips
-              people={store.people}
-              selected={personFilter}
-              onSelect={setPersonFilter}
-              allowAll
-              onAdd={() => setAddingPerson(true)}
-            />
-          </View>
-
-          {showReview && (
-            <ReviewCard
-              tasks={reviewTasks}
-              tagFor={tagFor}
-              onApply={(carry, drop) => store.applyReview(carry, drop)}
-              onLater={() => setReviewDismissed(true)}
-            />
-          )}
-
-          <EventsSection status={calendar.status} events={calendar.events} onRetry={calendar.retry} />
-
-          <TaskList
-            listId={dayListId}
-            title={
-              (dayOffset === 0 ? "Today's tasks" : "Tomorrow's tasks") +
-              (filterName ? ` for ${filterName}` : '')
-            }
-            subtitle={daySummary}
-            emptyText={dayOffset === 0 ? 'Nothing planned yet.' : 'Nothing lined up for tomorrow.'}
-            {...listProps}
+      <View style={styles.body}>
+        {tab === 'today' && (
+          <TodayScreen
+            dayOffset={dayOffset}
+            setDayOffset={setDayOffset}
+            headerDate={headerDate}
+            {...personProps}
+            showReview={showReview}
+            reviewTasks={reviewTasks}
+            onApplyReview={(carry, drop) => store.applyReview(carry, drop)}
+            onLaterReview={() => setReviewDismissed(true)}
+            calendar={calendar}
+            onRefresh={onRefresh}
+            dayListId={dayListId}
+            daySummary={daySummary}
+            listProps={listProps}
           />
+        )}
+        {tab === 'lists' && (
+          <ListsScreen
+            lists={visibleLists}
+            allListsCount={store.lists.length}
+            {...personProps}
+            googleConnected={!!google.account}
+            onNewList={() => setAddingList(true)}
+            onListOptions={setOptionsListId}
+            renamingListId={renamingListId}
+            onRename={(id, name) => {
+              store.renameList(id, name);
+              setRenamingListId(null);
+            }}
+            onCancelRename={() => setRenamingListId(null)}
+            onRefresh={onRefresh}
+            refreshing={sync.state === 'syncing'}
+            listProps={listProps}
+          />
+        )}
+        {tab === 'settings' && (
+          <SettingsScreen
+            google={google}
+            sync={sync}
+            reminderStatus={reminderStatus}
+            people={store.people}
+            onAddPerson={() => setAddingPerson(true)}
+            onStageReview={() => {
+              store.devBackdateOpenTasks();
+              setReviewDismissed(false);
+              setDayOffset(0);
+              setTab('today');
+            }}
+          />
+        )}
+      </View>
 
-          <View style={styles.listsHeader}>
-            <Text style={styles.listsTitle}>Lists{filterName ? ` · ${filterName}` : ''}</Text>
-            <SmallButton label="+ New list" onPress={() => setAddingList(true)} />
-          </View>
-          {visibleLists.length === 0 && (
-            <Text style={styles.hint}>
-              {store.lists.length === 0
-                ? "Named lists hold things that aren't tied to a day, like Groceries or Home."
-                : `No lists for ${filterName} yet.`}
-            </Text>
-          )}
-
-          {visibleLists.map((list) => (
-            <TaskList
-              key={list.id}
-              listId={list.id}
-              title={list.name}
-              subtitle={[
-                personFilter === 'all' && personOf(list) !== 'me'
-                  ? `For ${personName(store.people, list.personId)}`
-                  : null,
-                list.googleListId && google.account ? 'Synced with Google Tasks' : null,
-              ]
-                .filter(Boolean)
-                .join(' · ') || null}
-              emptyText="Empty."
-              onTitleLongPress={setOptionsListId}
-              renaming={renamingListId === list.id}
-              onRename={(id, name) => {
-                store.renameList(id, name);
-                setRenamingListId(null);
-              }}
-              onCancelRename={() => setRenamingListId(null)}
-              {...listProps}
-            />
-          ))}
-
-          <GoogleSection auth={google} sync={sync} />
-
-          {__DEV__ && (
-            <DevSection
-              onStageReview={() => {
-                store.devBackdateOpenTasks();
-                setReviewDismissed(false);
-                setDayOffset(0);
-              }}
-            />
-          )}
-
-          <Text style={styles.footer}>{reminderMessage(reminderStatus)}</Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      <TabBar active={tab} onSelect={setTab} />
 
       <NameModal
         visible={addingList}
@@ -266,15 +219,15 @@ function AlmanacScreen() {
       />
 
       <MoveTaskModal
-        task={movingTask ? store.tasks.find((t) => t.id === movingTask.id) || null : null}
+        task={movingTask}
         lists={store.lists}
         people={store.people}
         onSetPerson={store.setTaskPerson}
         onMove={(id, listId) => {
           store.moveTask(id, listId);
-          setMovingTask(null);
+          setMovingTaskId(null);
         }}
-        onClose={() => setMovingTask(null)}
+        onClose={() => setMovingTaskId(null)}
       />
 
       <StatusBar style="dark" />
@@ -282,63 +235,7 @@ function AlmanacScreen() {
   );
 }
 
-function SegmentButton({ label, active, onPress }) {
-  return (
-    <TouchableOpacity
-      style={[styles.segmentButton, active && styles.segmentButtonActive]}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-    >
-      <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  container: { padding: 20, paddingBottom: 40 },
-
-  kicker: {
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: colors.accent,
-  },
-  title: { fontSize: 26, fontWeight: '700', color: colors.ink, marginTop: 4 },
-
-  segment: {
-    flexDirection: 'row',
-    marginTop: 16,
-    backgroundColor: colors.accentSoft,
-    borderRadius: 10,
-    padding: 3,
-  },
-  segmentButton: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
-  segmentButtonActive: { backgroundColor: colors.bg },
-  segmentText: { fontSize: 14, fontWeight: '600', color: colors.accent },
-  segmentTextActive: { color: colors.ink },
-
-  people: { marginTop: 12 },
-
-  listsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 36,
-    paddingTop: 20,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.line,
-  },
-  listsTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.muted,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  hint: { marginTop: 8, fontSize: 13, color: colors.muted },
-
-  footer: { marginTop: 32, fontSize: 13, color: colors.muted, textAlign: 'center' },
+  body: { flex: 1 },
 });
