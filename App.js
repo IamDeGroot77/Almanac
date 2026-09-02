@@ -50,6 +50,7 @@ import TodayScreen from './src/screens/TodayScreen';
 import ListsScreen from './src/screens/ListsScreen';
 import JournalScreen from './src/screens/JournalScreen';
 import HomeScreen from './src/screens/HomeScreen';
+import YouScreen from './src/screens/YouScreen';
 import { quoteOfDay, parseQuotes } from './src/quotes';
 import { useArt } from './src/art';
 import InsightsScreen from './src/screens/InsightsScreen';
@@ -124,8 +125,12 @@ function AlmanacApp() {
     if (isWeb && (id === 'today' || id === 'planner' || id === 'semester' || id === 'month')) {
       pickCalView(id === 'month' ? 'calendar' : id);
       setTab('calendar');
+    } else if (!isWeb && (id === 'insights' || id === 'settings')) {
+      setYouView(id);
+      setTab('you');
     } else setTab(id);
   };
+  const [youView, setYouView] = useState('insights');
   const view = isWeb && tab === 'calendar' ? calView : tab;
   const [journalPrompt, setJournalPrompt] = useState(null);
   const [dayOffset, setDayOffset] = useState(0); // 0 = today, 1 = tomorrow
@@ -355,6 +360,38 @@ function AlmanacApp() {
   const focusTask = focusTaskId ? store.tasks.find((t) => t.id === focusTaskId && !t.done && t.startedAt) || null : null;
   const optionsList = store.lists.find((l) => l.id === optionsListId) || null;
 
+  const settingsProps = {
+    google,
+    sync,
+    reminderStatus,
+    lists: store.lists,
+    categories: store.categories || [],
+    onAddCategory: store.addCategory,
+    onRenameCategory: store.renameCategory,
+    onDeleteCategory: store.deleteCategory,
+    people: store.people,
+    onAddPerson: () => setAddingPerson(true),
+    sleep,
+    prefs: store.prefs,
+    onSetPref: store.setPref,
+    canvas,
+    canvasSync,
+    canvasCourses: store.canvas?.courses || [],
+    onToggleAssignmentCalendar: async (on) => {
+      store.setPref('assignmentsToCalendar', on);
+      if (!on) await assignmentCalendar.removeAll();
+    },
+    linkedEventCount: Object.keys(store.calendarEvents || {}).length,
+    weather,
+    drive,
+    onStageReview: () => {
+      store.devBackdateOpenTasks();
+      setReviewDismissed(false);
+      setDayOffset(0);
+      setTab('today');
+    },
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <View style={styles.body}>
@@ -554,7 +591,8 @@ function AlmanacApp() {
             onPromptUsed={() => setJournalPrompt(null)}
           />
         )}
-        {tab === 'insights' && <InsightsScreen store={store} />}
+        {view === 'insights' && <InsightsScreen store={store} />}
+        {tab === 'you' && <YouScreen key={youView} initial={youView} insightsProps={{ store }} settingsProps={settingsProps} />}
         {view === 'planner' && (
           <PlannerScreen
             store={store}
@@ -571,39 +609,7 @@ function AlmanacApp() {
         {view === 'semester' && <SemesterScreen store={store} onOpenTask={(task) => setSheetTaskId(task.id)} />}
         {view === 'calendar' && <CalendarScreen store={store} google={google} onOpenTask={(task) => setSheetTaskId(task.id)} />}
         {tab === 'files' && <FilesScreen google={google} />}
-        {tab === 'settings' && (
-          <SettingsScreen
-            google={google}
-            sync={sync}
-            reminderStatus={reminderStatus}
-            lists={store.lists}
-            categories={store.categories || []}
-            onAddCategory={store.addCategory}
-            onRenameCategory={store.renameCategory}
-            onDeleteCategory={store.deleteCategory}
-            people={store.people}
-            onAddPerson={() => setAddingPerson(true)}
-            sleep={sleep}
-            prefs={store.prefs}
-            onSetPref={store.setPref}
-            canvas={canvas}
-            canvasSync={canvasSync}
-            canvasCourses={store.canvas?.courses || []}
-            onToggleAssignmentCalendar={async (on) => {
-              store.setPref('assignmentsToCalendar', on);
-              if (!on) await assignmentCalendar.removeAll();
-            }}
-            linkedEventCount={Object.keys(store.calendarEvents || {}).length}
-            weather={weather}
-            drive={drive}
-            onStageReview={() => {
-              store.devBackdateOpenTasks();
-              setReviewDismissed(false);
-              setDayOffset(0);
-              setTab('today');
-            }}
-          />
-        )}
+        {view === 'settings' && <SettingsScreen {...settingsProps} />}
       </View>
 
       <UndoBar undo={undo} />

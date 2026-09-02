@@ -14,7 +14,8 @@ import DashboardSections from './web/DashboardSections';
 
 // Reality vs perception, and where things slip. Every section explains what
 // it needs when there isn't enough data yet, so the tab is never blank.
-export default function InsightsScreen({ store }) {
+export default function InsightsScreen({ store, embedded = false }) {
+  const Wrap = embedded ? View : Screen;
   const est = estimateAccuracy(store.timeLog);
   const byList = timeByList(store.timeLog, store.lists);
   const byPerson = timeByPerson(store.timeLog, store.people);
@@ -28,8 +29,8 @@ export default function InsightsScreen({ store }) {
   const stuckCounts = Object.entries((store.stuckLog || []).reduce((m, e) => ({ ...m, [e.reason]: (m[e.reason] || 0) + 1 }), {})).sort((a, b) => b[1] - a[1]);
 
   return (
-    <Screen>
-      <Text style={styles.title}>Insights</Text>
+    <Wrap>
+      {!embedded ? <Text style={styles.title}>Insights</Text> : null}
       <Text style={shared.muted}>
         {store.timeLog.length} timed {store.timeLog.length === 1 ? 'task' : 'tasks'} · {formatDuration(totalTracked) || '0m'} tracked
       </Text>
@@ -204,7 +205,7 @@ export default function InsightsScreen({ store }) {
           </View>
         )}
       </Section>
-    </Screen>
+    </Wrap>
   );
 }
 

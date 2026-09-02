@@ -7,11 +7,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 // Semester live inside one Calendar tab with a view switch.
 const PHONE_TABS = [
   { id: 'home', label: 'Home', icon: 'home' },
-  { id: 'today', label: 'Today', icon: 'sunny' },
+  { id: 'today', label: 'Day', icon: 'sunny' },
   { id: 'lists', label: 'Lists', icon: 'list' },
   { id: 'journal', label: 'Journal', icon: 'book' },
-  { id: 'insights', label: 'Insights', icon: 'stats-chart' },
-  { id: 'settings', label: 'Settings', icon: 'settings' },
+  { id: 'you', label: 'You', icon: 'person' },
 ];
 
 const WEB_TABS = [

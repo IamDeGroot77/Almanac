@@ -191,6 +191,16 @@ export default function TodayScreen({
 
       {isToday && !nowMode && <ConsiderSection items={considerations} onToday={onConsiderToday} onLater={onConsiderLater} />}
 
+      <TaskList
+        listId={dayListId}
+        title={listTitle}
+        subtitle={nowMode ? 'Now mode · open tasks only' : daySummary}
+        subtitleWarn={!nowMode && !!capacity?.over}
+        emptyText={isToday ? 'Nothing planned yet.' : dayOffset === 1 ? 'Nothing lined up for tomorrow.' : 'Nothing on ' + dayName + ' yet.'}
+        emptyHint={isToday ? 'Add one small thing, or use Just one thing on Home to pick from your lists.' : 'Add something here and it waits for that day.'}
+        {...nowListProps}
+      />
+
       {isToday && !nowMode && routines.length > 0 && (
         <View style={styles.routines}>
           <Text style={styles.sectionTitle}>Routines</Text>
@@ -221,15 +231,6 @@ export default function TodayScreen({
         </TouchableOpacity>
       )}
 
-      <TaskList
-        listId={dayListId}
-        title={listTitle}
-        subtitle={nowMode ? 'Now mode · open tasks only' : daySummary}
-        subtitleWarn={!nowMode && !!capacity?.over}
-        emptyText={isToday ? 'Nothing planned yet.' : dayOffset === 1 ? 'Nothing lined up for tomorrow.' : 'Nothing on ' + dayName + ' yet.'}
-        emptyHint={isToday ? 'Add one small thing, or tap Just one thing to pick from your lists.' : 'Add something here and it waits for that day.'}
-        {...nowListProps}
-      />
     </Screen>
   );
 }

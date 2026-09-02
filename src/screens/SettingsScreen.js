@@ -19,7 +19,10 @@ import { isWeb } from '../platform';
 import CalendarRulesSection from '../components/CalendarRulesSection';
 import DayPlanSection from '../components/DayPlanSection';
 import DopamenuSection from '../components/DopamenuSection';
+import Collapsible from '../components/Collapsible';
 
+// Settings in five groups, each one line until opened: Look and feel, Your
+// day, Sleep, Connections, People. The laptop shows only what runs there.
 export default function SettingsScreen({
   google,
   sync,
@@ -39,9 +42,10 @@ export default function SettingsScreen({
   canvasCourses,
   onToggleAssignmentCalendar,
   linkedEventCount,
+  onStageReview,
   weather,
   drive,
-  onStageReview,
+  embedded = false,
 }) {
   // Appearance: stored outside the store because index.js reads it before anything loads.
   const [theme, setTheme] = useState('system');
@@ -69,16 +73,25 @@ export default function SettingsScreen({
     }
   };
   const version = Constants.expoConfig?.version || '';
-  const lastSleep = sleep.segments.length ? sleep.segments[sleep.segments.length - 1] : null;
+  const lastSleep = sleep?.segments?.length ? sleep.segments[sleep.segments.length - 1] : null;
   const focusApps = [{ id: null, name: 'None' }, ...APP_CATALOG.filter((a) => a.kind === 'focus')];
   const timerApps = [{ id: null, name: 'None' }, ...APP_CATALOG.filter((a) => a.kind === 'timer')];
+  const themeName = { system: 'Match phone', light: 'Light', dark: 'Dark', anime: 'Anime' }[theme] || theme;
+  const connectionsAlert = google.account && (drive?.state === 'reconnect' || drive?.state === 'error' || sync?.state === 'error');
+  const connectionsSummary = !google.account ? 'Google not connected' : connectionsAlert ? 'Google needs attention' : `Google · ${google.account}${!isWeb && canvas?.connected ? ' · Canvas' : ''}`;
+  const daySummary = isWeb
+    ? `${categories.length} ${categories.length === 1 ? 'category' : 'categories'} · ${(prefs.dayBlocks || []).length} ${(prefs.dayBlocks || []).length === 1 ? 'block' : 'blocks'}`
+    : `Brief, bedtime ${prefs.bedtimeHour === -1 ? 'off' : `at ${formatTime(new Date().setHours(prefs.bedtimeHour ?? 23, 0, 0, 0))}`}, ${(prefs.dayBlocks || []).length} ${(prefs.dayBlocks || []).length === 1 ? 'block' : 'blocks'}`;
+  const sleepSummary = !sleep?.available ? 'Needs the newer build' : sleep.enabled || sleep.health?.enabled ? `On${sleep.health?.enabled ? ', with the watch' : ''}` : 'Off';
+
+  const Wrap = embedded ? View : Screen;
 
   return (
-    <Screen>
-      <Text style={styles.title}>Settings</Text>
+    <Wrap>
+      {!embedded ? <Text style={styles.title}>Settings</Text> : null}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Appearance</Text>
+      <Collapsible title="Look and feel" summary={`${themeName}${prefs.weatherPlace ? ` · weather for ${prefs.weatherPlace.name}` : ''}`}>
+        <Text style={styles.label}>Appearance</Text>
         <PersonChips
           people={[
             { id: 'system', name: 'Match phone' },
@@ -91,14 +104,12 @@ export default function SettingsScreen({
           compact
         />
         <Text style={styles.detail}>Takes effect the next time the app opens.</Text>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quotes and art</Text>
+        <Text style={styles.label}>Quotes and art</Text>
         <Text style={shared.muted}>
-          Home shows a line for the day. Add your own, one per line, as "quote — who, show". Yours come up three
-          times as often as the built-in set. For pictures, drop images named art-something.jpg into the Files tab on
-          the laptop; one rotates onto Home each day.
+          Home shows a line for the day. Add your own, one per line, as "quote — who, show". Yours come up three times
+          as often as the built-in set. For pictures, drop images named art-something.jpg into the Files tab on the
+          laptop; one rotates onto Home each day.
         </Text>
         <TextInput
           style={[shared.input, styles.quotesBox]}
@@ -109,22 +120,8 @@ export default function SettingsScreen({
           placeholder={'Set your heart ablaze. — Rengoku, Demon Slayer'}
           placeholderTextColor={colors.muted}
         />
-      </View>
 
-      <DayPlanSection
-        categories={categories}
-        lists={lists}
-        blocks={prefs.dayBlocks || []}
-        onAddCategory={onAddCategory}
-        onRenameCategory={onRenameCategory}
-        onDeleteCategory={onDeleteCategory}
-        onSetBlocks={(blocks) => onSetPref('dayBlocks', blocks)}
-      />
-
-      <DopamenuSection menu={prefs.dopamenu || []} onChange={(menu) => onSetPref('dopamenu', menu)} />
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Weather and daylight</Text>
+        <Text style={styles.label}>Weather and daylight</Text>
         {prefs.weatherPlace ? (
           <View>
             <Text style={shared.muted}>Showing weather for {prefs.weatherPlace.name}.</Text>
@@ -152,226 +149,182 @@ export default function SettingsScreen({
           </View>
         )}
         {weather?.error ? <Text style={styles.error}>{weather.error}</Text> : null}
-      </View>
+      </Collapsible>
 
-      {isWeb ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>On the phone</Text>
-          <Text style={shared.muted}>
-            Reminders, voice quick add, energy checks, check-ins, sleep detection, hand-off apps, Canvas,
-            and calendar mirroring run on the phone. This laptop gets their results through sync.
-          </Text>
-        </View>
-      ) : (
-        <>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Morning brief</Text>
-        <Text style={shared.muted}>{reminderMessage(reminderStatus) || 'Checking your alarm…'}</Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Bedtime nudge</Text>
-        <Text style={shared.muted}>
-          A notification with "Going to bed" and "Not yet" buttons, so closing the day is one tap from the
-          shade or the watch. Not yet asks again in half an hour.
-        </Text>
-        <PersonChips
-          people={[
-            { id: '-1', name: 'Off' },
-            { id: '21', name: '9 PM' },
-            { id: '22', name: '10 PM' },
-            { id: '23', name: '11 PM' },
-            { id: '0', name: 'Midnight' },
-            { id: '1', name: '1 AM' },
-          ]}
-          selected={String(prefs.bedtimeHour ?? 23)}
-          onSelect={(id) => onSetPref('bedtimeHour', Number(id))}
-          compact
-        />
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.switchRow}>
-          <Text style={styles.sectionTitle}>Quick add from the shade and watch</Text>
-          <Switch value={!!prefs.quickAddNotification} onValueChange={(v) => onSetPref('quickAddNotification', v)} />
-        </View>
-        <Text style={shared.muted}>
-          Keeps an Almanac notification in the shade with "Speak a task" and "Speak a note". On a Galaxy
-          Watch or any Wear OS watch you can answer by voice. Say things like "milk to groceries",
-          "call the dentist tomorrow", or "sign the form for Zeke".
-        </Text>
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.switchRow}>
-          <Text style={styles.sectionTitle}>Sunday letter</Text>
-          <Switch value={prefs.weeklyLetter !== false} onValueChange={(v) => onSetPref('weeklyLetter', v)} />
-        </View>
-        <Text style={shared.muted}>
-          A Sunday 6 PM note that the week's letter is ready on the Insights tab: what got done, what
-          slipped, how estimates held up.
-        </Text>
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.switchRow}>
-          <Text style={styles.sectionTitle}>Midday energy check</Text>
-          <Switch value={prefs.energyCheckins !== false} onValueChange={(v) => onSetPref('energyCheckins', v)} />
-        </View>
-        <Text style={shared.muted}>
-          A 1 PM notification asking how your energy is, answered with one tap. Morning and evening
-          checks are on the Today screen. Insights compares energy with what got done.
-        </Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Check-ins while a task runs</Text>
-        <Text style={shared.muted}>
-          Every so often the phone asks "Still working on this?" with Still on it, Pause, and Finish
-          buttons. They work from the shade and the watch.
-        </Text>
-        <PersonChips
-          people={[
-            { id: '0', name: 'Off' },
-            { id: '15', name: '15 min' },
-            { id: '30', name: '30 min' },
-            { id: '45', name: '45 min' },
-            { id: '60', name: '1 hour' },
-          ]}
-          selected={String(prefs.checkinMinutes ?? 30)}
-          onSelect={(id) => onSetPref('checkinMinutes', Number(id))}
-          compact
-        />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Sleep detection</Text>
-        {!sleep.available ? (
-          <Text style={shared.muted}>Needs a newer app build. Install the latest APK to turn this on.</Text>
-        ) : sleep.enabled ? (
+      <Collapsible title="Your day" summary={daySummary}>
+        {!isWeb ? (
           <View>
-            <Text style={shared.muted}>
-              On. The phone notices when it goes still for the night and Almanac uses that to fill in a
-              forgotten Good night or I'm up.
-            </Text>
-            <Text style={styles.detail}>
-              {lastSleep
-                ? `Last detected: asleep ${formatTime(lastSleep.start)} to ${formatTime(lastSleep.end)} (${formatDuration(lastSleep.end - lastSleep.start)}).`
-                : 'Nothing detected yet. The first reading usually arrives the morning after enabling.'}
-            </Text>
-            <SmallButton label="Turn off" onPress={sleep.disable} style={styles.button} />
+            <Text style={styles.label}>Morning brief</Text>
+            <Text style={shared.muted}>{reminderMessage(reminderStatus) || 'Checking your alarm…'}</Text>
+
+            <Text style={styles.label}>Bedtime nudge</Text>
+            <Text style={shared.muted}>"Going to bed" and "Not yet" buttons in a notification, so closing the day is one tap. Not yet asks again in half an hour.</Text>
+            <PersonChips
+              people={[
+                { id: '-1', name: 'Off' },
+                { id: '21', name: '9 PM' },
+                { id: '22', name: '10 PM' },
+                { id: '23', name: '11 PM' },
+                { id: '0', name: 'Midnight' },
+                { id: '1', name: '1 AM' },
+              ]}
+              selected={String(prefs.bedtimeHour ?? 23)}
+              onSelect={(id) => onSetPref('bedtimeHour', Number(id))}
+              compact
+            />
+          </View>
+        ) : null}
+
+        <DayPlanSection
+          categories={categories}
+          lists={lists}
+          blocks={prefs.dayBlocks || []}
+          onAddCategory={onAddCategory}
+          onRenameCategory={onRenameCategory}
+          onDeleteCategory={onDeleteCategory}
+          onSetBlocks={(blocks) => onSetPref('dayBlocks', blocks)}
+        />
+
+        <DopamenuSection menu={prefs.dopamenu || []} onChange={(menu) => onSetPref('dopamenu', menu)} />
+
+        {!isWeb ? (
+          <View>
+            <View style={styles.switchRow}>
+              <Text style={styles.label}>Midday energy check</Text>
+              <Switch value={prefs.energyCheckins !== false} onValueChange={(v) => onSetPref('energyCheckins', v)} />
+            </View>
+            <Text style={shared.muted}>A 1 PM notification asking how your energy is, answered with one tap.</Text>
+
+            <Text style={styles.label}>Check-ins while a task runs</Text>
+            <Text style={shared.muted}>"Still working on this?" with Still on it, Pause, and Finish, from the shade and the watch.</Text>
+            <PersonChips
+              people={[
+                { id: '0', name: 'Off' },
+                { id: '15', name: '15 min' },
+                { id: '30', name: '30 min' },
+                { id: '45', name: '45 min' },
+                { id: '60', name: '1 hour' },
+              ]}
+              selected={String(prefs.checkinMinutes ?? 30)}
+              onSelect={(id) => onSetPref('checkinMinutes', Number(id))}
+              compact
+            />
+
+            <View style={styles.switchRow}>
+              <Text style={styles.label}>Quick add from the shade and watch</Text>
+              <Switch value={!!prefs.quickAddNotification} onValueChange={(v) => onSetPref('quickAddNotification', v)} />
+            </View>
+            <Text style={shared.muted}>Keeps a notification in the shade with Speak a task, Hold a thought, and Journal. On a Galaxy Watch you answer by voice.</Text>
+
+            <View style={styles.switchRow}>
+              <Text style={styles.label}>Sunday letter</Text>
+              <Switch value={prefs.weeklyLetter !== false} onValueChange={(v) => onSetPref('weeklyLetter', v)} />
+            </View>
+            <Text style={shared.muted}>A Sunday 6 PM note that the week's letter is ready, with one question that files into the journal.</Text>
           </View>
         ) : (
-          <View>
-            <Text style={shared.muted}>
-              Let the phone's own sleep detection fill in bedtime and wake time when you forget to tap.
-              No wearable needed. Android will ask for the physical activity permission.
-            </Text>
-            <SmallButton label="Turn on" onPress={sleep.enable} style={styles.button} />
-          </View>
+          <Text style={[shared.muted, styles.note]}>Reminders, energy checks, check-ins, and voice capture run on the phone.</Text>
         )}
-        {sleep.error ? <Text style={styles.error}>{sleep.error}</Text> : null}
+      </Collapsible>
 
-        <Text style={[styles.sectionTitle, styles.subTitle]}>From the watch (Health Connect)</Text>
-        {sleep.health.status === 'missing' ? (
-          <Text style={shared.muted}>Needs a newer app build.</Text>
-        ) : sleep.health.status !== 'available' ? (
-          <Text style={shared.muted}>
-            {sleep.health.status === 'update'
-              ? 'Health Connect needs an update on this phone (it is in the Play Store).'
-              : 'Health Connect is not available on this phone.'}
-          </Text>
-        ) : sleep.health.enabled ? (
+      {!isWeb && sleep ? (
+        <Collapsible title="Sleep" summary={sleepSummary}>
+          <Text style={styles.label}>Sleep detection</Text>
+          {!sleep.available ? (
+            <Text style={shared.muted}>Needs a newer app build. Install the latest APK to turn this on.</Text>
+          ) : sleep.enabled ? (
+            <View>
+              <Text style={shared.muted}>On. The phone notices when it goes still for the night and uses that to fill in a forgotten Good night or I'm up.</Text>
+              <Text style={styles.detail}>
+                {lastSleep
+                  ? `Last detected: asleep ${formatTime(lastSleep.start)} to ${formatTime(lastSleep.end)} (${formatDuration(lastSleep.end - lastSleep.start)}).`
+                  : 'Nothing detected yet. The first reading usually arrives the morning after enabling.'}
+              </Text>
+              <SmallButton label="Turn off" onPress={sleep.disable} style={styles.button} />
+            </View>
+          ) : (
+            <View>
+              <Text style={shared.muted}>Let the phone's own sleep detection fill in bedtime and wake time when you forget to tap. Android asks for the physical activity permission.</Text>
+              <SmallButton label="Turn on" onPress={sleep.enable} style={styles.button} />
+            </View>
+          )}
+          {sleep.error ? <Text style={styles.error}>{sleep.error}</Text> : null}
+
+          <Text style={styles.label}>From the watch (Health Connect)</Text>
+          {sleep.health.status === 'missing' ? (
+            <Text style={shared.muted}>Needs a newer app build.</Text>
+          ) : sleep.health.status !== 'available' ? (
+            <Text style={shared.muted}>{sleep.health.status === 'update' ? 'Health Connect needs an update on this phone (it is in the Play Store).' : 'Health Connect is not available on this phone.'}</Text>
+          ) : sleep.health.enabled ? (
+            <View>
+              <Text style={shared.muted}>On. Sleep recorded by your Galaxy Watch through Samsung Health takes priority over the phone's guess.</Text>
+              <Text style={styles.detail}>
+                {sleep.health.lastRead
+                  ? `Latest: asleep ${formatTime(sleep.health.lastRead.start)} to ${formatTime(sleep.health.lastRead.end)} (${formatDuration(sleep.health.lastRead.end - sleep.health.lastRead.start)}).`
+                  : 'No sessions read yet. Make sure Samsung Health is set to sync sleep to Health Connect.'}
+              </Text>
+              <SmallButton label="Turn off" onPress={sleep.health.disable} style={styles.button} />
+            </View>
+          ) : (
+            <View>
+              <Text style={shared.muted}>Use the sleep your watch records. In Samsung Health, turn on syncing to Health Connect, then allow Almanac to read sleep.</Text>
+              <SmallButton label="Connect Health Connect" onPress={sleep.health.enable} style={styles.button} />
+            </View>
+          )}
+          {sleep.health.error ? <Text style={styles.error}>{sleep.health.error}</Text> : null}
+        </Collapsible>
+      ) : null}
+
+      <Collapsible title="Connections" summary={connectionsSummary} alert={!!connectionsAlert} open={!!connectionsAlert}>
+        <GoogleSection auth={google} sync={sync} drive={drive} />
+        {!isWeb ? (
           <View>
-            <Text style={shared.muted}>
-              On. Sleep recorded by your Galaxy Watch through Samsung Health is read from Health Connect and
-              takes priority over the phone's guess.
-            </Text>
-            <Text style={styles.detail}>
-              {sleep.health.lastRead
-                ? `Latest: asleep ${formatTime(sleep.health.lastRead.start)} to ${formatTime(sleep.health.lastRead.end)} (${formatDuration(sleep.health.lastRead.end - sleep.health.lastRead.start)}).`
-                : 'No sessions read yet. Make sure Samsung Health is set to sync sleep to Health Connect.'}
-            </Text>
-            <SmallButton label="Turn off" onPress={sleep.health.disable} style={styles.button} />
+            <CanvasSection auth={canvas} sync={canvasSync} courses={canvasCourses} />
+            <AssignmentCalendarSection
+              connected={canvas.connected}
+              enabled={!!prefs.assignmentsToCalendar}
+              calendarId={prefs.assignmentCalendarId}
+              onToggle={onToggleAssignmentCalendar}
+              onPickCalendar={(id) => onSetPref('assignmentCalendarId', id)}
+              linkedCount={linkedEventCount}
+            />
+            <CalendarRulesSection rules={prefs.calendarRules || []} lists={lists} onChange={(rules) => onSetPref('calendarRules', rules)} />
+            <Text style={styles.label}>Hand-off apps</Text>
+            <Text style={shared.muted}>When you start a phone-free task or a timed routine item, Almanac opens one of these.</Text>
+            <Text style={styles.subLabel}>Focus app</Text>
+            <PersonChips people={focusApps.map((a) => ({ id: a.id ?? 'none', name: a.name }))} selected={prefs.focusApp ?? 'none'} onSelect={(id) => onSetPref('focusApp', id === 'none' ? null : id)} compact />
+            <Text style={styles.subLabel}>Timer app</Text>
+            <PersonChips people={timerApps.map((a) => ({ id: a.id ?? 'none', name: a.name }))} selected={prefs.timerApp ?? 'none'} onSelect={(id) => onSetPref('timerApp', id === 'none' ? null : id)} compact />
           </View>
         ) : (
-          <View>
-            <Text style={shared.muted}>
-              Use the sleep your watch records. In Samsung Health, turn on syncing to Health Connect, then
-              allow Almanac to read sleep.
-            </Text>
-            <SmallButton label="Connect Health Connect" onPress={sleep.health.enable} style={styles.button} />
-          </View>
+          <Text style={[shared.muted, styles.note]}>Canvas, calendar mirroring, and hand-off apps are set up on the phone.</Text>
         )}
-        {sleep.health.error ? <Text style={styles.error}>{sleep.health.error}</Text> : null}
-      </View>
+      </Collapsible>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Hand-off apps</Text>
-        <Text style={shared.muted}>
-          When you start a phone-free task, the Focus screen offers to open one of these.
-        </Text>
-        <Text style={styles.label}>Focus app</Text>
-        <PersonChips
-          people={focusApps.map((a) => ({ id: a.id ?? 'none', name: a.name }))}
-          selected={prefs.focusApp ?? 'none'}
-          onSelect={(id) => onSetPref('focusApp', id === 'none' ? null : id)}
-          compact
-        />
-        <Text style={styles.label}>Timer app</Text>
-        <PersonChips
-          people={timerApps.map((a) => ({ id: a.id ?? 'none', name: a.name }))}
-          selected={prefs.timerApp ?? 'none'}
-          onSelect={(id) => onSetPref('timerApp', id === 'none' ? null : id)}
-          compact
-        />
-      </View>
-
-      <CalendarRulesSection rules={prefs.calendarRules || []} lists={lists} onChange={(rules) => onSetPref('calendarRules', rules)} />
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>People</Text>
+      <Collapsible title="People" summary={people.map((p) => p.name).join(', ')}>
         <Text style={shared.muted}>Tasks and lists can be tagged for any of these.</Text>
         <PersonChips people={people} selected={null} onSelect={() => {}} onAdd={onAddPerson} compact />
-      </View>
+      </Collapsible>
 
-        </>
-      )}
-
-      <GoogleSection auth={google} sync={sync} drive={drive} />
-
-      {!isWeb && (
-        <>
-      <CanvasSection auth={canvas} sync={canvasSync} courses={canvasCourses} />
-
-      <AssignmentCalendarSection
-        connected={canvas.connected}
-        enabled={!!prefs.assignmentsToCalendar}
-        calendarId={prefs.assignmentCalendarId}
-        onToggle={onToggleAssignmentCalendar}
-        onPickCalendar={(id) => onSetPref('assignmentCalendarId', id)}
-        linkedCount={linkedEventCount}
-      />
-
-        </>
-      )}
-
-      {__DEV__ && !isWeb && <DevSection onStageReview={onStageReview} />}
+      {__DEV__ && !isWeb ? (
+        <Collapsible title="Developer" summary="Test buttons">
+          <DevSection onStageReview={onStageReview} />
+        </Collapsible>
+      ) : null}
 
       <Text style={styles.footer}>Almanac {version}</Text>
-    </Screen>
+    </Wrap>
   );
 }
 
 const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '700', color: colors.ink },
-  section: { marginTop: 28, paddingTop: 20, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: colors.ink, marginBottom: 6 },
-  quotesBox: { flex: 0, minHeight: 90, textAlignVertical: 'top', marginTop: 8 },
+  label: { fontSize: 14, fontWeight: '700', color: colors.ink, marginTop: 16, marginBottom: 6 },
+  subLabel: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 10, marginBottom: 6 },
+  quotesBox: { flex: 0, minHeight: 90, textAlignVertical: 'top', marginTop: 4 },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   detail: { fontSize: 13, color: colors.muted, marginTop: 4 },
-  subTitle: { marginTop: 18 },
-  label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 12, marginBottom: 6 },
+  note: { marginTop: 8 },
   button: { marginTop: 10 },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   input: { flex: 1 },
