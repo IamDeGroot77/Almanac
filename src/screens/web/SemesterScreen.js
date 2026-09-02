@@ -19,7 +19,7 @@ const weekStartOf = (key) => {
 
 export default function SemesterScreen({ store, onOpenTask }) {
   const today = almanacToday();
-  const assignments = store.tasks.filter((t) => t.canvasId && t.due);
+  const assignments = store.tasks.filter((t) => (t.canvasId || t.canvasCourse) && t.due && !t.parentId);
   const courses = store.canvas?.courses || [];
 
   const { weeks, byCourse, totals } = useMemo(() => {

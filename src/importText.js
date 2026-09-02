@@ -22,6 +22,13 @@ import { HORIZONS } from './consider.js';
 //   - book flights // check miles  <- "// note" adds a note
 //   Today: / Tomorrow: / Monday:   <- headers that mean a day list
 //
+// A syllabus pasted as markdown also works, inside whatever list header
+// came before it (say "School (in Work):"):
+//   # Fall 2026 — Weekly Tasks       <- a title; a year here sets the year for the dates below
+//   ## Week 1 — 9/9–9/15             <- a week: items below are due at its end unless they say otherwise
+//   **MPA 711**                      <- a course; items below carry it (and "(opens 9/28)" is dropped)
+//   - [ ] Read Ch. 1 — Sat 9/12      <- a checkbox item; "— date", "post Sat 9/12", "Fri 9/11" set the date
+//
 // Lines before any header go to a list called "Inbox".
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -30,6 +37,7 @@ export function parseImport(text, { people = [], lists = [], routines = [], cate
   const plan = { lists: [], routines: [], counts: { lists: 0, newLists: 0, tasks: 0, steps: 0, routines: 0, items: 0 } };
   let current = null; // { kind: 'list' | 'routine', ... }
   let lastTask = null;
+  const ctx = { year: now.getFullYear(), week: null, course: null }; // syllabus context
 
   const findPerson = (name) => {
     const n = name.toLowerCase();
@@ -69,9 +77,35 @@ export function parseImport(text, { people = [], lists = [], routines = [], cate
     const bullet = line.match(/^([-*•]|\d+[.)])\s+(.*)$/);
     const body = bullet ? bullet[2].trim() : line;
 
+    // Syllabus lines: title with a year, week headers, bold course lines.
+    const md = line.match(/^#+\s*(.*)$/);
+    if (md) {
+      const h = md[1].trim();
+      const yearMatch = h.match(/\b(20\d{2})\b/);
+      const week = h.match(/^week\s*(\d+)\b\s*[—–-]?\s*(.*)$/i);
+      if (week) {
+        ctx.week = { n: Number(week[1]), label: h, end: rangeEnd(week[2], ctx.year, now) };
+        ctx.course = null;
+        if (!current) openHeader('School:');
+        continue;
+      }
+      if (yearMatch && !/:$/.test(line)) {
+        ctx.year = Number(yearMatch[1]);
+        if (!current) openHeader('School:');
+        continue;
+      }
+    }
+    const bold = !bullet && line.match(/^\*\*(.+?)\*\*\s*(?:\(.*\))?\s*$/);
+    if (bold) {
+      ctx.course = bold[1].replace(/\s*[—–-]\s*Course\s*\d+.*$/i, '').trim();
+      continue;
+    }
+
     const isHeader = !bullet && (/^#/.test(line) || /:$/.test(line));
     if (isHeader) {
       openHeader(line);
+      ctx.week = null;
+      ctx.course = null;
       continue;
     }
     if (!current) openHeader('Inbox:');
@@ -89,8 +123,17 @@ export function parseImport(text, { people = [], lists = [], routines = [], cate
       continue;
     }
 
-    const item = parseTaskLine(body, findPerson);
+    const item = parseTaskLine(cleanSyllabusItem(body), findPerson, ctx);
     if (!item) continue;
+    if (ctx.course) {
+      item.course = ctx.course;
+      const escaped = ctx.course.replace(/[.*+?^${}()|[\]\\]/g, (ch) => '\\' + ch);
+      item.text = item.text.replace(new RegExp('^' + escaped + '\\s*[—–:-]\\s*', 'i'), '');
+    }
+    if (ctx.week) {
+      if (!item.due && ctx.week.end) item.due = ctx.week.end;
+      item.notes = [ctx.week.label, item.notes].filter(Boolean).join(' · ');
+    }
     if (indent >= 2 && lastTask && bullet) {
       lastTask.steps.push(item);
       plan.counts.steps += 1;
@@ -159,8 +202,44 @@ function dayListFor(name, now) {
 }
 
 // "call dentist by fri 3pm for zeke // bring card" -> { text, due, dueTime, personId, notes }
-export function parseTaskLine(body, findPerson) {
+// "- [ ] **Assignment One — Sat 9/19**" -> "Assignment One — Sat 9/19"
+function cleanSyllabusItem(body) {
+  return body.replace(/^\[[ xX]\]\s*/, '').replace(/\*\*/g, '').replace(/(^|\s)\*(\S[^*]*\S)\*/g, '$1$2').trim();
+}
+
+// "9/9–9/15" -> the day key of 9/15 in the given year (a range that wraps the year rolls forward).
+function rangeEnd(text, year, now) {
+  const m = (text || '').match(/(\d{1,2})\/(\d{1,2})\s*[—–-]\s*(\d{1,2})\/(\d{1,2})/);
+  if (!m) return null;
+  const d = new Date(year, Number(m[3]) - 1, Number(m[4]));
+  return dayKey(d);
+}
+
+export function parseTaskLine(body, findPerson, ctx = null) {
   let text = body;
+  // Syllabus timing: "— Sat 9/19", "post Sat 9/12, replies Tue 9/15", "Fri 9/11", "(opens 9/28)".
+  if (ctx) {
+    // The last dash-separated segment, if it holds a date, is the timing.
+    const timing = text.match(/^(.*\S)\s+[—–-]\s+([^—–]*\d{1,2}\/\d{1,2}[^—–]*)$/);
+    if (timing) {
+      const dates = timing[2].match(/\d{1,2}\/\d{1,2}/g) || [];
+      if (dates.length) {
+        const [mo, da] = dates[0].split('/').map(Number);
+        const due = dayKey(new Date(ctx.year, mo - 1, da));
+        const rest = parseTaskLine(timing[1], findPerson);
+        if (!rest) return null;
+        return { ...rest, due, dueTime: null, notes: [rest.notes, timing[2].trim()].filter(Boolean).join(' · ') };
+      }
+    }
+    const bare = text.match(/\s+(?:(?:by|due|on)\s+)?(?:[A-Za-z]{3}\s+)?(\d{1,2})\/(\d{1,2})\s*$/i);
+    if (bare) {
+      const due = dayKey(new Date(ctx.year, Number(bare[1]) - 1, Number(bare[2])));
+      const rest = parseTaskLine(text.slice(0, bare.index), findPerson);
+      if (!rest) return null;
+      return { ...rest, due, dueTime: null };
+    }
+    text = text.replace(/\s*\(opens\s+[^)]*\)\s*$/i, '');
+  }
   let personId = null;
   let due = null;
   let dueTime = null;
