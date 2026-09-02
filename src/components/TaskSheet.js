@@ -31,6 +31,8 @@ export default function TaskSheet({
   onSetDue,
   onSetEstimate,
   onSetNotes,
+  onSetPlan,
+  calibration, // median actual/estimate ratio from the time log, or null
   onMove,
   onClose,
   steps, // { all, open, done } for this task
@@ -44,17 +46,20 @@ export default function TaskSheet({
   const [customTime, setCustomTime] = useState('');
   const [dueError, setDueError] = useState('');
   const [notes, setNotes] = useState('');
+  const [plan, setPlan] = useState('');
 
   useEffect(() => {
     setCustomDue('');
     setCustomTime('');
     setDueError('');
     setNotes(task?.notes || '');
+    setPlan(task?.plan || '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task?.id]);
 
   const close = () => {
     if (task && (notes || '') !== (task.notes || '')) onSetNotes(task.id, notes);
+    if (task && (plan || '') !== (task.plan || '')) onSetPlan(task.id, plan);
     onClose();
   };
 
@@ -164,9 +169,27 @@ export default function TaskSheet({
               ) : null}
               {dueError ? <Text style={styles.error}>{dueError}</Text> : null}
 
+              <Text style={[styles.label, styles.spacedSmall]}>When and where</Text>
+              <TextInput
+                style={[shared.input, styles.smallInput, styles.planInput]}
+                value={plan}
+                onChangeText={setPlan}
+                onBlur={() => onSetPlan(task.id, plan)}
+                placeholder="e.g. Tuesday after lunch, at the kitchen table"
+                placeholderTextColor={colors.muted}
+                returnKeyType="done"
+              />
+              <Text style={styles.calib}>Deciding when and where ahead of time is the best predictor of actually starting.</Text>
+
               <Text style={[styles.label, styles.spaced]}>
                 Estimate {task.estimateMs ? `· ${formatDuration(task.estimateMs)}` : ''}
               </Text>
+              {calibration && calibration > 1.2 && task.estimateMs ? (
+                <Text style={styles.calib}>
+                  Your timed tasks run about {Math.round(calibration * 100)}% of their estimates, so{' '}
+                  {formatDuration(task.estimateMs)} is more likely {formatDuration(Math.round(task.estimateMs * calibration))}.
+                </Text>
+              ) : null}
               <View style={styles.chips}>
                 <Chip label="None" active={!task.estimateMs} onPress={() => onSetEstimate(task.id, null)} />
                 {ESTIMATES.map((e) => (
@@ -315,6 +338,8 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: 'row', gap: 8, marginTop: 8, alignItems: 'center' },
   smallInput: { paddingVertical: 8, fontSize: 14 },
   notes: { flex: 0, minHeight: 64, textAlignVertical: 'top' },
+  planInput: { flex: 0, marginTop: 0 },
+  calib: { fontSize: 12, color: colors.muted, marginTop: 6, marginBottom: 6 },
   stepRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
   stepMain: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   stepBox: {

@@ -130,6 +130,17 @@ export default function SettingsScreen({
 
       <View style={styles.section}>
         <View style={styles.switchRow}>
+          <Text style={styles.sectionTitle}>Sunday letter</Text>
+          <Switch value={prefs.weeklyLetter !== false} onValueChange={(v) => onSetPref('weeklyLetter', v)} />
+        </View>
+        <Text style={shared.muted}>
+          A Sunday 6 PM note that the week's letter is ready on the Insights tab: what got done, what
+          slipped, how estimates held up.
+        </Text>
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.switchRow}>
           <Text style={styles.sectionTitle}>Midday energy check</Text>
           <Switch value={prefs.energyCheckins !== false} onValueChange={(v) => onSetPref('energyCheckins', v)} />
         </View>

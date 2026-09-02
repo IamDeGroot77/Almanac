@@ -5,6 +5,7 @@ import { formatDuration } from '../durations';
 import { formatTime, describeDayKey } from '../dates';
 import { estimateAccuracy, timeByList, timeByPerson, carryOvers, dayStats, trackedShare, energyStats } from '../insights';
 import { energyLabel } from '../components/EnergyPrompt';
+import { composeWeeklyLetter } from '../weeklyLetter';
 import { almanacToday } from '../clock';
 
 // Reality vs perception, and where things slip. Every section explains what
@@ -26,6 +27,10 @@ export default function InsightsScreen({ store }) {
       <Text style={shared.muted}>
         {store.timeLog.length} timed {store.timeLog.length === 1 ? 'task' : 'tasks'} · {formatDuration(totalTracked) || '0m'} tracked
       </Text>
+
+      <Section title="This week's letter">
+        <Text style={styles.letter}>{composeWeeklyLetter(store)}</Text>
+      </Section>
 
       <Section title="Estimates vs reality">
         {!est ? (
@@ -234,6 +239,7 @@ const styles = StyleSheet.create({
   bigValue: { fontSize: 34, fontWeight: '800', color: colors.accent },
   bigLabel: { fontSize: 14, color: colors.muted, flex: 1, minWidth: 160 },
   detail: { fontSize: 14, color: colors.muted, marginTop: 8 },
+  letter: { fontSize: 15, color: colors.ink, lineHeight: 22 },
   subhead: { fontSize: 13, fontWeight: '700', color: colors.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
   list: { marginTop: 12 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, gap: 12 },

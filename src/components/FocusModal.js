@@ -9,7 +9,7 @@ import { APP_CATALOG } from '../apps';
 // One task, full screen. Opens when you Start something. Everything else is
 // out of sight, the timer is big, and for a phone-free task it offers to
 // hand off to a focus or timer app.
-export default function FocusModal({ task, nextStep, stepsSummary, prefs, onPause, onFinish, onFinishStep, onPhoneFree, onClose }) {
+export default function FocusModal({ task, nextStep, stepsSummary, prefs, session, onStartSession, onEndSession, onFocusmate, onPause, onFinish, onFinishStep, onPhoneFree, onClose }) {
   const [handoffNote, setHandoffNote] = useState('');
   const now = useNow(!!task, 1000);
   if (!task) return null;
@@ -69,6 +69,32 @@ export default function FocusModal({ task, nextStep, stepsSummary, prefs, onPaus
           )}
         </View>
 
+        {task.plan ? <Text style={styles.plan}>📍 {task.plan}</Text> : null}
+
+        <View style={styles.sessionRow}>
+          {session && session.taskId === task.id ? (
+            <View style={styles.sessionLive}>
+              <Text style={styles.sessionText}>
+                {session.ended
+                  ? session.minutes + '-minute block done. Again, or finish?'
+                  : 'Block ends ' +
+                    new Date(session.endsAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) +
+                    ' · ' +
+                    Math.max(0, Math.ceil((session.endsAt - now) / 60000)) +
+                    ' min left'}
+              </Text>
+              <SmallButton label={session.ended ? 'Clear' : 'Stop block'} onPress={onEndSession} />
+            </View>
+          ) : (
+            <View style={styles.sessionPick}>
+              <Text style={styles.sessionLabel}>Work in a block</Text>
+              <SmallButton label="25 min" onPress={() => onStartSession(task, 25)} />
+              <SmallButton label="50 min" onPress={() => onStartSession(task, 50)} />
+              <SmallButton label="Focusmate" onPress={onFocusmate} />
+            </View>
+          )}
+        </View>
+
         <View style={styles.phoneFree}>
           <View style={styles.phoneFreeRow}>
             <Text style={styles.phoneFreeLabel}>Phone-free task</Text>
@@ -120,6 +146,12 @@ const styles = StyleSheet.create({
   fill: { height: 6, borderRadius: 3, backgroundColor: colors.accent },
   fillOver: { backgroundColor: colors.warn },
   estimateText: { fontSize: 13, color: colors.muted, marginTop: 8, textAlign: 'center' },
+  plan: { fontSize: 14, color: colors.muted, textAlign: 'center', marginBottom: 10 },
+  sessionRow: { marginBottom: 14 },
+  sessionPick: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  sessionLabel: { fontSize: 13, color: colors.muted, marginRight: 4 },
+  sessionLive: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  sessionText: { flex: 1, fontSize: 13, color: colors.accent, fontWeight: '600' },
   phoneFree: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line, paddingTop: 16, marginBottom: 16 },
   phoneFreeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   phoneFreeLabel: { fontSize: 16, fontWeight: '600', color: colors.ink },

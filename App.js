@@ -27,6 +27,11 @@ import UndoBar from './src/components/UndoBar';
 import { pickNext, nextStepOf, childrenOf } from './src/pickNext';
 import { suggestSteps, planDates } from './src/breakdown';
 import { useWeather } from './src/weather';
+import useFocusSession from './src/focusSession';
+import { maybeReward } from './src/rewards';
+import Toast from './src/components/Toast';
+import { useWeeklyLetterReminder } from './src/weeklyLetter';
+import { estimateAccuracy } from './src/insights';
 
 import TabBar from './src/components/TabBar';
 import TodayScreen from './src/screens/TodayScreen';
@@ -83,6 +88,9 @@ function AlmanacApp() {
   useTaskCheckins(store, { minutes: store.prefs.checkinMinutes ?? 30 });
   useEnergyCheckins(store, { enabled: store.prefs.energyCheckins !== false });
   const { undo, offer: offerUndo } = useUndo();
+  const focusSession = useFocusSession();
+  const [toast, setToast] = useState(null);
+  useWeeklyLetterReminder(store.prefs.weeklyLetter !== false);
   const [reminderStatus, setReminderStatus] = useState('pending');
   useEffect(() => {
     scheduleDailyReminder()
@@ -129,7 +137,19 @@ function AlmanacApp() {
 
   // Finishing the last step offers to finish the parent too.
   const finishTask = (id) => {
+    const before = store.tasks.find((t) => t.id === id);
     const { parentReady } = store.finishTask(id);
+    if (before) {
+      const spent = (before.spentMs || 0) + (before.startedAt ? Date.now() - before.startedAt : 0);
+      const line = maybeReward({
+        durationMs: spent || null,
+        estimateMs: before.estimateMs,
+        carriedCount: before.carriedCount,
+        isStep: !!before.parentId,
+      });
+      if (line) setToast({ text: line, at: Date.now() });
+    }
+    if (focusSession.session?.taskId === id) focusSession.clear();
     if (!parentReady) return;
     const parent = store.tasks.find((t) => t.id === parentReady);
     if (!parent) return;
@@ -300,6 +320,7 @@ function AlmanacApp() {
       </View>
 
       <UndoBar undo={undo} />
+      <Toast toast={toast} />
       <TabBar active={tab} onSelect={setTab} />
 
       <NameModal
@@ -348,6 +369,10 @@ function AlmanacApp() {
             : null
         }
         onFinishStep={(stepId) => store.finishTask(stepId)}
+        session={focusSession.session}
+        onStartSession={focusSession.start}
+        onEndSession={focusSession.clear}
+        onFocusmate={focusSession.openFocusmate}
         prefs={store.prefs}
         onPhoneFree={store.setTaskPhoneFree}
         onPause={(id) => {
@@ -373,6 +398,8 @@ function AlmanacApp() {
         onSetDue={store.setTaskDue}
         onSetEstimate={store.setTaskEstimate}
         onSetNotes={store.setTaskNotes}
+        onSetPlan={store.setTaskPlan}
+        calibration={estimateAccuracy(store.timeLog)?.median || null}
         onMove={(id, listId) => {
           store.moveTask(id, listId);
           setSheetTaskId(null);

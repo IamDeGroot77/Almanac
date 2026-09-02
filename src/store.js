@@ -472,6 +472,10 @@ export function useAlmanacStore() {
           sync: { ...s.sync, deletedTasks: s.sync.deletedTasks.filter((d) => !googleIds.has(d.googleId)) },
         }));
       },
+      // Implementation intention: when and where this will happen.
+      setTaskPlan(id, plan) {
+        edit((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, plan: (plan || '').trim() || null } : t)) }));
+      },
       setTaskNotes(id, notes) {
         const now = Date.now();
         edit((s) => ({

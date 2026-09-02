@@ -31,6 +31,7 @@ export default function TaskRow({ task, tag, context, steps, isStep, onToggle, o
           : task.canvasCourse,
     });
   }
+  if (task.plan && !task.done) meta.push({ text: `📍 ${task.plan}` });
   if (task.notes?.trim()) meta.push({ text: `≡ ${task.notes.trim().split('\n')[0].slice(0, 40)}` });
   if (task.done && elapsed != null) {
     meta.push({
