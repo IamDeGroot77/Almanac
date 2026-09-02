@@ -9,25 +9,42 @@ import { parseDayKey } from './dates';
 // goes away. Links between tasks and events live in state.calendarEvents.
 
 const DEBOUNCE_MS = 4000;
+const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
+const MONTH_MS = 30 * DAY;
+
+// Alerts, in minutes before the event: a day and an hour before everything,
+// and a week before anything that was more than a month out when it was
+// first put on the calendar (remembered on the link so it doesn't vanish
+// once the date gets closer).
+const ALERT_DAY = -24 * 60;
+const ALERT_HOUR = -60;
+const ALERT_WEEK = -7 * 24 * 60;
 
 function eventKey(task) {
-  return [task.text, task.canvasCourse || '', task.due, task.dueTime || '', task.done ? 1 : 0].join('|');
+  return [task.text, task.canvasCourse || '', task.canvasDueAt || task.due, task.dueTime || '', task.done ? 1 : 0].join('|');
 }
 
-function eventDetails(task) {
-  const start = parseDayKey(task.due);
-  let end;
-  let allDay = true;
+// When the deadline actually is, as a Date. Canvas gives an exact instant;
+// a hand-set due date without a time is treated as end of that day.
+function deadlineOf(task) {
+  if (task.canvasDueAt) return new Date(task.canvasDueAt);
+  const d = parseDayKey(task.due);
   if (task.dueTime) {
     const [h, m] = task.dueTime.split(':').map(Number);
-    start.setHours(h, m, 0, 0);
-    end = new Date(start.getTime() + 60 * 60 * 1000);
-    allDay = false;
+    d.setHours(h, m, 0, 0);
   } else {
-    end = new Date(start);
-    end.setDate(end.getDate() + 1);
+    d.setHours(23, 59, 0, 0);
   }
-  const title = `${task.done ? '✓ ' : ''}${task.text}${task.canvasCourse ? ` · ${task.canvasCourse}` : ''}`;
+  return d;
+}
+
+function eventDetails(task, { weekAlert }) {
+  const deadline = deadlineOf(task);
+  // A timed hour ending at the deadline, so "one hour before" is unambiguous.
+  const end = deadline;
+  const start = new Date(deadline.getTime() - HOUR);
+  const title = `${task.done ? '✓ ' : ''}Due: ${task.text}${task.canvasCourse ? ` · ${task.canvasCourse}` : ''}`;
   const notes = [
     task.canvasPoints != null ? `${task.canvasPoints} points` : null,
     task.canvasUrl || null,
@@ -35,8 +52,13 @@ function eventDetails(task) {
   ]
     .filter(Boolean)
     .join('\n');
-  return { title, startDate: start, endDate: end, allDay, notes };
+  // Alerts are relative to the event start (one hour before the deadline).
+  const alarms = [{ relativeOffset: ALERT_DAY + 60 }, { relativeOffset: ALERT_HOUR + 60 }];
+  if (weekAlert) alarms.push({ relativeOffset: ALERT_WEEK + 60 });
+  return { title, startDate: start, endDate: end, allDay: false, notes, alarms };
 }
+
+const isFarOut = (task) => deadlineOf(task).getTime() - Date.now() > MONTH_MS;
 
 export default function useAssignmentCalendar(store, { enabled, calendarId }) {
   const storeRef = useRef(store);
@@ -75,20 +97,21 @@ export default function useAssignmentCalendar(store, { enabled, calendarId }) {
       for (const t of wanted) {
         const key = eventKey(t);
         const link = links[t.id];
-        const details = eventDetails(t);
         if (link && link.key === key) continue;
+        const weekAlert = link ? !!link.weekAlert : isFarOut(t);
+        const details = eventDetails(t, { weekAlert });
         if (link) {
           try {
             const ev = await Calendar.ExpoCalendarEvent.get(link.eventId);
             await ev.update(details);
-            current.linkCalendarEvent(t.id, link.eventId, key);
+            current.linkCalendarEvent(t.id, link.eventId, key, weekAlert);
             continue;
           } catch {
             // Deleted by hand in the calendar app; fall through and recreate.
           }
         }
         const created = await cal.createEvent(details);
-        current.linkCalendarEvent(t.id, created.id, key);
+        current.linkCalendarEvent(t.id, created.id, key, weekAlert);
       }
     } catch (err) {
       console.warn('Assignment calendar sync failed', err);

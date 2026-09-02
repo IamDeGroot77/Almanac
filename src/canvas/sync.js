@@ -99,7 +99,11 @@ export function runCanvasSync(snapshot, perCourse, now = Date.now()) {
       const existing = byCanvasId.get(canvasId);
       if (existing) {
         const changed =
-          existing.text !== a.name || existing.due !== due || (done && !existing.done) || existing.canvasCourse !== (course.course_code || course.name);
+          existing.text !== a.name ||
+          existing.due !== due ||
+          (existing.canvasDueAt || null) !== (a.due_at || null) ||
+          (done && !existing.done) ||
+          existing.canvasCourse !== (course.course_code || course.name);
         nextTasks.push(
           changed
             ? {
@@ -111,6 +115,7 @@ export function runCanvasSync(snapshot, perCourse, now = Date.now()) {
                 doneAt: done && !existing.done ? doneAt || now : existing.doneAt,
                 canvasCourse: course.course_code || course.name,
                 canvasUrl: a.html_url,
+                canvasDueAt: a.due_at || null,
                 canvasPoints: a.points_possible ?? null,
                 canvasScore: a.submission?.score ?? null,
                 updatedAt: now,
@@ -132,6 +137,7 @@ export function runCanvasSync(snapshot, perCourse, now = Date.now()) {
           canvasId,
           canvasCourse: course.course_code || course.name,
           canvasUrl: a.html_url,
+          canvasDueAt: a.due_at || null,
           canvasPoints: a.points_possible ?? null,
           canvasScore: a.submission?.score ?? null,
         });

@@ -331,8 +331,11 @@ export function useAlmanacStore() {
       setPref(key, value) {
         setState((s) => ({ ...s, prefs: { ...s.prefs, [key]: value } }));
       },
-      linkCalendarEvent(taskId, eventId, key) {
-        setState((s) => ({ ...s, calendarEvents: { ...(s.calendarEvents || {}), [taskId]: { eventId, key } } }));
+      linkCalendarEvent(taskId, eventId, key, weekAlert = false) {
+        setState((s) => ({
+          ...s,
+          calendarEvents: { ...(s.calendarEvents || {}), [taskId]: { eventId, key, weekAlert } },
+        }));
       },
       unlinkCalendarEvent(taskId) {
         setState((s) => {
