@@ -16,7 +16,6 @@ import { APP_CATALOG } from '../apps';
 import { formatDuration } from '../durations';
 import { formatTime } from '../dates';
 import { isWeb } from '../platform';
-import DriveSection from '../components/DriveSection';
 import CalendarRulesSection from '../components/CalendarRulesSection';
 import DayPlanSection from '../components/DayPlanSection';
 import DopamenuSection from '../components/DopamenuSection';
@@ -339,12 +338,10 @@ export default function SettingsScreen({
         </>
       )}
 
-      <DriveSection auth={google} drive={drive} />
+      <GoogleSection auth={google} sync={sync} drive={drive} />
 
       {!isWeb && (
         <>
-      <GoogleSection auth={google} sync={sync} />
-
       <CanvasSection auth={canvas} sync={canvasSync} courses={canvasCourses} />
 
       <AssignmentCalendarSection
