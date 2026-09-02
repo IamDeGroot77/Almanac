@@ -2,7 +2,7 @@
   "expo": {
     "name": "Almanac",
     "slug": "iamdegroot77",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "scheme": "almanac",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -49,7 +49,7 @@
       "eas": {
         "projectId": "729e1faa-0a56-4a1c-86bd-c9c72242b5fc"
       },
-      "googleClientId": "PASTE_IOS_CLIENT_ID.apps.googleusercontent.com"
+      "googleClientId": "216954380461-toeqh6q4699dk89eibih7t5jm7ejvi19.apps.googleusercontent.com"
     },
     "owner": "iamdegroot77s-team"
   }
