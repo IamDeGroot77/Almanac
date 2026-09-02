@@ -25,6 +25,7 @@ import ReviewCard from './src/components/ReviewCard';
 import MoveTaskModal from './src/components/MoveTaskModal';
 import NewListModal from './src/components/NewListModal';
 import GoogleSection from './src/components/GoogleSection';
+import DevSection from './src/components/DevSection';
 import { SmallButton } from './src/components/Buttons';
 import { useGoogleAuth } from './src/google/auth';
 import useGoogleSync from './src/google/useGoogleSync';
@@ -180,6 +181,16 @@ function AlmanacScreen() {
         ))}
 
         <GoogleSection auth={google} sync={sync} />
+
+        {__DEV__ && (
+          <DevSection
+            onStageReview={() => {
+              store.devBackdateOpenTasks();
+              setReviewDismissed(false);
+              setDayOffset(0);
+            }}
+          />
+        )}
 
         <Text style={styles.footer}>{reminderMessage(reminderStatus)}</Text>
       </ScrollView>

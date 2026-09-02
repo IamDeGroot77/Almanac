@@ -229,6 +229,17 @@ export function useAlmanacStore() {
           };
         });
       },
+      // Developer helper: pretend today's open tasks were left over from
+      // yesterday so the start-of-day review can be exercised on demand.
+      devBackdateOpenTasks() {
+        const today = dayListId(todayKey());
+        const yesterday = dayListId(dayKey(dayFromOffset(-1)));
+        edit((s) => ({
+          tasks: s.tasks.map((t) =>
+            t.listId === today && !t.done ? { ...t, listId: yesterday } : t
+          ),
+        }));
+      },
       // Morning review: carry the given tasks to today, drop the rest.
       applyReview(carryIds, dropIds) {
         const today = dayListId(todayKey());

@@ -42,6 +42,20 @@ export async function scheduleDailyReminder() {
   return 'scheduled';
 }
 
+// Fires the daily brief immediately (developer helper).
+export async function sendTestReminder() {
+  const { status } = await Notifications.requestPermissionsAsync();
+  if (status !== 'granted') return 'denied';
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'Your Almanac',
+      body: "Your day is ready. Review yesterday's list and see what's ahead.",
+    },
+    trigger: null,
+  });
+  return 'sent';
+}
+
 export function reminderMessage(status) {
   switch (status) {
     case 'scheduled':
