@@ -5,6 +5,7 @@ import { SmallButton } from './Buttons';
 import { colors, shared } from '../theme';
 import { tasksForList } from '../store';
 import { childrenOf } from '../pickNext';
+import { groupByWeek } from '../weeks';
 
 // One list of tasks with its own add box. Used for the day list and for each
 // standing list. Steps (sub-tasks) render indented under their parent.
@@ -100,21 +101,36 @@ export default function TaskList({
         </View>
       )}
 
-      {all.map((t) => {
-        const kids = childrenOf(tasks, t.id);
-        return (
-          <View key={t.id}>
-            <TaskRow task={t} steps={kids} tag={tagFor ? tagFor(t) : null} {...rowProps} />
-            {kids.all.length > 0 && (
-              <View style={styles.steps}>
-                {[...kids.open, ...kids.done].map((step) => (
-                  <TaskRow key={step.id} task={step} isStep tag={null} {...rowProps} />
-                ))}
-              </View>
-            )}
-          </View>
-        );
-      })}
+      {(groupByWeek(all) || [{ key: 'flat', courses: [{ name: null, tasks: all }] }]).map((group) => (
+        <View key={group.key}>
+          {group.title ? (
+            <Text style={[styles.weekTitle, group.current && styles.weekCurrent]}>
+              {group.title}
+              {group.openCount != null ? <Text style={styles.weekMeta}>  {group.openCount} open</Text> : null}
+            </Text>
+          ) : null}
+          {group.courses.map((course) => (
+            <View key={course.name || 'none'}>
+              {course.name ? <Text style={styles.courseTitle}>{course.name}</Text> : null}
+              {course.tasks.map((t) => {
+                const kids = childrenOf(tasks, t.id);
+                return (
+                  <View key={t.id}>
+                    <TaskRow task={t} steps={kids} tag={tagFor ? tagFor(t) : null} {...rowProps} />
+                    {kids.all.length > 0 && (
+                      <View style={styles.steps}>
+                        {[...kids.open, ...kids.done].map((step) => (
+                          <TaskRow key={step.id} task={step} isStep tag={null} {...rowProps} />
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+      ))}
     </View>
   );
 }
@@ -136,4 +152,8 @@ const styles = StyleSheet.create({
   empty: { paddingVertical: 4 },
   emptyHint: { fontSize: 12, color: colors.muted, marginTop: -4 },
   steps: { marginLeft: 34, borderLeftWidth: 2, borderLeftColor: colors.line, paddingLeft: 8 },
+  weekTitle: { fontSize: 14, fontWeight: '700', color: colors.ink, marginTop: 18, marginBottom: 2 },
+  weekCurrent: { color: colors.accent },
+  weekMeta: { fontSize: 12, fontWeight: '400', color: colors.muted },
+  courseTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', color: colors.muted, marginTop: 10 },
 });

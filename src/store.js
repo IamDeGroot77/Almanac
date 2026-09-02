@@ -939,6 +939,7 @@ export function useAlmanacStore() {
                 listId,
                 personId: t.personId || l.personId || null,
                 canvasCourse: t.course || null,
+                week: t.week || null,
                 due: t.due || dueForHorizon(listObj, now) || null,
                 dueTime: t.due ? t.dueTime || null : null,
                 notes: t.notes || null,

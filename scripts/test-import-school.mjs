@@ -40,7 +40,7 @@ assert.equal(t.length, 7);
 assert.equal(t[0].text, 'Read Ch. 1, "What Public Administration Entails"');
 assert.equal(t[0].course, 'MPA 711');
 assert.equal(t[0].due, '2026-09-15');
-assert.match(t[0].notes, /Week 1/);
+assert.equal(t[0].week.n, 1);
 
 // Explicit timing wins and is kept in the notes.
 assert.equal(t[1].due, '2026-09-12');

@@ -132,7 +132,7 @@ export function parseImport(text, { people = [], lists = [], routines = [], cate
     }
     if (ctx.week) {
       if (!item.due && ctx.week.end) item.due = ctx.week.end;
-      item.notes = [ctx.week.label, item.notes].filter(Boolean).join(' · ');
+      item.week = { n: ctx.week.n, label: ctx.week.label };
     }
     if (indent >= 2 && lastTask && bullet) {
       lastTask.steps.push(item);
