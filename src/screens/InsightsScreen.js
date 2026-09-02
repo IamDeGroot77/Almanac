@@ -24,6 +24,7 @@ export default function InsightsScreen({ store }) {
   const totalTracked = store.timeLog.reduce((s, e) => s + (e.durationMs || 0), 0);
   const today = almanacToday();
   const usage = usageStats(store);
+  const stuckCounts = Object.entries((store.stuckLog || []).reduce((m, e) => ({ ...m, [e.reason]: (m[e.reason] || 0) + 1 }), {})).sort((a, b) => b[1] - a[1]);
 
   return (
     <Screen>
@@ -88,6 +89,11 @@ export default function InsightsScreen({ store }) {
               {carries.count} {carries.count === 1 ? 'task has' : 'tasks have'} been carried over
               {carries.repeat > 0 ? `, ${carries.repeat} more than once` : ''}.
             </Text>
+            {stuckCounts.length ? (
+              <Text style={styles.detail}>
+                When you said why: {stuckCounts.map(([r, n]) => `${r} ×${n}`).join(', ')}.
+              </Text>
+            ) : null}
             <View style={styles.list}>
               {carries.worst.map((t) => (
                 <Row key={t.id} left={t.text} right={`${t.carriedCount}×${t.done ? ' · done' : ''}`} />
@@ -134,7 +140,7 @@ export default function InsightsScreen({ store }) {
             return (
               <Text style={styles.detail}>
                 {open.length} open assignment{open.length === 1 ? '' : 's'}
-                {overdue.length ? `, ${overdue.length} overdue` : ''}
+                {overdue.length ? `, ${overdue.length} slipped` : ''}
                 {timed.length
                   ? ` · ${formatDuration(timed.reduce((s, t) => s + t.durationMs, 0))} tracked on coursework`
                   : ''}

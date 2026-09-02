@@ -19,6 +19,7 @@ import { isWeb } from '../platform';
 import DriveSection from '../components/DriveSection';
 import CalendarRulesSection from '../components/CalendarRulesSection';
 import DayPlanSection from '../components/DayPlanSection';
+import DopamenuSection from '../components/DopamenuSection';
 
 export default function SettingsScreen({
   google,
@@ -99,6 +100,8 @@ export default function SettingsScreen({
         onDeleteCategory={onDeleteCategory}
         onSetBlocks={(blocks) => onSetPref('dayBlocks', blocks)}
       />
+
+      <DopamenuSection menu={prefs.dopamenu || []} onChange={(menu) => onSetPref('dopamenu', menu)} />
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Weather and daylight</Text>

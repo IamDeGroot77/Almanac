@@ -50,6 +50,7 @@ const emptyState = () => ({
   dayNotes: {}, // dayKey -> end-of-day note
   journal: {}, // dayKey -> [{ id, at, text, prompt?, source, updatedAt? }], see journal.js
   scratch: [], // working memory, see scratch.js
+  stuckLog: [], // { taskId, text, reason, at } from "Why am I stuck?" (shared)
   days: {}, // dayKey -> { wokeAt, sleptAt, implicit?, autoClosed?, lastActiveAt?, sleep?: { start, end } }
   sleepApplied: [], // detected sleep segments already folded in ("start-end")
   canvas: { courses: [], lastSyncAt: null }, // course grades from Canvas, see canvas/sync.js
@@ -138,7 +139,7 @@ function markDeleted(deleted, kind, ids) {
   return { ...base, [kind]: next };
 }
 
-const SHARED_PREF_KEYS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep', 'bedtimeHour', 'calendarRules', 'dayBlocks'];
+const SHARED_PREF_KEYS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep', 'bedtimeHour', 'calendarRules', 'dayBlocks', 'dopamenu'];
 
 const TIME_LOG_MAX = 2000;
 
@@ -422,6 +423,27 @@ export function useAlmanacStore() {
         edit((s) => ({
           journal: { ...(s.journal || {}), [key]: ((s.journal || {})[key] || []).map((e) => (e.id === id ? { ...e, deleted: true, updatedAt: Date.now() } : e)) },
         }));
+      },
+      // Spend a skip token on an item (or take it back).
+      skipRoutineItem(routineId, periodKey, itemId) {
+        edit((s) => {
+          const forRoutine = s.routineDone?.[routineId] || {};
+          const forPeriod = { ...(forRoutine[periodKey] || {}) };
+          if (forPeriod[itemId] === -1) delete forPeriod[itemId];
+          else forPeriod[itemId] = -1;
+          return { routineDone: { ...s.routineDone, [routineId]: { ...forRoutine, [periodKey]: forPeriod } } };
+        });
+      },
+      // "Why am I stuck?" answer, kept on the task and in a log for patterns.
+      setTaskStuck(id, reason) {
+        const now = Date.now();
+        edit((s) => {
+          const t = s.tasks.find((x) => x.id === id);
+          return {
+            tasks: s.tasks.map((x) => (x.id === id ? { ...x, stuck: { reason, at: now }, updatedAt: now } : x)),
+            stuckLog: [...(s.stuckLog || []), { taskId: id, text: t?.text || '', reason, at: now }].slice(-500),
+          };
+        });
       },
       // ----- timed routine items -----
       startRoutineItem(routineId, itemId, text) {

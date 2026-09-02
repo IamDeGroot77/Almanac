@@ -102,6 +102,7 @@ function AlmanacApp() {
   const day = useAlmanacDay(store);
   const people = usePeopleFilter(store);
   const [tab, setTab] = useState('today');
+  const [journalPrompt, setJournalPrompt] = useState(null);
   const [dayOffset, setDayOffset] = useState(0); // 0 = today, 1 = tomorrow
   const derived = useTodayDerived({
     store,
@@ -360,6 +361,9 @@ function AlmanacApp() {
             dayListId={derived.dayListId}
             daySummary={derived.daySummary}
             capacity={derived.capacity}
+            onSkipRoutineItem={store.skipRoutineItem}
+            dopamenu={store.prefs.dopamenu || []}
+            onDopamenuDid={(m) => setToast({ text: `${m.text}. Good.`, at: Date.now() })}
             wrapUp={wrapUp}
             onJustOneThing={justOneThing}
             listProps={listProps}
@@ -459,6 +463,8 @@ function AlmanacApp() {
             onAdd={(text, opts) => store.addJournalEntry(text, opts)}
             onEdit={store.editJournalEntry}
             onDelete={store.deleteJournalEntry}
+            initialPrompt={journalPrompt}
+            onPromptUsed={() => setJournalPrompt(null)}
           />
         )}
         {tab === 'insights' && <InsightsScreen store={store} />}
@@ -598,6 +604,27 @@ function AlmanacApp() {
         onSetNotes={store.setTaskNotes}
         onSetPlan={store.setTaskPlan}
         onSetFirstStep={store.setTaskFirstStep}
+        onStuck={store.setTaskStuck}
+        stuckActions={{
+          startFirstStep: (task) => {
+            setSheetTaskId(null);
+            store.startTask(task.id);
+            setFocusTaskId(task.id);
+            setToast({ text: task.firstStep ? `Just this: ${task.firstStep}` : 'Two minutes. Then you can stop.', at: Date.now() });
+          },
+          moveTomorrow: (task) => {
+            store.moveTask(task.id, dayListId(almanacDayKeyFromOffset(1)));
+            setSheetTaskId(null);
+            setToast({ text: 'Moved to tomorrow. Today is allowed to be smaller.', at: Date.now() });
+          },
+          focusFirstStep: () => setToast({ text: 'Fill in "First two-minute step" above.', at: Date.now() }),
+          focusPlan: () => setToast({ text: 'Fill in "When and where" above.', at: Date.now() }),
+          journal: (task) => {
+            setSheetTaskId(null);
+            setJournalPrompt(`What am I avoiding about: ${task.text}?`);
+            setTab('journal');
+          },
+        }}
         calibration={estimateAccuracy(store.timeLog)?.median || null}
         onMove={(id, listId) => {
           store.moveTask(id, listId);

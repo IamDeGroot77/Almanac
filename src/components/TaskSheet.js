@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { colors, shared } from '../theme';
+import StuckSection from './StuckSection';
 import { dayListIdForOffset, personOf } from '../store';
 import { almanacToday, almanacDayKeyFromOffset } from '../clock';
 import { describeDue, parseDueInput, parseTimeInput, formatTime24 } from '../due';
@@ -41,6 +42,8 @@ export default function TaskSheet({
   onToggleStep,
   onDeleteStep,
   onSetFirstStep,
+  onStuck,
+  stuckActions,
 }) {
   const [stepText, setStepText] = useState('');
   const [customDue, setCustomDue] = useState('');
@@ -277,6 +280,21 @@ export default function TaskSheet({
                   )}
                 </View>
               )}
+
+              {onStuck && !task.done ? (
+                <StuckSection
+                  task={task}
+                  onStuck={onStuck}
+                  actions={{
+                    startFirstStep: () => stuckActions.startFirstStep(task),
+                    moveTomorrow: () => stuckActions.moveTomorrow(task),
+                    breakDown: () => onBreakDown(task.id),
+                    focusFirstStep: () => stuckActions.focusFirstStep(task),
+                    focusPlan: () => stuckActions.focusPlan(task),
+                    journal: () => stuckActions.journal(task),
+                  }}
+                />
+              ) : null}
 
               <Text style={[styles.label, styles.spaced]}>Notes</Text>
               <TextInput

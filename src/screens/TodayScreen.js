@@ -11,6 +11,7 @@ import RoutineCard from '../components/RoutineCard';
 import ConsiderSection from '../components/ConsiderSection';
 import BlockCard from '../components/BlockCard';
 import ScratchCard from '../components/ScratchCard';
+import DopamenuCard from '../components/DopamenuCard';
 import WrapUpCard from '../components/WrapUpCard';
 import DayBracket from '../components/DayBracket';
 import WeekStrip from '../components/WeekStrip';
@@ -73,6 +74,9 @@ export default function TodayScreen({
   scratch,
   scratchActions,
   capacity,
+  onSkipRoutineItem,
+  dopamenu,
+  onDopamenuDid,
 }) {
   const isToday = dayOffset === 0;
   const dayKey = almanacDayKeyFromOffset(dayOffset);
@@ -164,6 +168,8 @@ export default function TodayScreen({
         />
       )}
 
+      {isToday && (energy?.wake === 1 || energy?.midday === 1) ? <DopamenuCard menu={dopamenu} onDid={onDopamenuDid} /> : null}
+
       {isToday && blockInfo ? (
         <BlockCard
           block={blockInfo.current}
@@ -201,6 +207,7 @@ export default function TodayScreen({
               onFinishItem={onFinishRoutineItem}
               onCancelItem={onCancelRoutineItem}
               onToggleItem={onToggleRoutineItem}
+              onSkipItem={onSkipRoutineItem}
               onEdit={onEditRoutine}
             />
           ))}

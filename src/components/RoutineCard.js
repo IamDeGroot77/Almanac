@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, shared } from '../theme';
-import { activeItems, itemProgress, periodKey, periodLabel, daysLeftInPeriod, routineProgress, minutesToday, needsWarmup } from '../routines';
+import { activeItems, itemProgress, periodKey, periodLabel, daysLeftInPeriod, routineProgress, minutesToday, needsWarmup, isSkipped, skipsLeft } from '../routines';
 import { SmallButton } from './Buttons';
 import { useNow } from '../durations';
 
 // One routine for the current period: plain items you tick or time, quota
 // items that count themselves, and a minutes-a-day bar when the routine has
 // a points goal (a minute is a point).
-export default function RoutineCard({ routine, state, lists, routines = [], active, timerAppName, onToggleItem, onStartItem, onFinishItem, onCancelItem, onEdit }) {
+export default function RoutineCard({ routine, state, lists, routines = [], active, timerAppName, onToggleItem, onSkipItem, onStartItem, onFinishItem, onCancelItem, onEdit }) {
   const now = new Date();
   const tick = useNow(!!active && active.routineId === routine.id, 15000);
   const key = periodKey(routine, now);
@@ -20,6 +20,7 @@ export default function RoutineCard({ routine, state, lists, routines = [], acti
   const minutes = routine.minutesPerDay ? minutesToday(routine.id, state.routineLog, now) : null;
   const minutesPct = routine.minutesPerDay ? Math.min(1, (minutes || 0) / routine.minutesPerDay) : 0;
   const mine = active && active.routineId === routine.id ? active : null;
+  const tokens = skipsLeft(routine, state.routineDone, now);
   const [warmupFor, setWarmupFor] = useState(null); // item awaiting the stretch decision
 
   const start = (item) => {
@@ -63,6 +64,9 @@ export default function RoutineCard({ routine, state, lists, routines = [], acti
       <View style={styles.track}>
         <View style={[styles.fill, { width: `${Math.round((routine.minutesPerDay ? minutesPct : pct) * 100)}%` }]} />
       </View>
+      {onSkipItem && !progress.complete ? (
+        <Text style={styles.points}>{tokens > 0 ? `${tokens} guilt-free ${tokens === 1 ? 'skip' : 'skips'} left this week.` : 'No skips left this week. Tomorrow is fine too.'}</Text>
+      ) : null}
       {routine.minutesPerDay ? (
         <Text style={styles.points}>
           {minutes >= routine.minutesPerDay ? `${routine.minutesPerDay} points today, done.` : `${routine.minutesPerDay - minutes} more minutes today. A minute is a point.`}
@@ -108,18 +112,20 @@ export default function RoutineCard({ routine, state, lists, routines = [], acti
       {items.map((item) => {
         const p = itemProgress(routine, item, state, now);
         if (item.type === 'task') {
+          const skipped = isSkipped(routine, item, state.routineDone, now);
           return (
             <View key={item.id} style={styles.row}>
               <TouchableOpacity
                 style={styles.tick}
-                onPress={() => onToggleItem(routine.id, key, item.id)}
+                onPress={() => (skipped ? onSkipItem(routine.id, key, item.id) : onToggleItem(routine.id, key, item.id))}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: p.complete }}
               >
-                <View style={[styles.box, p.complete && styles.boxDone]}>{p.complete ? <Text style={styles.check}>✓</Text> : null}</View>
-                <Text style={[styles.text, p.complete && styles.textDone]}>{item.text}</Text>
+                <View style={[styles.box, p.complete && !skipped && styles.boxDone, skipped && styles.boxSkipped]}>{p.complete && !skipped ? <Text style={styles.check}>✓</Text> : skipped ? <Text style={styles.skipMark}>–</Text> : null}</View>
+                <Text style={[styles.text, p.complete && styles.textDone]}>{item.text}{skipped ? '  · skipped' : ''}</Text>
               </TouchableOpacity>
-              {onStartItem && !mine && (routine.minutesPerDay || routine.warmup) ? <SmallButton label="Start" onPress={() => start(item)} /> : null}
+              {onSkipItem && !p.complete && tokens > 0 ? <SmallButton label="Skip" onPress={() => onSkipItem(routine.id, key, item.id)} /> : null}
+              {onStartItem && !mine && !p.complete && (routine.minutesPerDay || routine.warmup) ? <SmallButton label="Start" onPress={() => start(item)} /> : null}
             </View>
           );
         }
@@ -192,6 +198,8 @@ const styles = StyleSheet.create({
   },
   boxQuota: { borderRadius: 11 },
   boxDone: { backgroundColor: colors.accent },
+  boxSkipped: { borderColor: colors.muted, borderStyle: 'dashed' },
+  skipMark: { color: colors.muted, fontSize: 13, fontWeight: '700' },
   check: { color: colors.onAccent, fontSize: 13, fontWeight: '700' },
   quotaNum: { color: colors.accent, fontSize: 11, fontWeight: '700' },
   text: { fontSize: 15, color: colors.ink, flex: 1 },

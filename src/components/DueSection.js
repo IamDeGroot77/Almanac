@@ -23,7 +23,7 @@ export default function DueSection({ overdue, dueToday, contextFor, listProps })
     <View style={styles.section}>
       {overdue.length > 0 && (
         <View>
-          <Text style={[styles.title, styles.overdue]}>Overdue</Text>
+          <Text style={[styles.title, styles.overdue]}>Slipped</Text>
           {overdue.map(render)}
         </View>
       )}

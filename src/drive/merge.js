@@ -22,7 +22,7 @@ const BOOKKEEPING = [
   'canvasId', 'canvasCourse', 'canvasUrl', 'canvasDueAt', 'canvasPoints', 'canvasScore',
   'canvas',
 ];
-export const SHARED_PREFS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep', 'bedtimeHour', 'calendarRules', 'dayBlocks'];
+export const SHARED_PREFS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep', 'bedtimeHour', 'calendarRules', 'dayBlocks', 'dopamenu'];
 
 const ts = (x) => x?.updatedAt || x?.createdAt || 0;
 
@@ -110,6 +110,7 @@ export function mergeStates(a, b, now = Date.now()) {
 
   const journal = mergeJournals(a.journal, b.journal);
   const scratch = mergeScratch(a.scratch, b.scratch);
+  const stuckLog = [...new Map([...(a.stuckLog || []), ...(b.stuckLog || [])].map((e) => [`${e.taskId}:${e.at}`, e])).values()].sort((p, q) => p.at - q.at).slice(-500);
   const dayNotes = {};
   const dayNoteMeta = {};
   for (const key of new Set([...Object.keys(a.dayNotes || {}), ...Object.keys(b.dayNotes || {})])) {
@@ -147,6 +148,7 @@ export function mergeStates(a, b, now = Date.now()) {
     dayNoteMeta,
     journal,
     scratch,
+    stuckLog,
     deleted,
     sharedPrefs,
     prefsUpdatedAt: Math.max(pa, pb),
@@ -173,6 +175,7 @@ export function shareable(state) {
     dayNoteMeta: state.dayNoteMeta || {},
     journal: state.journal || {},
     scratch: state.scratch || [],
+    stuckLog: state.stuckLog || [],
     deleted: state.deleted || { tasks: {}, lists: {}, routines: {} },
     sharedPrefs,
     prefsUpdatedAt: state.prefsUpdatedAt || 0,

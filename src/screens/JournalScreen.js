@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { colors, shared } from '../theme';
 import Screen from '../components/Screen';
@@ -11,10 +11,17 @@ import { isWeb } from '../platform';
 // The journal: a page per almanac day, short entries with the time, a
 // rotating prompt for when the page is blank, and everything searchable.
 // Spoken notes from the watch land here too.
-export default function JournalScreen({ journal, dayNotes, onAdd, onEdit, onDelete }) {
+export default function JournalScreen({ journal, dayNotes, onAdd, onEdit, onDelete, initialPrompt = null, onPromptUsed }) {
   const today = almanacToday();
   const [text, setText] = useState('');
-  const [prompt, setPrompt] = useState(null);
+  const [prompt, setPrompt] = useState(initialPrompt);
+  useEffect(() => {
+    if (initialPrompt) {
+      setPrompt(initialPrompt);
+      onPromptUsed?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPrompt]);
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState(null); // { id, key, text }
   const dailyPrompt = promptForDay(today);

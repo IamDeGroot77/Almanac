@@ -84,6 +84,32 @@ export function minutesToday(routineId, routineLog, date) {
   return Math.round(ms / 60000);
 }
 
+// Skip tokens: a skipped item is stored as -1 in routineDone. It counts as
+// complete for the period, never toward another routine's quota, and spends
+// one of the routine's weekly tokens (skipsPerWeek, default 2).
+export const DEFAULT_SKIPS_PER_WEEK = 2;
+
+export function isSkipped(routine, item, routineDone, date) {
+  return routineDone?.[routine.id]?.[periodKey(routine, date)]?.[item.id] === -1;
+}
+
+export function skipsUsedThisWeek(routine, routineDone, date) {
+  const ws = weekStart(anchor(date)).getTime();
+  const we = ws + 7 * 86400000;
+  let used = 0;
+  for (const [pk, items] of Object.entries(routineDone?.[routine.id] || {})) {
+    const day = pk.startsWith('d:') ? parseDayKey(pk.slice(2)).getTime() : pk.startsWith('w:') ? parseDayKey(pk.slice(2)).getTime() : 0;
+    if (day < ws || day >= we) continue;
+    for (const v of Object.values(items || {})) if (v === -1) used += 1;
+  }
+  return used;
+}
+
+export function skipsLeft(routine, routineDone, date) {
+  const total = routine.skipsPerWeek ?? DEFAULT_SKIPS_PER_WEEK;
+  return Math.max(0, total - skipsUsedThisWeek(routine, routineDone, date));
+}
+
 // Stretch first when nothing on this routine finished in the last hour.
 export function needsWarmup(routineId, routineLog, now = Date.now()) {
   const last = (routineLog || []).filter((e) => e.routineId === routineId).reduce((m, e) => Math.max(m, e.endedAt || 0), 0);

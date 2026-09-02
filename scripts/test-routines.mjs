@@ -40,3 +40,18 @@ assert.equal(needsWarmup('ex', [...routineLog, { id: '3', routineId: 'ex', itemI
 assert.equal(needsWarmup('ex', [], NOW), true, 'first of the day');
 
 console.log('All routine scenarios passed.');
+
+// Skip tokens: a skipped item completes the period, spends a weekly token, never feeds a quota.
+{
+  const { isSkipped, skipsLeft, itemProgress: ip } = await import('../src/routines.js');
+  const r = { id: 'd2', name: 'Daily', cadence: 'daily', items: [{ id: 'x', type: 'task', text: 'floss' }] };
+  const key = `d:${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const done = { d2: { [key]: { x: -1 } } };
+  assert.equal(isSkipped(r, r.items[0], done, today), true);
+  assert.equal(ip(r, r.items[0], { tasks: [], routineDone: done, routineLog: [] }, today).complete, true);
+  assert.equal(skipsLeft(r, done, today), 1);
+  assert.equal(skipsLeft({ ...r, skipsPerWeek: 5 }, done, today), 4);
+  const quota = { id: 'q', name: 'Q', cadence: 'daily', items: [{ id: 'm', type: 'quota', routineId: 'd2', count: 1 }] };
+  assert.equal(ip(quota, quota.items[0], { tasks: [], routineDone: done, routineLog: [] }, today).done, 0, 'a skip is not a tick');
+}
+console.log('Skip token scenarios passed.');

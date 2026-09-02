@@ -85,6 +85,11 @@ snapshots, and native features hide behind small modules.
 - Capacity: `src/capacity.js` (pure, tested by `scripts/test-capacity.mjs`) sums open estimates (20 min default for unestimated) against the bedtime pref and the Today list's subtitle reads "~1h 50m left · finishing 9:40 PM", in warn colour when past bedtime.
 - Shutdown ritual: the wrap-up card lists what was done (the "have done" list) and asks per open item: Tomorrow / Next week / Drop (undoable).
 
+- "Why am I stuck?" (`components/StuckSection.js` on the task sheet): four reasons (energy, clarity, dread, place), each with two defaults (first step only, move to tomorrow, break it down, journal prompt, set when and where). Answers go to `task.stuck` and `stuckLog` (shared), and Insights counts them.
+- Dopamine menu: `prefs.dopamenu` (shared) edited in Settings; when an energy check-in is Low, Today shows a `DopamenuCard` with two or three small good things before the list.
+- Skip tokens: a routine item can be skipped (-1 in `routineDone`), counting as complete for the period but not toward other routines' quotas; `skipsPerWeek` (default 2) tokens per routine per week, shown on the card. Never a broken streak.
+- Words: "Slipped" instead of "Overdue".
+
 ## Adherence (the phone does the initiating)
 
 - The morning brief follows the alarm clock: `modules/almanac-alarm` reads `AlarmManager.getNextAlarmClock`; `scheduleMorningBrief` in `src/notifications.js` schedules a one-off a minute after an alarm within 20 hours, else the brief is sent when the day auto-starts (`sendBriefIfDue`, once per day). Re-checked whenever the app comes to the foreground or goes to the background, so set the alarm before closing Almanac for the night if you want the brief tied to it.
