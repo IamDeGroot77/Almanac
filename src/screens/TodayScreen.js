@@ -55,7 +55,12 @@ export default function TodayScreen({
         />
       )}
 
-      <EventsSection status={calendar.status} events={calendar.events} onRetry={calendar.retry} />
+      <EventsSection
+        status={calendar.status}
+        events={calendar.events}
+        calendarNames={calendar.calendarNames}
+        onRetry={calendar.retry}
+      />
 
       <TaskList
         listId={dayListId}

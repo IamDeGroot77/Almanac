@@ -10,6 +10,7 @@ export default function useCalendarEvents(offset) {
   const [events, setEvents] = useState([]);
   const [status, setStatus] = useState('loading'); // loading | granted | denied | error
   const [refreshing, setRefreshing] = useState(false);
+  const [calendarNames, setCalendarNames] = useState([]);
 
   const load = useCallback(async (which) => {
     try {
@@ -21,8 +22,12 @@ export default function useCalendarEvents(offset) {
       }
 
       const calendars = await Calendar.getCalendars(Calendar.EntityTypes.EVENT);
+      setCalendarNames(calendars.map((c) => c.title || c.name || c.id));
       const { start, end } = dayBounds(which);
       const found = await Calendar.listEvents(calendars, start, end);
+      console.log(
+        `Calendar: ${calendars.length} calendars, ${found.length} events for ${start.toDateString()}`
+      );
 
       const sorted = [...found].sort((a, b) => {
         if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
@@ -58,5 +63,5 @@ export default function useCalendarEvents(offset) {
 
   const retry = useCallback(() => load(offset), [offset, load]);
 
-  return { events, status, refreshing, refresh, retry };
+  return { events, status, refreshing, refresh, retry, calendarNames };
 }

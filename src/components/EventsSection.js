@@ -2,7 +2,7 @@ import { Linking, StyleSheet, Text, View } from 'react-native';
 import { SmallButton } from './Buttons';
 import { colors, shared } from '../theme';
 
-export default function EventsSection({ status, events, onRetry }) {
+export default function EventsSection({ status, events, calendarNames = [], onRetry }) {
   return (
     <View style={styles.section}>
       <Text style={styles.title}>Events</Text>
@@ -27,7 +27,14 @@ export default function EventsSection({ status, events, onRetry }) {
       )}
 
       {status === 'granted' && events.length === 0 && (
-        <Text style={shared.muted}>Nothing on the calendar.</Text>
+        <View>
+          <Text style={shared.muted}>Nothing on the calendar.</Text>
+          <Text style={styles.detail}>
+            {calendarNames.length === 0
+              ? 'No calendars found on this phone.'
+              : `Checked ${calendarNames.length}: ${calendarNames.join(', ')}`}
+          </Text>
+        </View>
       )}
 
       {status === 'granted' &&
@@ -52,4 +59,5 @@ const styles = StyleSheet.create({
   eventBody: { flex: 1 },
   eventTitle: { fontSize: 16, color: colors.ink },
   eventLocation: { fontSize: 13, color: colors.muted, marginTop: 2 },
+  detail: { fontSize: 12, color: colors.muted },
 });
