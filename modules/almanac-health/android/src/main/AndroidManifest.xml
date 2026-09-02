@@ -1,0 +1,22 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.health.READ_SLEEP" />
+
+  <queries>
+    <package android:name="com.google.android.apps.healthdata" />
+  </queries>
+
+  <application>
+    <!-- Health Connect requires an activity that can show why the permission
+         is used. It points at the app's main activity, which opens Settings. -->
+    <activity-alias
+      android:name="org.almanac.health.ViewPermissionUsageActivity"
+      android:exported="true"
+      android:targetActivity="${applicationId}.MainActivity"
+      android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+        <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+      </intent-filter>
+    </activity-alias>
+  </application>
+</manifest>

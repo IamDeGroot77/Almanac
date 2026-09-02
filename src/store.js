@@ -55,6 +55,8 @@ const emptyState = () => ({
     quickAddNotification: false, // keep a "speak a task / note" notification in the shade
     checkinMinutes: 30, // "still working on this?" interval while a task runs; 0 = off
     energyCheckins: true, // midday energy notification
+    healthSleep: false, // read watch sleep from Health Connect
+    weeklyLetter: true, // Sunday 6 PM letter reminder
   },
   localVersion: 0,
   sync: emptySync(),
@@ -306,10 +308,13 @@ export function useAlmanacStore() {
       // night's day and the wake time on the morning's day, but only where
       // the existing value was guessed or missing, or is far from the
       // detection. Also records the segment on the wake day for insights.
-      applyDetectedSleep(seg, tolerance) {
+      applyDetectedSleep(seg, tolerance, explicitId = null) {
         setState((s) => {
-          const id = `${seg.start}-${seg.end}`;
+          const id = explicitId || `${seg.start}-${seg.end}`;
           if (s.sleepApplied?.includes(id)) return s;
+          // Watch data (Health Connect) is measured; it may replace what the
+          // phone inferred, but never a deliberate tap.
+          const fromWatch = seg.source === 'health';
           const days = { ...s.days };
           const wakeDate = new Date(seg.end);
           const wakeKey = dayKey(wakeDate);
@@ -319,14 +324,30 @@ export function useAlmanacStore() {
           const far = (a, b) => a == null || Math.abs(a - b) > tolerance;
 
           const night = days[bedKey];
-          if (night?.wokeAt && (night.autoClosed || !night.sleptAt || (far(night.sleptAt, seg.start) && night.implicitClose))) {
-            days[bedKey] = { ...night, sleptAt: seg.start, autoClosed: false, sleepDetected: true };
+          const nightOverridable =
+            night?.autoClosed || !night?.sleptAt || (night?.implicitClose && far(night.sleptAt, seg.start)) ||
+            (fromWatch && night?.sleepDetected && night?.sleepSource !== 'health');
+          if (night?.wokeAt && nightOverridable) {
+            days[bedKey] = { ...night, sleptAt: seg.start, autoClosed: false, sleepDetected: true, sleepSource: seg.source || 'phone' };
           }
           const morning = days[wakeKey] || {};
-          if (!morning.wokeAt || (morning.implicit && far(morning.wokeAt, seg.end))) {
-            days[wakeKey] = { ...morning, wokeAt: seg.end, sleptAt: morning.sleptAt ?? null, implicit: false, wakeDetected: true };
+          const morningOverridable =
+            !morning.wokeAt || (morning.implicit && far(morning.wokeAt, seg.end)) ||
+            (fromWatch && morning.wakeDetected && morning.wakeSource !== 'health');
+          if (morningOverridable) {
+            days[wakeKey] = {
+              ...morning,
+              wokeAt: seg.end,
+              sleptAt: morning.sleptAt ?? null,
+              implicit: false,
+              wakeDetected: true,
+              wakeSource: seg.source || 'phone',
+            };
           }
-          days[wakeKey] = { ...(days[wakeKey] || {}), sleep: { start: seg.start, end: seg.end } };
+          const existing = days[wakeKey]?.sleep;
+          if (!existing || fromWatch || existing.source !== 'health') {
+            days[wakeKey] = { ...(days[wakeKey] || {}), sleep: { start: seg.start, end: seg.end, source: seg.source || 'phone' } };
+          }
           return { ...s, days, sleepApplied: [...(s.sleepApplied || []), id].slice(-200) };
         });
       },

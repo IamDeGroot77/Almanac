@@ -197,6 +197,39 @@ export default function SettingsScreen({
           </View>
         )}
         {sleep.error ? <Text style={styles.error}>{sleep.error}</Text> : null}
+
+        <Text style={[styles.sectionTitle, styles.subTitle]}>From the watch (Health Connect)</Text>
+        {sleep.health.status === 'missing' ? (
+          <Text style={shared.muted}>Needs a newer app build.</Text>
+        ) : sleep.health.status !== 'available' ? (
+          <Text style={shared.muted}>
+            {sleep.health.status === 'update'
+              ? 'Health Connect needs an update on this phone (it is in the Play Store).'
+              : 'Health Connect is not available on this phone.'}
+          </Text>
+        ) : sleep.health.enabled ? (
+          <View>
+            <Text style={shared.muted}>
+              On. Sleep recorded by your Galaxy Watch through Samsung Health is read from Health Connect and
+              takes priority over the phone's guess.
+            </Text>
+            <Text style={styles.detail}>
+              {sleep.health.lastRead
+                ? `Latest: asleep ${formatTime(sleep.health.lastRead.start)} to ${formatTime(sleep.health.lastRead.end)} (${formatDuration(sleep.health.lastRead.end - sleep.health.lastRead.start)}).`
+                : 'No sessions read yet. Make sure Samsung Health is set to sync sleep to Health Connect.'}
+            </Text>
+            <SmallButton label="Turn off" onPress={sleep.health.disable} style={styles.button} />
+          </View>
+        ) : (
+          <View>
+            <Text style={shared.muted}>
+              Use the sleep your watch records. In Samsung Health, turn on syncing to Health Connect, then
+              allow Almanac to read sleep.
+            </Text>
+            <SmallButton label="Connect Health Connect" onPress={sleep.health.enable} style={styles.button} />
+          </View>
+        )}
+        {sleep.health.error ? <Text style={styles.error}>{sleep.health.error}</Text> : null}
       </View>
 
       <View style={styles.section}>
@@ -252,6 +285,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 15, fontWeight: '700', color: colors.ink, marginBottom: 6 },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   detail: { fontSize: 13, color: colors.muted, marginTop: 4 },
+  subTitle: { marginTop: 18 },
   label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 12, marginBottom: 6 },
   button: { marginTop: 10 },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
