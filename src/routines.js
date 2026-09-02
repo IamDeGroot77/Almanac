@@ -1,4 +1,5 @@
-import { dayKey, dayFromOffset, parseDayKey } from './dates.js';
+import { dayKey, parseDayKey } from './dates.js';
+import { almanacToday } from './clock.js';
 
 // Routines are lists that regenerate every period.
 //   { id, name, cadence: 'daily' | 'weekly', personId, items: [...] }
@@ -7,8 +8,15 @@ import { dayKey, dayFromOffset, parseDayKey } from './dates.js';
 //   { id, type: 'quota', listId, count }           // "count tasks from listId"
 // Plain items are ticked per period in state.routineDone[routineId][periodKey][itemId].
 // Quota progress is derived from tasks finished in the period.
+//
+// Periods follow the almanac day (see clock.js): a daily routine started on
+// Wednesday is still Wednesday's at 1 AM if you haven't said Good night.
 
 export const WEEK_START = 1; // Monday
+
+// The calendar day a period is anchored on. Explicit `date` wins (tests);
+// otherwise the almanac day.
+const anchor = (date) => (date ? new Date(date) : parseDayKey(almanacToday()));
 
 export function weekStart(date) {
   const d = new Date(date);
@@ -18,47 +26,47 @@ export function weekStart(date) {
   return d;
 }
 
-export function periodKey(routine, date = new Date()) {
-  return routine.cadence === 'weekly' ? `w:${dayKey(weekStart(date))}` : `d:${dayKey(date)}`;
+export function periodKey(routine, date) {
+  const a = anchor(date);
+  return routine.cadence === 'weekly' ? `w:${dayKey(weekStart(a))}` : `d:${dayKey(a)}`;
 }
 
-export function periodBounds(routine, date = new Date()) {
-  if (routine.cadence === 'weekly') {
-    const start = weekStart(date);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 7);
-    return { start, end };
-  }
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
+// Bounds run from the period's midnight start until its nominal end, or the
+// present moment if the almanac day has spilled past that end (late nights).
+export function periodBounds(routine, date) {
+  const a = anchor(date);
+  const start = routine.cadence === 'weekly' ? weekStart(a) : new Date(a.setHours(0, 0, 0, 0));
   const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-  return { start, end };
+  end.setDate(end.getDate() + (routine.cadence === 'weekly' ? 7 : 1));
+  const spill = Date.now() + 1;
+  return { start, end: end.getTime() > spill || date ? end : new Date(spill) };
 }
 
-export function periodLabel(routine, date = new Date()) {
+export function periodLabel(routine, date) {
   if (routine.cadence !== 'weekly') return 'Today';
-  const { start, end } = periodBounds(routine, date);
-  const last = new Date(end);
-  last.setDate(last.getDate() - 1);
+  const { start } = periodBounds(routine, date);
+  const last = new Date(start);
+  last.setDate(last.getDate() + 6);
   const fmt = (d) => d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   return `${fmt(start)} – ${fmt(last)}`;
 }
 
-export function daysLeftInPeriod(routine, date = new Date()) {
-  const { end } = periodBounds(routine, date);
-  return Math.max(0, Math.ceil((end - date) / 86400000));
+export function daysLeftInPeriod(routine, date) {
+  const { start } = periodBounds(routine, date);
+  const nominalEnd = new Date(start);
+  nominalEnd.setDate(nominalEnd.getDate() + (routine.cadence === 'weekly' ? 7 : 1));
+  return Math.max(0, Math.ceil((nominalEnd - Date.now()) / 86400000));
 }
 
-// Items that apply on `date` (weekday filters only matter for daily routines).
-export function activeItems(routine, date = new Date()) {
+// Items that apply on the anchored day (weekday filters only matter for daily routines).
+export function activeItems(routine, date) {
   if (routine.cadence !== 'daily') return routine.items;
-  const wd = date.getDay();
+  const wd = anchor(date).getDay();
   return routine.items.filter((it) => it.type !== 'task' || !it.days?.length || it.days.includes(wd));
 }
 
-// Progress for one item in the period containing `date`.
-export function itemProgress(routine, item, { tasks, routineDone }, date = new Date()) {
+// Progress for one item in the period containing the anchored day.
+export function itemProgress(routine, item, { tasks, routineDone }, date) {
   if (item.type === 'task') {
     const key = periodKey(routine, date);
     const done = !!routineDone?.[routine.id]?.[key]?.[item.id];
@@ -71,7 +79,7 @@ export function itemProgress(routine, item, { tasks, routineDone }, date = new D
   return { done: Math.min(done, item.count), target: item.count, complete: done >= item.count };
 }
 
-export function routineProgress(routine, state, date = new Date()) {
+export function routineProgress(routine, state, date) {
   const items = activeItems(routine, date);
   let done = 0;
   let target = 0;
@@ -93,7 +101,3 @@ export function describeDays(days) {
   if (sorted.join() === '0,6') return 'Weekends';
   return sorted.map((d) => WEEKDAY_NAMES[d].slice(0, 3)).join(', ');
 }
-
-// Convenience for tests and screens.
-export const todayDate = () => dayFromOffset(0);
-export { parseDayKey };

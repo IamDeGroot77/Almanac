@@ -1,24 +1,30 @@
-import { dayKey, dayFromOffset, parseDayKey, todayKey } from './dates.js';
+import { dayKey, parseDayKey } from './dates.js';
+import { almanacToday, almanacDayKeyFromOffset, almanacDayFromOffset } from './clock.js';
 
 // Due dates are YYYY-MM-DD strings; due times are "HH:MM" (24h) or null.
+// "Today" means the almanac day (see clock.js), so a task due Wednesday is
+// still "due today" at 1 AM if Wednesday hasn't been closed.
 
-export function dueStatus(task, today = todayKey()) {
+export function dueStatus(task, today = almanacToday()) {
   if (!task.due || task.done) return null;
   if (task.due < today) return 'overdue';
   if (task.due === today) return 'today';
   return 'upcoming';
 }
 
-export function describeDue(task, today = todayKey()) {
+export function describeDue(task, today = almanacToday()) {
   if (!task.due) return null;
-  const tomorrow = dayKey(dayFromOffset(1));
+  const tomorrow = almanacDayKeyFromOffset(1);
   let day;
   if (task.due === today) day = 'Today';
   else if (task.due === tomorrow) day = 'Tomorrow';
   else {
     const d = parseDayKey(task.due);
     const sameYear = d.getFullYear() === new Date().getFullYear();
-    day = d.toLocaleDateString([], sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
+    day = d.toLocaleDateString(
+      [],
+      sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' }
+    );
   }
   return task.dueTime ? `${day} ${formatTime24(task.dueTime)}` : day;
 }
@@ -35,11 +41,11 @@ export function formatTime24(hhmm) {
 export function parseDueInput(text) {
   const s = (text || '').trim().toLowerCase();
   if (!s) return null;
-  if (s === 'today') return todayKey();
-  if (s === 'tomorrow' || s === 'tmrw') return dayKey(dayFromOffset(1));
+  if (s === 'today') return almanacToday();
+  if (s === 'tomorrow' || s === 'tmrw') return almanacDayKeyFromOffset(1);
   const wd = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].findIndex((w) => s.startsWith(w));
   if (wd >= 0) {
-    const d = dayFromOffset(0);
+    const d = almanacDayFromOffset(0);
     let diff = (wd - d.getDay() + 7) % 7;
     if (diff === 0) diff = 7;
     d.setDate(d.getDate() + diff);

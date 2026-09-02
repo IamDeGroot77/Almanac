@@ -20,10 +20,14 @@ export default function TodayScreen({
   setPersonFilter,
   onAddPerson,
   filterName,
-  day, // { wokeAt, sleptAt } for today
+  openDay,
+  pastMidnight,
+  lastClosed,
+  dayLabel,
   onStartDay,
   onGoingToBed,
   onReopenDay,
+  onStartFresh,
   showReview,
   reviewTasks,
   onApplyReview,
@@ -46,7 +50,9 @@ export default function TodayScreen({
   const isToday = dayOffset === 0;
   return (
     <Screen refreshing={calendar.refreshing} onRefresh={onRefresh}>
-      <Text style={styles.kicker}>{isToday ? 'Today' : 'Tomorrow'}</Text>
+      <Text style={styles.kicker}>
+        {isToday ? (pastMidnight ? 'Today · past midnight' : 'Today') : 'Tomorrow'}
+      </Text>
       <Text style={styles.title}>{formatHeaderDate(headerDate)}</Text>
 
       <View style={styles.segment}>
@@ -66,11 +72,15 @@ export default function TodayScreen({
 
       {isToday && (
         <DayBracket
-          day={day}
+          openDay={openDay}
+          pastMidnight={pastMidnight}
+          lastClosed={lastClosed}
+          dayLabel={dayLabel}
           leftovers={reviewTasks.length}
           onStart={onStartDay}
           onBed={onGoingToBed}
           onReopen={onReopenDay}
+          onStartFresh={onStartFresh}
         />
       )}
 

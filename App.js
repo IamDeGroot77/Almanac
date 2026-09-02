@@ -1,10 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View } from 'react-native';
+import { AppState, StyleSheet, View } from 'react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors } from './src/theme';
-import { dayFromOffset, todayKey, describeDayKey } from './src/dates';
+import { dayKey, describeDayKey, parseDayKey } from './src/dates';
+import { setAlmanacToday, almanacDayFromOffset, openDayKey, lastClosedDay } from './src/clock';
 import {
   useAlmanacStore,
   pastUnfinished,
@@ -45,8 +46,32 @@ function AlmanacApp() {
   const [tab, setTab] = useState('today');
   const [dayOffset, setDayOffset] = useState(0); // 0 = today, 1 = tomorrow
   const [personFilter, setPersonFilter] = useState('all'); // 'all' | person id
-  const calendar = useCalendarEvents(dayOffset);
   const store = useAlmanacStore();
+
+  // ----- the almanac day -------------------------------------------------
+  // The day you're in is the one opened with "I'm up" and not yet closed,
+  // even past midnight. Otherwise it's the calendar date.
+  const calendarToday = dayKey(new Date());
+  const openKey = openDayKey(store.days);
+  const today = openKey && openKey <= calendarToday ? openKey : calendarToday;
+  setAlmanacToday(today);
+  const pastMidnight = today !== calendarToday;
+  const openDay = openKey ? { key: openKey, ...store.days[openKey] } : null;
+
+  // Forgotten Good night: close a stale day on launch, on foreground, and
+  // every few minutes while the app is open.
+  useEffect(() => {
+    store.autoCloseStaleDay();
+    const sub = AppState.addEventListener('change', (s) => s === 'active' && store.autoCloseStaleDay());
+    const timer = setInterval(store.autoCloseStaleDay, 5 * 60 * 1000);
+    return () => {
+      sub.remove();
+      clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.loaded]);
+
+  const calendar = useCalendarEvents(dayOffset, today);
   const google = useGoogleAuth();
   const sync = useGoogleSync(store, google);
   useTaskReminders(store.tasks, store.loaded);
@@ -74,10 +99,8 @@ function AlmanacApp() {
     await Promise.all([calendar.refresh(), sync.syncNow()]);
   };
 
-  const today = todayKey();
   const dayListId = dayListIdForOffset(dayOffset);
-  const headerDate = dayFromOffset(dayOffset);
-  const day = store.days[today] || null;
+  const headerDate = almanacDayFromOffset(dayOffset);
 
   // ----- people -----------------------------------------------------------
   const matchesFilter = (t) => personFilter === 'all' || personOf(t) === personFilter;
@@ -106,8 +129,8 @@ function AlmanacApp() {
 
   // ----- review, due, summary ---------------------------------------------
   const reviewTasks = useMemo(() => pastUnfinished(visibleTasks), [visibleTasks]);
-  const showReview =
-    dayOffset === 0 && store.loaded && !!day?.wokeAt && !reviewDismissed && reviewTasks.length > 0;
+  // Shown whenever earlier days left something behind; no button required.
+  const showReview = dayOffset === 0 && store.loaded && !reviewDismissed && reviewTasks.length > 0;
 
   const todayListId = dayListIdForOffset(0);
   const dueOverdue = visibleTasks.filter((t) => t.listId !== todayListId && dueStatus(t) === 'overdue');
@@ -129,7 +152,9 @@ function AlmanacApp() {
   // ----- wrap-up -----------------------------------------------------------
   const wrapUp = useMemo(() => {
     if (!wrapOpen || dayOffset !== 0) return null;
-    const { start, end } = { start: dayFromOffset(0).getTime(), end: dayFromOffset(1).getTime() };
+    // From the almanac day's midnight until now, so a late night still counts.
+    const start = parseDayKey(today).getTime();
+    const end = Date.now() + 1;
     const doneToday = visibleTasks.filter((t) => t.done && t.doneAt >= start && t.doneAt < end);
     const open = tasksForList(visibleTasks, todayListId).open;
     const routineState = { tasks: store.tasks, routineDone: store.routineDone };
@@ -183,14 +208,23 @@ function AlmanacApp() {
             setDayOffset={setDayOffset}
             headerDate={headerDate}
             {...personProps}
-            day={day}
+            openDay={openDay}
+            pastMidnight={pastMidnight}
+            lastClosed={lastClosedDay(store.days)}
+            dayLabel={parseDayKey(today).toLocaleDateString([], { weekday: 'long' })}
             onStartDay={() => {
-              store.startDay(today);
+              store.startDay(calendarToday);
               setReviewDismissed(false);
               onRefresh();
             }}
             onGoingToBed={() => setWrapOpen(true)}
-            onReopenDay={() => store.reopenDay(today)}
+            onReopenDay={(key) => store.reopenDay(key)}
+            onStartFresh={() => {
+              if (openKey) store.endDay(openKey);
+              store.startDay(calendarToday);
+              setReviewDismissed(false);
+              setWrapOpen(false);
+            }}
             showReview={showReview}
             reviewTasks={reviewTasks}
             onApplyReview={(carry, drop) => store.applyReview(carry, drop)}

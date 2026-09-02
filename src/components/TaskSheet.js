@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { colors, shared } from '../theme';
 import { dayListIdForOffset, personOf } from '../store';
-import { dayKey, dayFromOffset, todayKey } from '../dates';
+import { almanacToday, almanacDayKeyFromOffset } from '../clock';
 import { describeDue, parseDueInput, parseTimeInput, formatTime24 } from '../due';
 import { formatDuration } from '../durations';
 import PersonChips from './PersonChips';
@@ -51,8 +51,8 @@ export default function TaskSheet({
     ...lists.map((l) => ({ id: l.id, name: l.name })),
   ].filter((d) => d.id !== task.listId);
 
-  const today = todayKey();
-  const tomorrow = dayKey(dayFromOffset(1));
+  const today = almanacToday();
+  const tomorrow = almanacDayKeyFromOffset(1);
 
   const applyCustomDue = () => {
     const key = parseDueInput(customDue);

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { dayKey, dayFromOffset, todayKey } from './dates';
+import { dayKey, todayKey } from './dates';
+import { almanacToday, almanacDayKeyFromOffset, openDayKey } from './clock.js';
 import { newId, DONE_RETENTION_MS } from './ids';
 
 export { newId, DONE_RETENTION_MS };
@@ -23,7 +24,10 @@ export const DAY_PREFIX = 'day:';
 export const dayListId = (key) => `${DAY_PREFIX}${key}`;
 export const isDayList = (listId) => listId.startsWith(DAY_PREFIX);
 export const dayOfList = (listId) => listId.slice(DAY_PREFIX.length);
-export const dayListIdForOffset = (offset) => dayListId(dayKey(dayFromOffset(offset)));
+// Day lists follow the almanac day (clock.js): still Wednesday at 1 AM until Good night.
+export const dayListIdForOffset = (offset) => dayListId(almanacDayKeyFromOffset(offset));
+
+const LONG_DAY_MS = 20 * 60 * 60 * 1000;
 
 const emptySync = () => ({ lastSyncAt: null, syncedVersion: 0, deletedTasks: [], deletedLists: [] });
 const emptyState = () => ({
@@ -138,9 +142,31 @@ export function useAlmanacStore() {
   }, [state, loaded]);
 
   // A user edit: apply the partial and bump localVersion so sync notices.
+  // Also keeps the day bracket honest when buttons get forgotten: an edit
+  // with no open day starts today implicitly, and any edit stamps the open
+  // day's lastActiveAt (used as the bedtime if Good night never comes).
   const edit = useCallback(
     (fn) =>
-      setState((prev) => ({ ...prev, ...fn(prev), localVersion: prev.localVersion + 1 })),
+      setState((prev) => {
+        const next = { ...prev, ...fn(prev), localVersion: prev.localVersion + 1 };
+        const now = Date.now();
+        const open = openDayKey(next.days);
+        if (open) {
+          next.days = { ...next.days, [open]: { ...next.days[open], lastActiveAt: now } };
+        } else {
+          // No open day: reopen today's if it was closed earlier (back up
+          // after Good night), otherwise start it now.
+          const key = dayKey(new Date());
+          const existing = next.days[key];
+          next.days = {
+            ...next.days,
+            [key]: existing?.wokeAt
+              ? { ...existing, sleptAt: null, lastActiveAt: now }
+              : { wokeAt: now, sleptAt: null, implicit: true, lastActiveAt: now },
+          };
+        }
+        return next;
+      }),
     []
   );
 
@@ -230,14 +256,34 @@ export function useAlmanacStore() {
         });
       },
       // ----- day bracket -----
+      // These bypass `edit` so they don't stamp activity or implicitly start days.
       startDay(key) {
-        edit((s) => ({ days: { ...s.days, [key]: { ...(s.days[key] || {}), wokeAt: Date.now(), sleptAt: null } } }));
+        setState((s) => ({
+          ...s,
+          days: { ...s.days, [key]: { ...(s.days[key] || {}), wokeAt: Date.now(), sleptAt: null, implicit: false } },
+        }));
       },
       endDay(key) {
-        edit((s) => ({ days: { ...s.days, [key]: { ...(s.days[key] || {}), sleptAt: Date.now() } } }));
+        setState((s) => ({
+          ...s,
+          days: { ...s.days, [key]: { ...(s.days[key] || {}), sleptAt: Date.now(), autoClosed: false } },
+        }));
       },
       reopenDay(key) {
-        edit((s) => ({ days: { ...s.days, [key]: { ...(s.days[key] || {}), sleptAt: null } } }));
+        setState((s) => ({ ...s, days: { ...s.days, [key]: { ...(s.days[key] || {}), sleptAt: null } } }));
+      },
+      // Forgot Good night: close a day that's been open 20h+ once the date
+      // has moved on, using the last activity as the bedtime.
+      autoCloseStaleDay() {
+        setState((s) => {
+          const open = openDayKey(s.days);
+          if (!open) return s;
+          const d = s.days[open];
+          const now = Date.now();
+          if (now - d.wokeAt < LONG_DAY_MS || open >= dayKey(new Date())) return s;
+          const sleptAt = Math.max(d.lastActiveAt || 0, d.wokeAt + 60000);
+          return { ...s, days: { ...s.days, [open]: { ...d, sleptAt, autoClosed: true } } };
+        });
       },
       // ----- end of day -----
       setDayNote(key, text) {
@@ -245,7 +291,7 @@ export function useAlmanacStore() {
       },
       pushOpenToTomorrow(fromKey) {
         const from = dayListId(fromKey);
-        const to = dayListId(dayKey(dayFromOffset(1)));
+        const to = dayListId(almanacDayKeyFromOffset(1));
         const now = Date.now();
         edit((s) => ({
           tasks: s.tasks.map((t) =>
@@ -348,8 +394,8 @@ export function useAlmanacStore() {
       // Developer helper: pretend today's open tasks were left over from
       // yesterday so the start-of-day review can be exercised on demand.
       devBackdateOpenTasks() {
-        const today = dayListId(todayKey());
-        const yesterday = dayListId(dayKey(dayFromOffset(-1)));
+        const today = dayListId(almanacToday());
+        const yesterday = dayListId(almanacDayKeyFromOffset(-1));
         edit((s) => ({
           tasks: s.tasks.map((t) =>
             t.listId === today && !t.done ? { ...t, listId: yesterday } : t
@@ -358,7 +404,7 @@ export function useAlmanacStore() {
       },
       // Morning review: carry the given tasks to today, drop the rest.
       applyReview(carryIds, dropIds) {
-        const today = dayListId(todayKey());
+        const today = dayListId(almanacToday());
         const carry = new Set(carryIds);
         const drop = new Set(dropIds);
         const now = Date.now();
@@ -398,8 +444,7 @@ export function useAlmanacStore() {
 }
 
 // Unfinished tasks on day lists dated before today, oldest day first.
-export function pastUnfinished(tasks) {
-  const today = todayKey();
+export function pastUnfinished(tasks, today = almanacToday()) {
   return tasks
     .filter((t) => !t.done && isDayList(t.listId) && dayOfList(t.listId) < today)
     .sort(
