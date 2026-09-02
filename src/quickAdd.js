@@ -16,6 +16,7 @@ export const QUICK_ADD_ID = 'quick-add';
 const ACTION_PREFIX = 'quick-';
 const ACTION_TASK = 'quick-task';
 const ACTION_NOTE = 'quick-note';
+const ACTION_SCRATCH = 'quick-scratch';
 
 export { parseQuickTask };
 
@@ -28,8 +29,14 @@ export async function ensureQuickAddCategory() {
       options: { opensAppToForeground: false },
     },
     {
+      identifier: ACTION_SCRATCH,
+      buttonTitle: 'Hold a thought',
+      textInput: { submitButtonTitle: 'Hold', placeholder: 'Working memory' },
+      options: { opensAppToForeground: false },
+    },
+    {
       identifier: ACTION_NOTE,
-      buttonTitle: 'Speak a note',
+      buttonTitle: 'Journal',
       textInput: { submitButtonTitle: 'Save', placeholder: 'Journal entry' },
       options: { opensAppToForeground: false },
     },
@@ -79,6 +86,7 @@ export function useQuickAdd(store, { enabled }) {
         const s = storeRef.current;
         if (response.actionIdentifier === ACTION_TASK) applyQuickTask(s, text);
         else if (response.actionIdentifier === ACTION_NOTE) s.addJournalEntry(text, { source: 'voice' });
+        else if (response.actionIdentifier === ACTION_SCRATCH) s.addScratch(text, 'voice');
       }),
     []
   );

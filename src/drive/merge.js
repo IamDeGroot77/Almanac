@@ -1,4 +1,5 @@
 import { mergeJournals } from '../journal.js';
+import { mergeScratch } from '../scratch.js';
 // Merging two copies of the shared state (phone and laptop) into one.
 // Symmetric and pure, so it runs in Node for tests.
 //
@@ -108,6 +109,7 @@ export function mergeStates(a, b, now = Date.now()) {
   }
 
   const journal = mergeJournals(a.journal, b.journal);
+  const scratch = mergeScratch(a.scratch, b.scratch);
   const dayNotes = {};
   const dayNoteMeta = {};
   for (const key of new Set([...Object.keys(a.dayNotes || {}), ...Object.keys(b.dayNotes || {})])) {
@@ -144,6 +146,7 @@ export function mergeStates(a, b, now = Date.now()) {
     dayNotes,
     dayNoteMeta,
     journal,
+    scratch,
     deleted,
     sharedPrefs,
     prefsUpdatedAt: Math.max(pa, pb),
@@ -169,6 +172,7 @@ export function shareable(state) {
     dayNotes: state.dayNotes || {},
     dayNoteMeta: state.dayNoteMeta || {},
     journal: state.journal || {},
+    scratch: state.scratch || [],
     deleted: state.deleted || { tasks: {}, lists: {}, routines: {} },
     sharedPrefs,
     prefsUpdatedAt: state.prefsUpdatedAt || 0,

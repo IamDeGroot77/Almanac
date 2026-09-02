@@ -10,6 +10,7 @@ import DueSection from '../components/DueSection';
 import RoutineCard from '../components/RoutineCard';
 import ConsiderSection from '../components/ConsiderSection';
 import BlockCard from '../components/BlockCard';
+import ScratchCard from '../components/ScratchCard';
 import WrapUpCard from '../components/WrapUpCard';
 import DayBracket from '../components/DayBracket';
 import WeekStrip from '../components/WeekStrip';
@@ -69,6 +70,8 @@ export default function TodayScreen({
   onStartRoutineItem,
   onFinishRoutineItem,
   onCancelRoutineItem,
+  scratch,
+  scratchActions,
 }) {
   const isToday = dayOffset === 0;
   const dayKey = almanacDayKeyFromOffset(dayOffset);
@@ -113,6 +116,8 @@ export default function TodayScreen({
           onAdd={onAddPerson}
         />
       </View>
+
+      {isToday && scratchActions ? <ScratchCard scratch={scratch} {...scratchActions} /> : null}
 
       {isToday && (
         <DayBracket

@@ -365,6 +365,27 @@ function AlmanacApp() {
             onConsiderLater={(id) => store.snoozeConsideration(id)}
             allRoutines={store.routines}
             blockInfo={blockInfoFor(store, block, blockPicksAll)}
+            scratch={store.scratch || []}
+            scratchActions={{
+              onAdd: (text) => store.addScratch(text),
+              onEdit: store.editScratch,
+              onRemove: store.removeScratch,
+              onClearStale: store.clearStaleScratch,
+              onToTask: (id) => {
+                const n = (store.scratch || []).find((x) => x.id === id);
+                if (!n) return;
+                store.addTask(n.text, dayListId(day.today));
+                store.removeScratch(id);
+                setToast({ text: 'Moved to today\'s tasks.', at: Date.now() });
+              },
+              onToJournal: (id) => {
+                const n = (store.scratch || []).find((x) => x.id === id);
+                if (!n) return;
+                store.addJournalEntry(n.text, { source: 'scratch' });
+                store.removeScratch(id);
+                setToast({ text: 'Saved to the journal.', at: Date.now() });
+              },
+            }}
             routineActive={store.routineActive}
             timerAppName={timerApp?.name || null}
             onStartRoutineItem={(routineId, itemId, text) => {

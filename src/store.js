@@ -49,6 +49,7 @@ const emptyState = () => ({
   routineActive: null, // { routineId, itemId, text, startedAt } while a routine item is being timed (this device)
   dayNotes: {}, // dayKey -> end-of-day note
   journal: {}, // dayKey -> [{ id, at, text, prompt?, source, updatedAt? }], see journal.js
+  scratch: [], // working memory, see scratch.js
   days: {}, // dayKey -> { wokeAt, sleptAt, implicit?, autoClosed?, lastActiveAt?, sleep?: { start, end } }
   sleepApplied: [], // detected sleep segments already folded in ("start-end")
   canvas: { courses: [], lastSyncAt: null }, // course grades from Canvas, see canvas/sync.js
@@ -378,6 +379,29 @@ export function useAlmanacStore() {
             routineDone: { ...s.routineDone, [routineId]: { ...forRoutine, [periodKey]: forPeriod } },
           };
         });
+      },
+      // ----- working memory -----
+      addScratch(text, source = 'typed') {
+        const trimmed = (text || '').trim();
+        if (!trimmed) return null;
+        const now = Date.now();
+        const id = newId('s');
+        edit((s) => ({ scratch: [...(s.scratch || []), { id, text: trimmed, at: now, updatedAt: now, source }] }));
+        return id;
+      },
+      editScratch(id, text) {
+        const trimmed = (text || '').trim();
+        if (!trimmed) return;
+        edit((s) => ({ scratch: (s.scratch || []).map((n) => (n.id === id ? { ...n, text: trimmed, updatedAt: Date.now() } : n)) }));
+      },
+      removeScratch(id) {
+        edit((s) => ({ scratch: (s.scratch || []).map((n) => (n.id === id ? { ...n, deleted: true, updatedAt: Date.now() } : n)) }));
+      },
+      clearStaleScratch() {
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        const now = Date.now();
+        edit((s) => ({ scratch: (s.scratch || []).map((n) => (!n.deleted && n.at < start.getTime() ? { ...n, deleted: true, updatedAt: now } : n)) }));
       },
       // ----- journal -----
       addJournalEntry(text, { prompt = null, source = 'typed', at = Date.now() } = {}) {

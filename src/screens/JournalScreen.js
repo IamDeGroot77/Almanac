@@ -108,7 +108,7 @@ function Entry({ entry, dayKey, editing, setEditing, onEdit, onDelete }) {
     <TouchableOpacity style={styles.entry} onLongPress={() => setEditing({ id: entry.id, key: dayKey, text: entry.text })} delayLongPress={350} onPress={isWeb ? () => setEditing({ id: entry.id, key: dayKey, text: entry.text }) : undefined} accessibilityRole="button" accessibilityHint="Long press to edit">
       <Text style={styles.entryMeta}>
         {formatTime(entry.at)}
-        {entry.source === 'voice' ? ' · spoken' : entry.source === 'letter' ? ' · from the Sunday letter' : ''}
+        {entry.source === 'voice' ? ' · spoken' : entry.source === 'letter' ? ' · from the Sunday letter' : entry.source === 'scratch' ? ' · from working memory' : ''}
         {entry.prompt ? ` · ${entry.prompt}` : ''}
       </Text>
       <Text style={styles.entryText}>{entry.text}</Text>

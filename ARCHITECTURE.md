@@ -61,6 +61,7 @@ snapshots, and native features hide behind small modules.
 
 ## Capture
 
+- Working memory (`src/scratch.js` pure, tested by `scripts/test-scratch.mjs`; `components/ScratchCard.js` at the top of Today on both devices): a few notes you're holding right now, with Hold / Task / Journal / drop, an age label, and "Clear N old" for notes from earlier days. The shade notification's third button, "Hold a thought", captures by voice. Merged across devices by id.
 - Journal (`src/journal.js` pure, tested by `scripts/test-journal.mjs`; `screens/JournalScreen.js`, a Journal tab on both devices): entries per almanac day with time, an optional prompt (one rotates per day; "What got in the way?" and the skip question are always offered), search, edit and delete (tombstones). Spoken notes from the shade or watch land here, and the Sunday letter notification carries an "Answer" text field for "What made you skip a day this week?" that files straight into the journal. Merged across devices by entry id.
 
 - "Paste a list" on the Lists tab (`components/ImportBox.js`) turns a brain dump into lists, tasks, steps, dates, times, people, and notes. The parser is `src/importText.js` (pure, tested by `scripts/test-import.mjs`); the store applies the plan in one edit (`importPlan`), so it syncs to Google Tasks and the other device like any edit.
