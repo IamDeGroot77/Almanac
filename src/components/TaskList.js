@@ -17,6 +17,7 @@ export default function TaskList({
   tagFor,
   onToggle,
   onStart,
+  onPause,
   onFinish,
   onDelete,
   onMove,
@@ -95,6 +96,7 @@ export default function TaskList({
           tag={tagFor ? tagFor(t) : null}
           onToggle={onToggle}
           onStart={onStart}
+          onPause={onPause}
           onFinish={onFinish}
           onDelete={onDelete}
           onLongPress={onMove}

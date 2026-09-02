@@ -1,17 +1,18 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, shared } from '../theme';
-import { formatDuration, useNow } from '../durations';
+import { formatDuration, useNow, elapsedFor, isRunning, isPaused } from '../durations';
 import { describeDue, dueStatus } from '../due';
 
-// A task is not started, in progress (startedAt set), or done.
+// A task is not started, running, paused, or done.
 //  - tapping the circle toggles done / not started (instant check-off)
-//  - Start begins timing, Finish completes it and records the duration
+//  - Start begins timing; Pause banks it; Finish completes and records it
 //  - long press opens the task sheet
-export default function TaskRow({ task, tag, context, onToggle, onStart, onFinish, onDelete, onLongPress }) {
-  const inProgress = !task.done && !!task.startedAt;
-  const now = useNow(inProgress);
+export default function TaskRow({ task, tag, context, onToggle, onStart, onPause, onFinish, onDelete, onLongPress }) {
+  const running = isRunning(task);
+  const paused = isPaused(task);
+  const now = useNow(running);
+  const elapsed = elapsedFor(task, now);
 
-  const elapsed = task.done ? task.durationMs : inProgress ? now - task.startedAt : null;
   const meta = [];
   if (context) meta.push({ text: context });
   if (task.canvasCourse) {
@@ -26,12 +27,14 @@ export default function TaskRow({ task, tag, context, onToggle, onStart, onFinis
     meta.push({
       text: task.estimateMs ? `${formatDuration(elapsed)} (est ${formatDuration(task.estimateMs)})` : formatDuration(elapsed),
     });
-  } else if (inProgress) {
+  } else if (running) {
     meta.push({
-      text: task.estimateMs
-        ? `${formatDuration(elapsed)} of ~${formatDuration(task.estimateMs)}`
-        : `${formatDuration(elapsed)} so far`,
+      text: task.estimateMs ? `${formatDuration(elapsed)} of ~${formatDuration(task.estimateMs)}` : `${formatDuration(elapsed)} so far`,
       active: true,
+    });
+  } else if (paused) {
+    meta.push({
+      text: `${formatDuration(elapsed)} so far · paused${task.estimateMs ? ` · ~${formatDuration(task.estimateMs)}` : ''}`,
     });
   } else if (task.estimateMs) {
     meta.push({ text: `~${formatDuration(task.estimateMs)}` });
@@ -52,9 +55,10 @@ export default function TaskRow({ task, tag, context, onToggle, onStart, onFinis
         accessibilityState={{ checked: task.done }}
         accessibilityHint="Long press for options"
       >
-        <View style={[styles.circle, inProgress && styles.circleActive, task.done && styles.circleDone]}>
+        <View style={[styles.circle, (running || paused) && styles.circleActive, task.done && styles.circleDone]}>
           {task.done ? <Text style={styles.check}>✓</Text> : null}
-          {inProgress ? <View style={styles.dot} /> : null}
+          {running ? <View style={styles.dot} /> : null}
+          {paused ? <View style={styles.pauseMark} /> : null}
         </View>
         <View style={styles.body}>
           <View style={styles.textRow}>
@@ -64,10 +68,7 @@ export default function TaskRow({ task, tag, context, onToggle, onStart, onFinis
           {meta.length > 0 ? (
             <Text style={styles.meta} numberOfLines={1}>
               {meta.map((m, i) => (
-                <Text
-                  key={i}
-                  style={[m.active && styles.metaActive, m.overdue && styles.metaOverdue, m.today && styles.metaToday]}
-                >
+                <Text key={i} style={[m.active && styles.metaActive, m.overdue && styles.metaOverdue, m.today && styles.metaToday]}>
                   {i > 0 ? ' · ' : ''}
                   {m.text}
                 </Text>
@@ -77,28 +78,11 @@ export default function TaskRow({ task, tag, context, onToggle, onStart, onFinis
         </View>
       </TouchableOpacity>
 
-      {!task.done && !inProgress && (
-        <TouchableOpacity
-          style={styles.action}
-          onPress={() => onStart(task.id)}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={`Start ${task.text}`}
-        >
-          <Text style={styles.actionText}>Start</Text>
-        </TouchableOpacity>
+      {!task.done && !running && (
+        <Action label={paused ? 'Resume' : 'Start'} onPress={() => onStart(task.id)} hint={task.text} />
       )}
-      {inProgress && (
-        <TouchableOpacity
-          style={[styles.action, styles.actionPrimary]}
-          onPress={() => onFinish(task.id)}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={`Finish ${task.text}`}
-        >
-          <Text style={[styles.actionText, styles.actionTextPrimary]}>Finish</Text>
-        </TouchableOpacity>
-      )}
+      {running && <Action label="Pause" onPress={() => onPause(task.id)} hint={task.text} />}
+      {(running || paused) && <Action label="Finish" primary onPress={() => onFinish(task.id)} hint={task.text} />}
 
       <TouchableOpacity
         onPress={() => onDelete(task.id)}
@@ -112,8 +96,22 @@ export default function TaskRow({ task, tag, context, onToggle, onStart, onFinis
   );
 }
 
+function Action({ label, primary, onPress, hint }) {
+  return (
+    <TouchableOpacity
+      style={[styles.action, primary && styles.actionPrimary]}
+      onPress={onPress}
+      hitSlop={6}
+      accessibilityRole="button"
+      accessibilityLabel={`${label} ${hint}`}
+    >
+      <Text style={[styles.actionText, primary && styles.actionTextPrimary]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 8 },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 6 },
   main: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   circle: {
     width: 22,
@@ -128,6 +126,7 @@ const styles = StyleSheet.create({
   circleActive: { backgroundColor: colors.accentSoft },
   circleDone: { backgroundColor: colors.accent },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
+  pauseMark: { width: 8, height: 8, borderRadius: 1, backgroundColor: colors.muted },
   check: { color: '#FFFFFF', fontSize: 13, lineHeight: 15, fontWeight: '700' },
   body: { flex: 1 },
   textRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
@@ -147,9 +146,9 @@ const styles = StyleSheet.create({
   metaActive: { color: colors.accent },
   metaOverdue: { color: colors.danger, fontWeight: '600' },
   metaToday: { color: colors.warn, fontWeight: '600' },
-  action: { borderWidth: 1, borderColor: colors.line, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  action: { borderWidth: 1, borderColor: colors.line, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 5 },
   actionPrimary: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
   actionText: { fontSize: 13, fontWeight: '600', color: colors.muted },
   actionTextPrimary: { color: colors.accent },
-  delete: { color: colors.muted, fontSize: 16, paddingHorizontal: 6 },
+  delete: { color: colors.muted, fontSize: 16, paddingHorizontal: 4 },
 });

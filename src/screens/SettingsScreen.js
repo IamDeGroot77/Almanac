@@ -56,6 +56,26 @@ export default function SettingsScreen({
       </View>
 
       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Check-ins while a task runs</Text>
+        <Text style={shared.muted}>
+          Every so often the phone asks "Still working on this?" with Still on it, Pause, and Finish
+          buttons. They work from the shade and the watch.
+        </Text>
+        <PersonChips
+          people={[
+            { id: '0', name: 'Off' },
+            { id: '15', name: '15 min' },
+            { id: '30', name: '30 min' },
+            { id: '45', name: '45 min' },
+            { id: '60', name: '1 hour' },
+          ]}
+          selected={String(prefs.checkinMinutes ?? 30)}
+          onSelect={(id) => onSetPref('checkinMinutes', Number(id))}
+          compact
+        />
+      </View>
+
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Sleep detection</Text>
         {!sleep.available ? (
           <Text style={shared.muted}>Needs a newer app build. Install the latest APK to turn this on.</Text>

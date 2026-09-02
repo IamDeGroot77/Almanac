@@ -53,6 +53,7 @@ const emptyState = () => ({
     assignmentsToCalendar: false, // mirror Canvas assignments into a calendar
     assignmentCalendarId: null,
     quickAddNotification: false, // keep a "speak a task / note" notification in the shade
+    checkinMinutes: 30, // "still working on this?" interval while a task runs; 0 = off
   },
   localVersion: 0,
   sync: emptySync(),
@@ -118,9 +119,17 @@ const TIME_LOG_MAX = 2000;
 function finishIn(s, id, now) {
   const target = s.tasks.find((t) => t.id === id);
   if (!target || target.done) return {};
-  const durationMs = target.startedAt ? Math.max(0, now - target.startedAt) : null;
+  // Time spent = earlier sessions (spentMs) plus the running one, if any.
+  const running = target.startedAt ? Math.max(0, now - target.startedAt) : 0;
+  const total = (target.spentMs || 0) + running;
+  const durationMs = target.startedAt || target.spentMs ? total : null;
+  const sessions = target.startedAt
+    ? [...(target.sessions || []), { start: target.startedAt, end: now }]
+    : target.sessions || [];
   const tasks = s.tasks.map((t) =>
-    t.id === id ? { ...t, done: true, doneAt: now, durationMs, updatedAt: now } : t
+    t.id === id
+      ? { ...t, done: true, doneAt: now, durationMs, spentMs: total, startedAt: null, sessions, updatedAt: now }
+      : t
   );
   if (durationMs == null) return { tasks };
   const entry = {
@@ -384,7 +393,7 @@ export function useAlmanacStore() {
             return {
               tasks: s.tasks.map((t) =>
                 t.id === id
-                  ? { ...t, done: false, doneAt: null, startedAt: null, durationMs: null, updatedAt: now }
+                  ? { ...t, done: false, doneAt: null, startedAt: null, durationMs: null, spentMs: 0, sessions: [], updatedAt: now }
                   : t
               ),
             };
@@ -392,11 +401,29 @@ export function useAlmanacStore() {
           return finishIn(s, id, now);
         });
       },
+      // Start, or resume after a pause. Earlier time is kept in spentMs.
       startTask(id) {
         const now = Date.now();
         edit((s) => ({
           tasks: s.tasks.map((t) =>
-            t.id === id && !t.done ? { ...t, startedAt: now, updatedAt: now } : t
+            t.id === id && !t.done && !t.startedAt ? { ...t, startedAt: now, updatedAt: now } : t
+          ),
+        }));
+      },
+      // Pause: bank the running session and stop the clock.
+      pauseTask(id) {
+        const now = Date.now();
+        edit((s) => ({
+          tasks: s.tasks.map((t) =>
+            t.id === id && t.startedAt
+              ? {
+                  ...t,
+                  spentMs: (t.spentMs || 0) + Math.max(0, now - t.startedAt),
+                  sessions: [...(t.sessions || []), { start: t.startedAt, end: now }],
+                  startedAt: null,
+                  updatedAt: now,
+                }
+              : t
           ),
         }));
       },
@@ -490,7 +517,15 @@ export function useAlmanacStore() {
             // fresh. carriedCount feeds the "what keeps slipping" insight.
             .map((t) =>
               carry.has(t.id)
-                ? { ...t, listId: today, startedAt: null, updatedAt: now, carriedCount: (t.carriedCount || 0) + 1 }
+                ? {
+                    ...t,
+                    listId: today,
+                    // A clock left running overnight is dropped, but time banked
+                    // before that (spentMs) carries with the task.
+                    startedAt: null,
+                    updatedAt: now,
+                    carriedCount: (t.carriedCount || 0) + 1,
+                  }
                 : t
             ),
         }));

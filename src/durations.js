@@ -23,8 +23,13 @@ export function useNow(active, intervalMs = 15000) {
   return now;
 }
 
+// Time on a task so far: banked sessions plus the running one.
 export function elapsedFor(task, now = Date.now()) {
   if (task.done) return task.durationMs ?? null;
-  if (task.startedAt) return now - task.startedAt;
-  return null;
+  const banked = task.spentMs || 0;
+  if (task.startedAt) return banked + (now - task.startedAt);
+  return banked > 0 ? banked : null;
 }
+
+export const isRunning = (task) => !task.done && !!task.startedAt;
+export const isPaused = (task) => !task.done && !task.startedAt && (task.spentMs || 0) > 0;

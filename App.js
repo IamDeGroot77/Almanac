@@ -30,6 +30,7 @@ import { useCanvasAuth } from './src/canvas/auth';
 import useCanvasSync from './src/canvas/useCanvasSync';
 import useAssignmentCalendar from './src/assignmentCalendar';
 import { useQuickAdd } from './src/quickAdd';
+import useTaskCheckins from './src/checkins';
 import TabBar from './src/components/TabBar';
 import TodayScreen from './src/screens/TodayScreen';
 import ListsScreen from './src/screens/ListsScreen';
@@ -90,6 +91,7 @@ function AlmanacApp() {
     calendarId: store.prefs.assignmentCalendarId,
   });
   useQuickAdd(store, { enabled: !!store.prefs.quickAddNotification });
+  useTaskCheckins(store, { minutes: store.prefs.checkinMinutes ?? 30 });
   const toggleAssignmentCalendar = async (on) => {
     store.setPref('assignmentsToCalendar', on);
     if (!on) await assignmentCalendar.removeAll();
@@ -205,6 +207,7 @@ function AlmanacApp() {
       store.startTask(id);
       setFocusTaskId(id);
     },
+    onPause: store.pauseTask,
     onFinish: store.finishTask,
     onDelete: store.deleteTask,
     onMove: (task) => setSheetTaskId(task.id),
@@ -365,6 +368,10 @@ function AlmanacApp() {
         task={focusTaskId ? store.tasks.find((t) => t.id === focusTaskId && !t.done && t.startedAt) || null : null}
         prefs={store.prefs}
         onPhoneFree={store.setTaskPhoneFree}
+        onPause={(id) => {
+          store.pauseTask(id);
+          setFocusTaskId(null);
+        }}
         onFinish={(id) => {
           store.finishTask(id);
           setFocusTaskId(null);

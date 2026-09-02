@@ -38,7 +38,10 @@ function fromRemote(local, remote, googleListId) {
   let durationMs = local.durationMs ?? null;
   let startedAt = local.startedAt ?? null;
   if (done && !local.done) {
-    durationMs = startedAt ? Math.max(0, doneAt - startedAt) : null;
+    const banked = local.spentMs || 0;
+    const running = startedAt ? Math.max(0, doneAt - startedAt) : 0;
+    durationMs = startedAt || banked ? banked + running : null;
+    startedAt = null;
   } else if (!done && local.done) {
     durationMs = null;
     startedAt = null;

@@ -13,6 +13,7 @@ export default function DueSection({ overdue, dueToday, contextFor, listProps })
       context={contextFor(t)}
       onToggle={listProps.onToggle}
       onStart={listProps.onStart}
+      onPause={listProps.onPause}
       onFinish={listProps.onFinish}
       onDelete={listProps.onDelete}
       onLongPress={listProps.onMove}

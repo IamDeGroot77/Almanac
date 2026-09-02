@@ -3,18 +3,18 @@ import { Modal, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-n
 import * as IntentLauncher from 'expo-intent-launcher';
 import { colors } from '../theme';
 import { PrimaryButton, SmallButton } from './Buttons';
-import { formatDuration, useNow } from '../durations';
+import { formatDuration, useNow, elapsedFor } from '../durations';
 import { APP_CATALOG } from '../apps';
 
 // One task, full screen. Opens when you Start something. Everything else is
 // out of sight, the timer is big, and for a phone-free task it offers to
 // hand off to a focus or timer app.
-export default function FocusModal({ task, prefs, onFinish, onPhoneFree, onClose }) {
+export default function FocusModal({ task, prefs, onPause, onFinish, onPhoneFree, onClose }) {
   const [handoffNote, setHandoffNote] = useState('');
   const now = useNow(!!task, 1000);
   if (!task) return null;
 
-  const elapsed = task.startedAt ? now - task.startedAt : 0;
+  const elapsed = elapsedFor(task, now) || 0;
   const est = task.estimateMs || 0;
   const pct = est ? Math.min(1, elapsed / est) : 0;
   const over = est && elapsed > est;
@@ -80,7 +80,10 @@ export default function FocusModal({ task, prefs, onFinish, onPhoneFree, onClose
           )}
         </View>
 
-        <PrimaryButton label="Finish" onPress={() => onFinish(task.id)} style={styles.finish} />
+        <View style={styles.buttons}>
+          <SmallButton label="Pause" onPress={() => onPause(task.id)} style={styles.pause} />
+          <PrimaryButton label="Finish" onPress={() => onFinish(task.id)} style={styles.finish} />
+        </View>
       </View>
     </Modal>
   );
@@ -106,5 +109,7 @@ const styles = StyleSheet.create({
   phoneFreeHint: { fontSize: 13, color: colors.muted, marginTop: 6 },
   apps: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10 },
   note: { fontSize: 13, color: colors.accent, marginTop: 8 },
-  finish: { alignSelf: 'stretch', paddingVertical: 14 },
+  buttons: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  pause: { paddingVertical: 12, paddingHorizontal: 18 },
+  finish: { flex: 1, paddingVertical: 14 },
 });
