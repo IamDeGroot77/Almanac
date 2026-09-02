@@ -72,6 +72,7 @@ export default function TodayScreen({
   onCancelRoutineItem,
   scratch,
   scratchActions,
+  capacity,
 }) {
   const isToday = dayOffset === 0;
   const dayKey = almanacDayKeyFromOffset(dayOffset);
@@ -217,6 +218,7 @@ export default function TodayScreen({
         listId={dayListId}
         title={listTitle}
         subtitle={nowMode ? 'Now mode · open tasks only' : daySummary}
+        subtitleWarn={!nowMode && !!capacity?.over}
         emptyText={isToday ? 'Nothing planned yet.' : dayOffset === 1 ? 'Nothing lined up for tomorrow.' : 'Nothing on ' + dayName + ' yet.'}
         emptyHint={isToday ? 'Add one small thing, or tap Just one thing to pick from your lists.' : 'Add something here and it waits for that day.'}
         {...nowListProps}

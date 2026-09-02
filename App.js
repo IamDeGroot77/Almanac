@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors } from './src/theme';
-import { almanacDayFromOffset } from './src/clock';
+import { almanacDayFromOffset, almanacDayKeyFromOffset } from './src/clock';
 import { useAlmanacStore } from './src/store';
 import useAlmanacDay from './src/hooks/useAlmanacDay';
 import usePeopleFilter from './src/hooks/usePeopleFilter';
@@ -219,6 +219,12 @@ function AlmanacApp() {
           note: store.dayNotes[day.today] || '',
           onChangeNote: (text) => store.setDayNote(day.today, text),
           onPushToTomorrow: () => store.pushOpenToTomorrow(day.today),
+          onCarry: (id) => store.moveTask(id, dayListId(almanacDayKeyFromOffset(1))),
+          onNextWeek: (id) => store.moveTask(id, dayListId(almanacDayKeyFromOffset(7))),
+          onDrop: (id) => {
+            const removed = store.deleteTask(id);
+            if (removed) offerUndo('Dropped ' + JSON.stringify(removed.text), () => store.restoreTasks([removed]));
+          },
           onGoodNight: () => {
             store.endDay(day.today);
             setWrapOpen(false);
@@ -353,6 +359,7 @@ function AlmanacApp() {
             onEditRoutine={setEditingRoutine}
             dayListId={derived.dayListId}
             daySummary={derived.daySummary}
+            capacity={derived.capacity}
             wrapUp={wrapUp}
             onJustOneThing={justOneThing}
             listProps={listProps}
@@ -590,6 +597,7 @@ function AlmanacApp() {
         onSetEstimate={store.setTaskEstimate}
         onSetNotes={store.setTaskNotes}
         onSetPlan={store.setTaskPlan}
+        onSetFirstStep={store.setTaskFirstStep}
         calibration={estimateAccuracy(store.timeLog)?.median || null}
         onMove={(id, listId) => {
           store.moveTask(id, listId);

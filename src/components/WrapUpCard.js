@@ -15,6 +15,11 @@ export default function WrapUpCard({
   note,
   onChangeNote,
   onPushToTomorrow,
+  onCarry,
+  onNextWeek,
+  onDrop,
+  doneTasks = [],
+  openTasks = [],
   onGoodNight,
   onClose,
   energy,
@@ -32,6 +37,35 @@ export default function WrapUpCard({
         <Text style={styles.sub}>
           Estimated {formatDuration(estimateMs)}, took {formatDuration(trackedMs)}.
         </Text>
+      ) : null}
+
+      {doneTasks.length > 0 ? (
+        <View style={styles.haveDone}>
+          <Text style={styles.label}>Have done</Text>
+          {doneTasks.map((t) => (
+            <Text key={t.id} style={styles.doneLine}>
+              ✓ {t.text}
+              {t.durationMs ? <Text style={styles.doneMeta}>  {formatDuration(t.durationMs)}</Text> : null}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+
+      {openTasks.length > 0 && onCarry ? (
+        <View style={styles.leftovers}>
+          <Text style={styles.label}>Still open · decide each one</Text>
+          {openTasks.map((t) => (
+            <View key={t.id} style={styles.leftoverRow}>
+              <View style={styles.leftoverBody}>
+                <Text style={styles.leftoverText}>{t.text}</Text>
+                {t.carriedCount >= 2 ? <Text style={styles.leftoverMeta}>dodged {t.carriedCount} days</Text> : null}
+              </View>
+              <SmallButton label="Tomorrow" onPress={() => onCarry(t.id)} />
+              <SmallButton label="Next week" onPress={() => onNextWeek(t.id)} />
+              <SmallButton label="Drop" onPress={() => onDrop(t.id)} />
+            </View>
+          ))}
+        </View>
       ) : null}
 
       {routines.length > 0 && (
@@ -79,6 +113,14 @@ const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '700', color: colors.ink, marginTop: 4 },
   sub: { fontSize: 14, color: colors.muted, marginTop: 2 },
   routines: { marginTop: 10 },
+  haveDone: { marginTop: 4 },
+  doneLine: { fontSize: 14, color: colors.ink, marginTop: 3 },
+  doneMeta: { fontSize: 12, color: colors.muted },
+  leftovers: { marginTop: 4 },
+  leftoverRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6 },
+  leftoverBody: { flex: 1 },
+  leftoverText: { fontSize: 14, color: colors.ink },
+  leftoverMeta: { fontSize: 11, color: colors.warn },
   routine: { fontSize: 14, color: colors.ink, marginTop: 2 },
   routineDone: { color: colors.muted },
   label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 14, marginBottom: 6 },

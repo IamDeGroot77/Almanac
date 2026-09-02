@@ -13,6 +13,7 @@ export default function TaskList({
   listId,
   title,
   subtitle,
+  subtitleWarn,
   tasks,
   emptyText,
   emptyHint,
@@ -68,7 +69,7 @@ export default function TaskList({
             accessibilityHint={onTitleLongPress ? 'Long press to rename or delete this list' : undefined}
           >
             <Text style={styles.title}>{title}</Text>
-            {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+            {subtitle ? <Text style={[styles.subtitle, subtitleWarn && styles.subtitleWarn]}>{subtitle}</Text> : null}
           </TouchableOpacity>
         )}
         {done.length > 0 && (
@@ -129,6 +130,7 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 17, fontWeight: '700', color: colors.ink, letterSpacing: -0.2 },
   subtitle: { fontSize: 12, color: colors.muted, marginTop: 1 },
+  subtitleWarn: { color: colors.warn, fontWeight: '600' },
   renameInput: { fontSize: 18, fontWeight: '700', paddingVertical: 6, marginRight: 10 },
   inputRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   empty: { paddingVertical: 4 },

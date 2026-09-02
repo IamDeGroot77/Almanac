@@ -40,6 +40,7 @@ export default function TaskSheet({
   onBreakDown,
   onToggleStep,
   onDeleteStep,
+  onSetFirstStep,
 }) {
   const [stepText, setStepText] = useState('');
   const [customDue, setCustomDue] = useState('');
@@ -47,6 +48,7 @@ export default function TaskSheet({
   const [dueError, setDueError] = useState('');
   const [notes, setNotes] = useState('');
   const [plan, setPlan] = useState('');
+  const [firstStep, setFirstStep] = useState('');
 
   useEffect(() => {
     setCustomDue('');
@@ -54,12 +56,14 @@ export default function TaskSheet({
     setDueError('');
     setNotes(task?.notes || '');
     setPlan(task?.plan || '');
+    setFirstStep(task?.firstStep || '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task?.id]);
 
   const close = () => {
     if (task && (notes || '') !== (task.notes || '')) onSetNotes(task.id, notes);
     if (task && (plan || '') !== (task.plan || '')) onSetPlan(task.id, plan);
+    if (task && onSetFirstStep && (firstStep || '') !== (task.firstStep || '')) onSetFirstStep(task.id, firstStep);
     onClose();
   };
 
@@ -168,6 +172,18 @@ export default function TaskSheet({
                 </View>
               ) : null}
               {dueError ? <Text style={styles.error}>{dueError}</Text> : null}
+
+              <Text style={[styles.label, styles.spacedSmall]}>First two-minute step</Text>
+              <TextInput
+                style={[shared.input, styles.smallInput, styles.planInput]}
+                value={firstStep}
+                onChangeText={setFirstStep}
+                onBlur={() => onSetFirstStep && onSetFirstStep(task.id, firstStep)}
+                placeholder="e.g. open the doc and write the title"
+                placeholderTextColor={colors.muted}
+                returnKeyType="done"
+              />
+              <Text style={styles.calib}>The smallest motion that counts as started. Now mode shows just this line.</Text>
 
               <Text style={[styles.label, styles.spacedSmall]}>When and where</Text>
               <TextInput

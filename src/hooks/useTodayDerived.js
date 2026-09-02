@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { capacityFor, describeCapacity } from '../capacity';
 import { pastUnfinished, dayListIdForOffset, tasksForList, isDayList, dayOfList } from '../store';
 import { describeDayKey, parseDayKey } from '../dates';
 import { formatDuration } from '../durations';
@@ -8,6 +9,8 @@ import { routineProgress } from '../routines';
 // Everything the Today tab derives from the visible tasks: the review,
 // due sections, the day summary, and the wrap-up numbers.
 export default function useTodayDerived({ store, visibleTasks, visibleRoutines, dayOffset, today }) {
+  const bedtimeHour = store.prefs.bedtimeHour ?? 23;
+  const wokeAt = store.days?.[today]?.wokeAt || null;
   const dayListId = dayListIdForOffset(dayOffset);
   const todayListId = dayListIdForOffset(0);
 
@@ -18,14 +21,26 @@ export default function useTodayDerived({ store, visibleTasks, visibleRoutines, 
   const contextFor = (t) =>
     isDayList(t.listId) ? describeDayKey(dayOfList(t.listId)) : store.lists.find((l) => l.id === t.listId)?.name || null;
 
+  const capacity = useMemo(() => {
+    if (dayOffset !== 0) return null;
+    const { open } = tasksForList(visibleTasks, dayListId);
+    const due = visibleTasks.filter((t) => t.listId !== dayListId && !t.done && !t.parentId && (dueStatus(t) === 'today' || dueStatus(t) === 'overdue'));
+    return capacityFor([...open, ...due], { bedtimeHour, wokeAt });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleTasks, dayListId, dayOffset, bedtimeHour, wokeAt]);
+
   const daySummary = useMemo(() => {
     const { done } = tasksForList(visibleTasks, dayListId);
-    if (done.length === 0) return null;
-    const tracked = done.reduce((sum, t) => sum + (t.durationMs || 0), 0);
-    const parts = [`${done.length} done`];
-    if (tracked > 0) parts.push(`${formatDuration(tracked)} tracked`);
-    return parts.join(' · ');
-  }, [visibleTasks, dayListId]);
+    const parts = [];
+    if (done.length) {
+      const tracked = done.reduce((sum, t) => sum + (t.durationMs || 0), 0);
+      parts.push(`${done.length} done`);
+      if (tracked > 0) parts.push(`${formatDuration(tracked)} tracked`);
+    }
+    const cap = describeCapacity(capacity);
+    if (cap) parts.push(cap);
+    return parts.length ? parts.join(' · ') : null;
+  }, [visibleTasks, dayListId, capacity]);
 
   // Numbers for the end-of-day card, from the almanac day's midnight until now.
   const wrapUpStats = useMemo(() => {
@@ -37,6 +52,8 @@ export default function useTodayDerived({ store, visibleTasks, visibleRoutines, 
     return {
       doneCount: doneToday.length,
       openCount: open.length,
+      doneTasks: doneToday.map((t) => ({ id: t.id, text: t.text, durationMs: t.durationMs || 0 })),
+      openTasks: open.map((t) => ({ id: t.id, text: t.text, carriedCount: t.carriedCount || 0 })),
       trackedMs: doneToday.reduce((s, t) => s + (t.durationMs || 0), 0),
       estimateMs: doneToday.filter((t) => t.durationMs).reduce((s, t) => s + (t.estimateMs || 0), 0),
       routines: visibleRoutines.map((r) => ({ name: r.name, ...routineProgress(r, routineState) })),
@@ -44,5 +61,5 @@ export default function useTodayDerived({ store, visibleTasks, visibleRoutines, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleTasks, visibleRoutines, store.routineDone, today]);
 
-  return { dayListId, todayListId, reviewTasks, dueOverdue, dueToday, contextFor, daySummary, wrapUpStats };
+  return { dayListId, todayListId, reviewTasks, dueOverdue, dueToday, contextFor, daySummary, wrapUpStats, capacity };
 }

@@ -732,6 +732,9 @@ export function useAlmanacStore() {
         }));
       },
       // Implementation intention: when and where this will happen.
+      setTaskFirstStep(id, firstStep) {
+        edit((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, firstStep: (firstStep || '').trim() || null, updatedAt: Date.now() } : t)) }));
+      },
       setTaskPlan(id, plan) {
         edit((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, plan: (plan || '').trim() || null } : t)) }));
       },

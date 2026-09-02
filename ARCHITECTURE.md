@@ -78,6 +78,13 @@ snapshots, and native features hide behind small modules.
 - `categories` in the store group lists (`list.categoryId`); set in list options, Settings → Categories and day blocks, or an import header "(in Work)". They merge across devices like lists.
 - Day blocks (`prefs.dayBlocks`, shared): a category plus a start/end time and weekdays. `src/blocks.js` (pure, tested by `scripts/test-blocks.mjs`) finds the current and next block; Today shows a BlockCard with the three best tasks from every list in the category (`pickNext` over `categoryTasks`), the timeline shades the blocks, and "Just one thing" prefers the current block's category.
 
+## From the research pass (2026-09-02)
+
+- Dodged count: a task carried through the start-of-day review `carriedCount` times shows "dodged N days" on its row and in the wrap-up, so avoidance is a number rather than a feeling.
+- First two-minute step: `task.firstStep` (task sheet), shown as "Start with: …" on the row until the task runs.
+- Capacity: `src/capacity.js` (pure, tested by `scripts/test-capacity.mjs`) sums open estimates (20 min default for unestimated) against the bedtime pref and the Today list's subtitle reads "~1h 50m left · finishing 9:40 PM", in warn colour when past bedtime.
+- Shutdown ritual: the wrap-up card lists what was done (the "have done" list) and asks per open item: Tomorrow / Next week / Drop (undoable).
+
 ## Adherence (the phone does the initiating)
 
 - The morning brief follows the alarm clock: `modules/almanac-alarm` reads `AlarmManager.getNextAlarmClock`; `scheduleMorningBrief` in `src/notifications.js` schedules a one-off a minute after an alarm within 20 hours, else the brief is sent when the day auto-starts (`sendBriefIfDue`, once per day). Re-checked whenever the app comes to the foreground or goes to the background, so set the alarm before closing Almanac for the night if you want the brief tied to it.
