@@ -340,6 +340,10 @@ function AlmanacApp() {
             refreshing={sync.state === 'syncing'}
             listProps={listProps}
             google={google}
+            onImport={(plan) => {
+              const added = store.importPlan(plan);
+              setToast({ text: `Added ${added.tasks} ${added.tasks === 1 ? 'task' : 'tasks'}${added.lists ? ` and ${added.lists} new ${added.lists === 1 ? 'list' : 'lists'}` : ''}.`, at: Date.now() });
+            }}
           />
         )}
         {tab === 'insights' && <InsightsScreen store={store} />}

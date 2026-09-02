@@ -59,6 +59,10 @@ snapshots, and native features hide behind small modules.
 - Laptop-only tabs live in `src/screens/web/`: `PlannerScreen` (week columns, drag and drop), `SemesterScreen` (courses × weeks), `DashboardSections` (charts), `CalendarScreen` (month grid over the Google Calendar API, `src/google/calendarApi.js`, needs the `calendar.events` scope on the web client), and `FilesScreen` (the drop box).
 - The drop box is a normal Drive folder called "Almanac Drop" (`src/drive/filesApi.js`, `drive.file` scope, so the app only sees files it made). The laptop uploads by drag and drop; the phone lists the folder at the bottom of Lists (`DropBoxSection`) and opens files in Drive. Sending from the phone needs a file picker native module, planned for the next build.
 
+## Capture
+
+- "Paste a list" on the Lists tab (`components/ImportBox.js`) turns a brain dump into lists, tasks, steps, dates, times, people, and notes. The parser is `src/importText.js` (pure, tested by `scripts/test-import.mjs`); the store applies the plan in one edit (`importPlan`), so it syncs to Google Tasks and the other device like any edit.
+
 ## Adherence (the phone does the initiating)
 
 - The morning brief follows the alarm clock: `modules/almanac-alarm` reads `AlarmManager.getNextAlarmClock`; `scheduleMorningBrief` in `src/notifications.js` schedules a one-off a minute after an alarm within 20 hours, else the brief is sent when the day auto-starts (`sendBriefIfDue`, once per day). Re-checked whenever the app comes to the foreground or goes to the background, so set the alarm before closing Almanac for the night if you want the brief tied to it.

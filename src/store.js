@@ -671,6 +671,67 @@ export function useAlmanacStore() {
           ],
         }));
       },
+      // Applies a plan from src/importText.js in one edit: creates any new
+      // lists, then the tasks and their steps. Returns what it added.
+      importPlan(plan) {
+        const now = Date.now();
+        const added = { lists: 0, tasks: 0, steps: 0 };
+        edit((s) => {
+          const lists = [...s.lists];
+          const tasks = [...s.tasks];
+          let order = now;
+          for (const l of plan.lists) {
+            let listId = l.id;
+            if (!listId) {
+              const existing = lists.find((x) => x.name.toLowerCase() === l.name.toLowerCase());
+              if (existing) listId = existing.id;
+              else {
+                listId = newId('l');
+                lists.push({ id: listId, name: l.name, personId: null, createdAt: now, updatedAt: now });
+                added.lists += 1;
+              }
+            }
+            for (const t of l.tasks) {
+              const id = newId('t');
+              tasks.push({
+                id,
+                text: t.text,
+                done: false,
+                listId,
+                personId: t.personId || null,
+                due: t.due || null,
+                dueTime: t.due ? t.dueTime || null : null,
+                notes: t.notes || null,
+                createdAt: order,
+                doneAt: null,
+                updatedAt: now,
+              });
+              added.tasks += 1;
+              order += 1;
+              for (const st of t.steps || []) {
+                tasks.push({
+                  id: newId('t'),
+                  text: st.text,
+                  done: false,
+                  listId,
+                  parentId: id,
+                  personId: t.personId || null,
+                  due: st.due || null,
+                  dueTime: st.due ? st.dueTime || null : null,
+                  notes: st.notes || null,
+                  createdAt: order,
+                  doneAt: null,
+                  updatedAt: now,
+                });
+                added.steps += 1;
+                order += 1;
+              }
+            }
+          }
+          return { lists, tasks };
+        });
+        return added;
+      },
       renameList(id, name) {
         const trimmed = name.trim();
         if (!trimmed) return;
