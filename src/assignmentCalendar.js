@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import * as Calendar from 'expo-calendar';
 import { parseDayKey } from './dates';
+import { isWeb } from './platform';
 
 // Mirrors Canvas assignments into a calendar of your choosing on the phone
 // (normally your Google account's calendar, so it reaches Google Calendar and
@@ -68,7 +69,7 @@ export default function useAssignmentCalendar(store, { enabled, calendarId }) {
 
   const reconcile = useCallback(async () => {
     const current = storeRef.current;
-    if (!current.loaded || !enabled || !calendarId) return;
+    if (isWeb || !current.loaded || !enabled || !calendarId) return;
     if (inFlight.current) {
       queued.current = true;
       return;
@@ -153,6 +154,7 @@ export default function useAssignmentCalendar(store, { enabled, calendarId }) {
 
 // Calendars you can write to, primary first.
 export async function listWritableCalendars() {
+  if (isWeb) return [];
   const calendars = await Calendar.getCalendars(Calendar.EntityTypes.EVENT);
   return calendars
     .filter((c) => c.allowsModifications)

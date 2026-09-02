@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 import { getValidAccessToken } from './auth';
 import { runSync } from './sync';
 import { GoogleApiError } from './tasksApi';
+import { isWeb } from '../platform';
 
 const DEBOUNCE_MS = 3000;
 
@@ -17,7 +18,7 @@ export default function useGoogleSync(store, auth) {
 
   const syncNow = useCallback(async () => {
     const current = storeRef.current;
-    if (!auth.account || !current.loaded) return;
+    if (isWeb || !auth.account || !current.loaded) return;
     if (inFlight.current) {
       queued.current = true;
       return;

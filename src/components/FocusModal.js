@@ -5,6 +5,7 @@ import { colors } from '../theme';
 import { PrimaryButton, SmallButton } from './Buttons';
 import { formatDuration, useNow, elapsedFor } from '../durations';
 import { APP_CATALOG } from '../apps';
+import { isWeb } from '../platform';
 
 // One task, full screen. Opens when you Start something. Everything else is
 // out of sight, the timer is big, and for a phone-free task it offers to
@@ -23,6 +24,10 @@ export default function FocusModal({ task, nextStep, stepsSummary, prefs, sessio
   const timerApp = APP_CATALOG.find((a) => a.id === prefs.timerApp) || null;
 
   const open = (app) => {
+    if (isWeb) {
+      setHandoffNote('Hand-off to apps works on the phone.');
+      return;
+    }
     try {
       IntentLauncher.openApplication(app.package);
       setHandoffNote(`Opening ${app.name}. The timer here keeps running.`);

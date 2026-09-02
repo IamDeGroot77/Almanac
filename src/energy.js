@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import { registerNotificationHandler } from './notificationRouter';
 import { almanacToday } from './clock';
+import { isWeb } from './platform';
 
 // Midday energy check-in as a notification with three buttons, so the answer
 // takes one tap from the shade or the watch. Wake and bed check-ins live on
@@ -35,7 +36,7 @@ export default function useEnergyCheckins(store, { enabled }) {
   );
 
   useEffect(() => {
-    if (!store.loaded) return;
+    if (!store.loaded || isWeb) return;
     (async () => {
       try {
         if (!enabled) {

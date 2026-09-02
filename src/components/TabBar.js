@@ -1,4 +1,4 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme';
 
@@ -13,6 +13,7 @@ export default function TabBar({ active, onSelect }) {
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      <View style={styles.inner}>
       {TABS.map((tab) => {
         const isActive = tab.id === active;
         return (
@@ -29,6 +30,7 @@ export default function TabBar({ active, onSelect }) {
           </TouchableOpacity>
         );
       })}
+      </View>
     </View>
   );
 }
@@ -41,6 +43,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     paddingTop: 8,
   },
+  inner: { flexDirection: 'row', flex: 1, ...(Platform.OS === 'web' ? { maxWidth: 760, alignSelf: 'center', width: '100%' } : {}) },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 4 },
   icon: { fontSize: 20, color: colors.muted, lineHeight: 24 },
   label: { fontSize: 11, fontWeight: '600', color: colors.muted, marginTop: 2 },

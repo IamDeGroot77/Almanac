@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 // Docs: https://docs.expo.dev/versions/v57.0.0/sdk/calendar/
 import * as Calendar from 'expo-calendar';
 import { parseDayKey, formatTime } from './dates';
+import { isWeb } from './platform';
 
 // Loads the calendar events for the day at `offset` from the almanac day
 // (`baseKey`, YYYY-MM-DD): 0 = today, 1 = tomorrow.
@@ -14,6 +15,11 @@ export default function useCalendarEvents(offset, baseKey) {
   const [calendarNames, setCalendarNames] = useState([]);
 
   const load = useCallback(async (which, base = baseKey) => {
+    if (isWeb) {
+      setStatus('unavailable');
+      setEvents([]);
+      return;
+    }
     try {
       const perm = await Calendar.requestCalendarPermissions();
       if (perm.status !== 'granted') {

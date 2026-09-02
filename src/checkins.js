@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import { formatTime } from './dates';
 import { registerNotificationHandler } from './notificationRouter';
+import { isWeb } from './platform';
 
 // "Still working on this?" While a task is running, a repeating notification
 // checks in every N minutes with three replies: Still on it, Pause, Finish.
@@ -45,7 +46,7 @@ export default function useTaskCheckins(store, { minutes }) {
   const signature = running.map((t) => `${t.id}:${t.startedAt}`).join(';');
 
   useEffect(() => {
-    if (!store.loaded) return;
+    if (!store.loaded || isWeb) return;
     (async () => {
       try {
         const want = new Map();

@@ -4,6 +4,7 @@ import { dayListIdForOffset } from './store';
 import { almanacToday } from './clock';
 import { parseQuickTask } from './quickParse';
 import { registerNotificationHandler } from './notificationRouter';
+import { isWeb } from './platform';
 
 // "Quick add" from the notification shade and the watch. A notification with
 // two reply actions sits in the shade; Wear OS lets you answer them by
@@ -87,7 +88,7 @@ export function useQuickAdd(store, { enabled }) {
   );
 
   useEffect(() => {
-    if (!store.loaded) return;
+    if (!store.loaded || isWeb) return;
     (enabled ? showQuickAddNotification() : hideQuickAddNotification()).catch((err) =>
       console.warn('Quick add notification failed', err)
     );

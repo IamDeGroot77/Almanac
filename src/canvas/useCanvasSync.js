@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { makeCanvasApi, CanvasApiError } from './api';
 import { fetchCanvasData, runCanvasSync } from './sync';
+import { isWeb } from '../platform';
 
 const MIN_INTERVAL_MS = 10 * 60 * 1000;
 
@@ -16,7 +17,7 @@ export default function useCanvasSync(store, auth) {
   const syncNow = useCallback(
     async ({ force = false } = {}) => {
       const current = storeRef.current;
-      if (!auth.creds || !current.loaded || inFlight.current) return;
+      if (isWeb || !auth.creds || !current.loaded || inFlight.current) return;
       if (!force && Date.now() - lastRun.current < MIN_INTERVAL_MS) return;
       inFlight.current = true;
       setStatus({ state: 'syncing', error: null });

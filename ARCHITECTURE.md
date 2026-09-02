@@ -49,3 +49,10 @@ snapshots, and native features hide behind small modules.
 - `eas.json` profiles: `development` (dev client APK, auto-increment versionCode), `preview`, `production`.
 - `app.config.js` derives the Google redirect scheme from the client ID and declares launchable packages; `plugins/withAppQueries.js` writes the manifest queries.
 - `scripts/make-icons.js` regenerates the icon set from `assets/icon-new.png`.
+
+## Laptop (web) and device sync
+
+- The same code builds for the browser: `npm run build:web` writes `docs/app/`, which GitHub Pages serves at `https://iamdegroot77.github.io/Almanac/app/` (`experiments.baseUrl` in app.json; `docs/_config.yml` tells Jekyll to publish the `_expo` folder).
+- `src/platform.js` (`isWeb`) gates phone-only features; `src/secure.js` swaps SecureStore for localStorage on the web.
+- Google on the web uses Google Identity Services (`src/google/authWeb.js`) with a Web-application OAuth client (`extra.googleWebClientId`).
+- `src/drive/` keeps devices in step through a private file in Drive's app-data folder: `merge.js` (pure, tested by `scripts/test-merge.mjs`), `driveApi.js`, `useDriveSync.js`. The phone stays the hub for Google Tasks, Canvas, and the calendar; the laptop receives those through Drive.

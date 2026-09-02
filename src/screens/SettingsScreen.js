@@ -15,6 +15,8 @@ import { reminderMessage } from '../notifications';
 import { APP_CATALOG } from '../apps';
 import { formatDuration } from '../durations';
 import { formatTime } from '../dates';
+import { isWeb } from '../platform';
+import DriveSection from '../components/DriveSection';
 
 export default function SettingsScreen({
   google,
@@ -31,6 +33,7 @@ export default function SettingsScreen({
   onToggleAssignmentCalendar,
   linkedEventCount,
   weather,
+  drive,
   onStageReview,
 }) {
   // Appearance: stored outside the store because index.js reads it before anything loads.
@@ -111,6 +114,16 @@ export default function SettingsScreen({
         {weather?.error ? <Text style={styles.error}>{weather.error}</Text> : null}
       </View>
 
+      {isWeb ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>On the phone</Text>
+          <Text style={shared.muted}>
+            Reminders, voice quick add, energy checks, check-ins, sleep detection, hand-off apps, Canvas,
+            and calendar mirroring run on the phone. This laptop gets their results through sync.
+          </Text>
+        </View>
+      ) : (
+        <>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Daily brief</Text>
         <Text style={shared.muted}>{reminderMessage(reminderStatus) || 'Setting up the 6:30 AM reminder…'}</Text>
@@ -259,6 +272,13 @@ export default function SettingsScreen({
         <PersonChips people={people} selected={null} onSelect={() => {}} onAdd={onAddPerson} compact />
       </View>
 
+        </>
+      )}
+
+      <DriveSection auth={google} drive={drive} />
+
+      {!isWeb && (
+        <>
       <GoogleSection auth={google} sync={sync} />
 
       <CanvasSection auth={canvas} sync={canvasSync} courses={canvasCourses} />
@@ -272,7 +292,10 @@ export default function SettingsScreen({
         linkedCount={linkedEventCount}
       />
 
-      {__DEV__ && <DevSection onStageReview={onStageReview} />}
+        </>
+      )}
+
+      {__DEV__ && !isWeb && <DevSection onStageReview={onStageReview} />}
 
       <Text style={styles.footer}>Almanac {version}</Text>
     </Screen>

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import { dueDateTime } from './due';
+import { isWeb } from './platform';
 
 // Keeps one scheduled notification per task that has a due time and isn't
 // done. Reconciles whenever tasks change: schedules new ones, reschedules
@@ -24,7 +25,7 @@ export default function useTaskReminders(tasks, loaded) {
   const known = useRef(new Map()); // task id -> reminderKey currently scheduled
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || isWeb) return;
     const wanted = new Map();
     for (const t of tasks) {
       const key = reminderKey(t);

@@ -47,6 +47,10 @@ const emptyState = () => ({
   sleepApplied: [], // detected sleep segments already folded in ("start-end")
   canvas: { courses: [], lastSyncAt: null }, // course grades from Canvas, see canvas/sync.js
   calendarEvents: {}, // taskId -> { eventId, key } for assignments mirrored to the calendar
+  deleted: { tasks: {}, lists: {}, routines: {} }, // id -> deletedAt, for device-to-device sync
+  dayNoteMeta: {}, // dayKey -> updatedAt
+  prefsUpdatedAt: 0, // when a shared preference last changed
+  driveRevision: 0, // revision of the Drive file this device last wrote
   prefs: {
     focusApp: 'focusFriend', // hand-off apps, see apps.js
     timerApp: null,
@@ -114,6 +118,18 @@ async function load() {
 }
 
 const tombstone = (t) => (t.googleId ? { googleListId: t.googleListId, googleId: t.googleId } : null);
+
+// Deletion markers for device-to-device sync (see drive/merge.js).
+function markDeleted(deleted, kind, ids) {
+  if (!ids.length) return deleted || { tasks: {}, lists: {}, routines: {} };
+  const base = deleted || { tasks: {}, lists: {}, routines: {} };
+  const now = Date.now();
+  const next = { ...(base[kind] || {}) };
+  for (const id of ids) next[id] = now;
+  return { ...base, [kind]: next };
+}
+
+const SHARED_PREF_KEYS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep'];
 
 const TIME_LOG_MAX = 2000;
 
@@ -262,7 +278,7 @@ export function useAlmanacStore() {
       saveRoutine(routine) {
         edit((s) => {
           const exists = s.routines.some((r) => r.id === routine.id);
-          const clean = { ...routine, personId: routine.personId === 'me' ? null : routine.personId || null };
+          const clean = { ...routine, personId: routine.personId === 'me' ? null : routine.personId || null, updatedAt: Date.now() };
           return {
             routines: exists
               ? s.routines.map((r) => (r.id === routine.id ? clean : r))
@@ -273,7 +289,7 @@ export function useAlmanacStore() {
       deleteRoutine(id) {
         edit((s) => {
           const { [id]: _gone, ...rest } = s.routineDone || {};
-          return { routines: s.routines.filter((r) => r.id !== id), routineDone: rest };
+          return { routines: s.routines.filter((r) => r.id !== id), routineDone: rest, deleted: markDeleted(s.deleted, 'routines', [id]) };
         });
       },
       toggleRoutineItem(routineId, periodKey, itemId) {
@@ -364,7 +380,48 @@ export function useAlmanacStore() {
         }));
       },
       setPref(key, value) {
-        setState((s) => ({ ...s, prefs: { ...s.prefs, [key]: value } }));
+        setState((s) => ({
+          ...s,
+          prefs: { ...s.prefs, [key]: value },
+          prefsUpdatedAt: SHARED_PREF_KEYS.includes(key) ? Date.now() : s.prefsUpdatedAt || 0,
+          localVersion: SHARED_PREF_KEYS.includes(key) ? s.localVersion + 1 : s.localVersion,
+        }));
+      },
+      setDriveRevision(revision) {
+        setState((s) => ({ ...s, driveRevision: revision }));
+      },
+      // Result of merging with the Drive file. Replaces the shared slice;
+      // device-only state (Google/Canvas/calendar bookkeeping, prefs that
+      // aren't shared) stays. Tasks that vanished in the merge and had a
+      // Google id get a tombstone so the phone removes them from Google too.
+      applyDriveMerge(merged) {
+        setState((s) => {
+          const mergedIds = new Set(merged.tasks.map((t) => t.id));
+          const stones = s.tasks.filter((t) => !mergedIds.has(t.id)).map(tombstone).filter(Boolean);
+          const mergedListIds = new Set(merged.lists.map((l) => l.id));
+          const listStones = s.lists.filter((l) => !mergedListIds.has(l.id) && l.googleListId).map((l) => l.googleListId);
+          return {
+            ...s,
+            tasks: merged.tasks,
+            lists: merged.lists,
+            routines: merged.routines,
+            people: merged.people,
+            routineDone: merged.routineDone,
+            timeLog: merged.timeLog,
+            days: merged.days,
+            dayNotes: merged.dayNotes,
+            dayNoteMeta: merged.dayNoteMeta,
+            deleted: merged.deleted,
+            prefs: { ...s.prefs, ...(merged.sharedPrefs || {}) },
+            prefsUpdatedAt: merged.prefsUpdatedAt || s.prefsUpdatedAt || 0,
+            driveRevision: merged.revision || s.driveRevision || 0,
+            sync: {
+              ...s.sync,
+              deletedTasks: [...s.sync.deletedTasks, ...stones],
+              deletedLists: [...s.sync.deletedLists, ...listStones],
+            },
+          };
+        });
       },
       linkCalendarEvent(taskId, eventId, key, weekAlert = false) {
         setState((s) => ({
@@ -396,7 +453,7 @@ export function useAlmanacStore() {
       },
       // ----- end of day -----
       setDayNote(key, text) {
-        edit((s) => ({ dayNotes: { ...s.dayNotes, [key]: text } }));
+        edit((s) => ({ dayNotes: { ...s.dayNotes, [key]: text }, dayNoteMeta: { ...(s.dayNoteMeta || {}), [key]: Date.now() } }));
       },
       pushOpenToTomorrow(fromKey) {
         const from = dayListId(fromKey);
@@ -479,6 +536,7 @@ export function useAlmanacStore() {
           return {
             tasks: s.tasks.filter((t) => !ids.has(t.id)),
             sync: stones.length ? { ...s.sync, deletedTasks: [...s.sync.deletedTasks, ...stones] } : s.sync,
+            deleted: markDeleted(s.deleted, 'tasks', [...ids]),
           };
         });
         return removed;
@@ -561,6 +619,7 @@ export function useAlmanacStore() {
           return {
             tasks: s.tasks.filter((t) => !(topIds.has(t.id) || topIds.has(t.parentId))),
             sync: { ...s.sync, deletedTasks: [...s.sync.deletedTasks, ...stones] },
+            deleted: markDeleted(s.deleted, 'tasks', gone.map((t) => t.id)),
           };
         });
         return removed;
@@ -593,12 +652,14 @@ export function useAlmanacStore() {
       deleteList(id) {
         edit((s) => {
           const list = s.lists.find((l) => l.id === id);
+          const goneTasks = s.tasks.filter((t) => t.listId === id).map((t) => t.id);
           return {
             lists: s.lists.filter((l) => l.id !== id),
             tasks: s.tasks.filter((t) => t.listId !== id),
             sync: list?.googleListId
               ? { ...s.sync, deletedLists: [...s.sync.deletedLists, list.googleListId] }
               : s.sync,
+            deleted: markDeleted(markDeleted(s.deleted, 'lists', [id]), 'tasks', goneTasks),
           };
         });
       },
@@ -620,6 +681,7 @@ export function useAlmanacStore() {
         const drop = new Set(dropIds);
         const now = Date.now();
         edit((s) => ({
+          deleted: markDeleted(s.deleted, 'tasks', s.tasks.filter((t) => drop.has(t.id) || drop.has(t.parentId)).map((t) => t.id)),
           tasks: s.tasks
             .filter((t) => !drop.has(t.id) && !drop.has(t.parentId))
             .map((t) => (carry.has(t.parentId) ? { ...t, listId: today, startedAt: null, updatedAt: now } : t))

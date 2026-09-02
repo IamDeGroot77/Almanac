@@ -15,6 +15,7 @@ import { scheduleDailyReminder } from './src/notifications';
 import { useNotificationRouter } from './src/notificationRouter';
 import { useGoogleAuth } from './src/google/auth';
 import useGoogleSync from './src/google/useGoogleSync';
+import useDriveSync from './src/drive/useDriveSync';
 import { useSleepDetection } from './src/sleep';
 import { useCanvasAuth } from './src/canvas/auth';
 import useCanvasSync from './src/canvas/useCanvasSync';
@@ -71,6 +72,7 @@ function AlmanacApp() {
   const calendar = useCalendarEvents(dayOffset, day.today);
   const google = useGoogleAuth();
   const sync = useGoogleSync(store, google);
+  const drive = useDriveSync(store, google);
   const canvas = useCanvasAuth();
   const canvasSync = useCanvasSync(store, canvas);
   const assignmentCalendar = useAssignmentCalendar(store, {
@@ -113,7 +115,7 @@ function AlmanacApp() {
   const [editingRoutine, setEditingRoutine] = useState(null); // null | {} (new) | routine
 
   const onRefresh = async () => {
-    await Promise.all([calendar.refresh(), sync.syncNow(), canvasSync.syncNow(), weather.refresh({ force: true })]);
+    await Promise.all([calendar.refresh(), sync.syncNow(), canvasSync.syncNow(), drive.syncNow(), weather.refresh({ force: true })]);
   };
 
   const showReview = dayOffset === 0 && store.loaded && !reviewDismissed && derived.reviewTasks.length > 0;
@@ -309,6 +311,7 @@ function AlmanacApp() {
             }}
             linkedEventCount={Object.keys(store.calendarEvents || {}).length}
             weather={weather}
+            drive={drive}
             onStageReview={() => {
               store.devBackdateOpenTasks();
               setReviewDismissed(false);

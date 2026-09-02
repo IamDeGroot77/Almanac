@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import * as Google from 'expo-auth-session/providers/google';
-import * as SecureStore from 'expo-secure-store';
+import { getSecret, setSecret, deleteSecret } from '../secure';
+import { isWeb } from '../platform';
+import { useGoogleAuthWeb, getValidAccessTokenWeb, webClientId } from './authWeb';
 import Constants from 'expo-constants';
 
 // Google sign-in for the Tasks bridge, using the standard OAuth code flow
@@ -19,7 +21,7 @@ import Constants from 'expo-constants';
 WebBrowser.maybeCompleteAuthSession();
 
 const TOKENS_KEY = 'google_tokens';
-const SCOPES = ['https://www.googleapis.com/auth/tasks', 'openid', 'email'];
+const SCOPES = ['https://www.googleapis.com/auth/tasks', 'https://www.googleapis.com/auth/drive.appdata', 'openid', 'email'];
 const CLIENT_SUFFIX = '.apps.googleusercontent.com';
 
 export const googleClientId = Constants.expoConfig?.extra?.googleClientId || '';
@@ -36,7 +38,7 @@ const redirectUri = isGoogleConfigured
 
 async function loadTokens() {
   try {
-    const raw = await SecureStore.getItemAsync(TOKENS_KEY);
+    const raw = await getSecret(TOKENS_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch (err) {
     console.warn('Token load failed', err);
@@ -45,16 +47,17 @@ async function loadTokens() {
 }
 
 async function saveTokens(tokens) {
-  await SecureStore.setItemAsync(TOKENS_KEY, JSON.stringify(tokens));
+  await setSecret(TOKENS_KEY, JSON.stringify(tokens));
 }
 
 export async function clearTokens() {
-  await SecureStore.deleteItemAsync(TOKENS_KEY);
+  await deleteSecret(TOKENS_KEY);
 }
 
 // Returns a usable access token, refreshing it when it's about to expire.
 // Resolves to null when there's no session or the refresh fails.
 export async function getValidAccessToken() {
+  if (isWeb) return getValidAccessTokenWeb();
   const tokens = await loadTokens();
   if (!tokens) return null;
   if (tokens.expiresAt - 60_000 > Date.now()) return tokens.accessToken;
@@ -88,6 +91,13 @@ function emailFromIdToken(idToken) {
 }
 
 export function useGoogleAuth() {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  if (isWeb) return useGoogleAuthWeb();
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return useGoogleAuthNative();
+}
+
+function useGoogleAuthNative() {
   const [account, setAccount] = useState(null); // email string or null
   const [ready, setReady] = useState(false);
 

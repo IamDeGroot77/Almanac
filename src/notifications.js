@@ -16,6 +16,7 @@ Notifications.setNotificationHandler({
 });
 
 export async function scheduleDailyReminder() {
+  if (Platform.OS === 'web') return 'unsupported';
   const { status } = await Notifications.requestPermissionsAsync();
   if (status !== 'granted') return 'denied';
 
@@ -46,6 +47,7 @@ export async function scheduleDailyReminder() {
 
 // Fires the daily brief immediately (developer helper).
 export async function sendTestReminder() {
+  if (Platform.OS === 'web') return 'denied';
   const { status } = await Notifications.requestPermissionsAsync();
   if (status !== 'granted') return 'denied';
   await Notifications.scheduleNotificationAsync({
@@ -64,6 +66,8 @@ export function reminderMessage(status) {
       return 'Daily brief arrives at 6:30 AM.';
     case 'denied':
       return 'Notifications are off. Enable them in Settings to get the 6:30 AM brief.';
+    case 'unsupported':
+      return 'Reminders come from the phone.';
     case 'error':
       return "Couldn't set up the daily brief.";
     default:

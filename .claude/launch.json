@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "almanac-web",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/serve-web.js", "dist-web", "8090"],
+      "port": 8090
+    }
+  ]
+}

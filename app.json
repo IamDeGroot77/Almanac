@@ -25,7 +25,9 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
     },
     "plugins": [
       [
@@ -57,8 +59,12 @@
       "eas": {
         "projectId": "729e1faa-0a56-4a1c-86bd-c9c72242b5fc"
       },
-      "googleClientId": "216954380461-toeqh6q4699dk89eibih7t5jm7ejvi19.apps.googleusercontent.com"
+      "googleClientId": "216954380461-toeqh6q4699dk89eibih7t5jm7ejvi19.apps.googleusercontent.com",
+      "googleWebClientId": "PASTE_WEB_CLIENT_ID.apps.googleusercontent.com"
     },
-    "owner": "iamdegroot77s-team"
+    "owner": "iamdegroot77s-team",
+    "experiments": {
+      "baseUrl": "/Almanac/app"
+    }
   }
 }

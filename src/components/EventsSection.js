@@ -8,6 +8,7 @@ export default function EventsSection({ status, events, calendarNames = [], onRe
       <Text style={styles.title}>Events</Text>
 
       {status === 'loading' && <Text style={shared.muted}>Loading your calendar…</Text>}
+      {status === 'unavailable' && <Text style={shared.muted}>Calendar events show on the phone.</Text>}
 
       {status === 'denied' && (
         <View>

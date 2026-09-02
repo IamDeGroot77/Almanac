@@ -1,2 +1,5 @@
 title: Almanac
 theme: minima
+include:
+  - _expo
+  - app

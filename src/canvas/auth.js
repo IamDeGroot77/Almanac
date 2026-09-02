@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import { getSecret, setSecret, deleteSecret } from '../secure';
 import { makeCanvasApi, normalizeHost } from './api';
 
 // The Canvas host and personal access token live in the device keystore.
@@ -7,7 +7,7 @@ const KEY = 'canvas_credentials';
 
 export async function loadCanvasCredentials() {
   try {
-    const raw = await SecureStore.getItemAsync(KEY);
+    const raw = await getSecret(KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -40,7 +40,7 @@ export function useCanvasAuth() {
     try {
       const me = await makeCanvasApi(host, cleanToken).self();
       const next = { host, token: cleanToken, userName: me?.name || me?.short_name || 'Canvas user' };
-      await SecureStore.setItemAsync(KEY, JSON.stringify(next));
+      await setSecret(KEY, JSON.stringify(next));
       setCreds(next);
       return true;
     } catch (err) {
@@ -54,7 +54,7 @@ export function useCanvasAuth() {
   }, []);
 
   const disconnect = useCallback(async () => {
-    await SecureStore.deleteItemAsync(KEY);
+    await deleteSecret(KEY);
     setCreds(null);
     setError(null);
   }, []);

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { formatTime } from './dates';
+import { isWeb } from './platform';
 
 // Timed focus sessions (25 or 50 minutes, the body-doubling formats), with
 // a "working alongside" notification that mirrors to the watch and a chime
@@ -19,6 +20,7 @@ export default function useFocusSession() {
   const clear = useCallback(async () => {
     setSession(null);
     if (timer.current) clearTimeout(timer.current);
+    if (isWeb) return;
     await Notifications.cancelScheduledNotificationAsync(END_ID).catch(() => {});
     await Notifications.dismissNotificationAsync(LIVE_ID).catch(() => {});
   }, []);
@@ -28,6 +30,10 @@ export default function useFocusSession() {
       await clear();
       const endsAt = Date.now() + minutes * 60000;
       setSession({ taskId: task.id, text: task.text, minutes, endsAt });
+      if (isWeb) {
+        timer.current = setTimeout(() => setSession((s) => (s ? { ...s, ended: true } : s)), minutes * 60000);
+        return;
+      }
       try {
         await Notifications.scheduleNotificationAsync({
           identifier: LIVE_ID,

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
+import { isWeb } from './platform';
 
 export { composeWeeklyLetter } from './weeklyLetterText';
 
@@ -9,6 +10,7 @@ const ID = 'weekly-letter';
 // (expo-notifications weekday: 1 = Sunday.)
 export function useWeeklyLetterReminder(enabled) {
   useEffect(() => {
+    if (isWeb) return;
     (async () => {
       try {
         await Notifications.cancelScheduledNotificationAsync(ID).catch(() => {});

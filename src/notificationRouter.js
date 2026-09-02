@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
+import { isWeb } from './platform';
 
 // One place that listens for notification responses (button taps, voice
 // replies) and routes them by action identifier prefix. Features register a
@@ -37,15 +38,20 @@ function dispatch(response) {
 
 // Mount once, near the root, after the store has loaded.
 export function useNotificationRouter(ready) {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  if (isWeb) return;
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const last = Notifications.useLastNotificationResponse();
   const readyRef = useRef(ready);
   readyRef.current = ready;
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener((r) => readyRef.current && dispatch(r));
     return () => sub.remove();
   }, []);
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     if (ready && last) dispatch(last);
   }, [ready, last]);
