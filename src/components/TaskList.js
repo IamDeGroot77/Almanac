@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     minHeight: 32,
   },
-  title: { fontSize: 18, fontWeight: '700', color: colors.ink },
+  title: { fontSize: 17, fontWeight: '700', color: colors.ink, letterSpacing: -0.2 },
   subtitle: { fontSize: 12, color: colors.muted, marginTop: 1 },
   renameInput: { fontSize: 18, fontWeight: '700', paddingVertical: 6, marginRight: 10 },
   inputRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },

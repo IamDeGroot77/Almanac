@@ -69,7 +69,7 @@ export default function ScratchCard({ scratch, onAdd, onEdit, onRemove, onToTask
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: 16, padding: 12, borderRadius: 12, backgroundColor: colors.warnSoft },
+  card: { marginTop: 16, padding: 12, borderRadius: 14, backgroundColor: colors.warnSoft },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontSize: 13, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: colors.warn },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },

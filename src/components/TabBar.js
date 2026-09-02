@@ -1,27 +1,28 @@
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 // The phone keeps four tabs. The laptop adds the planning views that want a
 // big screen and a keyboard.
 const PHONE_TABS = [
-  { id: 'today', label: 'Today', icon: '☀' },
-  { id: 'lists', label: 'Lists', icon: '☰' },
-  { id: 'journal', label: 'Journal', icon: '✎' },
-  { id: 'insights', label: 'Insights', icon: '◑' },
-  { id: 'settings', label: 'Settings', icon: '⚙' },
+  { id: 'today', label: 'Today', icon: 'sunny' },
+  { id: 'lists', label: 'Lists', icon: 'list' },
+  { id: 'journal', label: 'Journal', icon: 'book' },
+  { id: 'insights', label: 'Insights', icon: 'stats-chart' },
+  { id: 'settings', label: 'Settings', icon: 'settings' },
 ];
 
 const WEB_TABS = [
-  { id: 'today', label: 'Today', icon: '☀' },
-  { id: 'planner', label: 'Week', icon: '▦' },
-  { id: 'calendar', label: 'Calendar', icon: '▤' },
-  { id: 'semester', label: 'Semester', icon: '▥' },
-  { id: 'lists', label: 'Lists', icon: '☰' },
-  { id: 'journal', label: 'Journal', icon: '✎' },
-  { id: 'insights', label: 'Dashboard', icon: '◑' },
-  { id: 'files', label: 'Files', icon: '⇅' },
-  { id: 'settings', label: 'Settings', icon: '⚙' },
+  { id: 'today', label: 'Today', icon: 'sunny' },
+  { id: 'planner', label: 'Week', icon: 'grid' },
+  { id: 'calendar', label: 'Calendar', icon: 'calendar' },
+  { id: 'semester', label: 'Semester', icon: 'school' },
+  { id: 'lists', label: 'Lists', icon: 'list' },
+  { id: 'journal', label: 'Journal', icon: 'book' },
+  { id: 'insights', label: 'Dashboard', icon: 'stats-chart' },
+  { id: 'files', label: 'Files', icon: 'swap-vertical' },
+  { id: 'settings', label: 'Settings', icon: 'settings' },
 ];
 
 export const TABS = Platform.OS === 'web' ? WEB_TABS : PHONE_TABS;
@@ -42,7 +43,7 @@ export default function TabBar({ active, onSelect }) {
               accessibilityState={{ selected: isActive }}
               accessibilityLabel={tab.label}
             >
-              <Text style={[styles.icon, isActive && styles.active]}>{tab.icon}</Text>
+              <Ionicons name={isActive ? tab.icon : `${tab.icon}-outline`} size={22} color={isActive ? colors.accent : colors.muted} />
               <Text style={[styles.label, isActive && styles.active]}>{tab.label}</Text>
             </TouchableOpacity>
           );

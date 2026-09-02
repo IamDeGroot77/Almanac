@@ -26,7 +26,7 @@ export default function ConsiderSection({ items, onToday, onLater }) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginTop: 24, padding: 14, borderRadius: 12, backgroundColor: colors.warnSoft },
+  wrap: { marginTop: 24, padding: 14, borderRadius: 14, backgroundColor: colors.warnSoft },
   title: { fontSize: 16, fontWeight: '700', color: colors.ink },
   hint: { fontSize: 12, color: colors.muted, marginTop: 2, marginBottom: 6 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },

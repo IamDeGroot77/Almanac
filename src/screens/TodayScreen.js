@@ -206,7 +206,7 @@ export default function TodayScreen({
         </View>
       )}
 
-      {isToday && onJustOneThing && (
+      {isToday && onJustOneThing && !blockInfo?.current && (
         <TouchableOpacity style={styles.oneThing} onPress={onJustOneThing} accessibilityRole="button">
           <Text style={styles.oneThingText}>Just one thing</Text>
           <Text style={styles.oneThingHint}>Pick the next task worth starting and open it full screen.</Text>
@@ -239,10 +239,10 @@ const styles = StyleSheet.create({
   oneThing: {
     marginTop: 24,
     padding: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     backgroundColor: colors.accent,
   },
   oneThingText: { color: colors.onAccent, fontSize: 16, fontWeight: '700' },
   oneThingHint: { color: colors.accentSoft, fontSize: 12, marginTop: 2 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.ink },
+  sectionTitle: { fontSize: 17, fontWeight: '700', color: colors.ink, letterSpacing: -0.2 },
 });

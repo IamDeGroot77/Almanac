@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   card: {
     marginTop: 20,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     backgroundColor: colors.warnSoft,
   },
   kicker: {

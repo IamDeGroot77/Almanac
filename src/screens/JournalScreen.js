@@ -118,7 +118,7 @@ function Entry({ entry, dayKey, editing, setEditing, onEdit, onDelete }) {
 
 const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '700', color: colors.ink },
-  page: { marginTop: 14, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.bg },
+  page: { marginTop: 14, padding: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.bg },
   pageWide: { maxWidth: 760 },
   box: { minHeight: 90, textAlignVertical: 'top', fontSize: 16, lineHeight: 22 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' },

@@ -3,6 +3,7 @@ import { SmallButton } from './Buttons';
 import { colors, shared } from '../theme';
 
 export default function EventsSection({ status, events, calendarNames = [], onRetry }) {
+  if (status === 'unavailable') return null;
   return (
     <View style={styles.section}>
       <Text style={styles.title}>Events</Text>
@@ -54,7 +55,7 @@ export default function EventsSection({ status, events, calendarNames = [], onRe
 
 const styles = StyleSheet.create({
   section: { marginTop: 28 },
-  title: { fontSize: 18, fontWeight: '700', color: colors.ink, marginBottom: 10 },
+  title: { fontSize: 17, fontWeight: '700', color: colors.ink, letterSpacing: -0.2, marginBottom: 10 },
   eventRow: { flexDirection: 'row', paddingVertical: 10 },
   eventTime: { width: 80, fontSize: 14, color: colors.muted, paddingTop: 2 },
   eventBody: { flex: 1 },

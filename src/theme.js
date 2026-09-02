@@ -43,6 +43,8 @@ export function applyTheme(preference) {
 
 export const shared = StyleSheet.create({
   muted: { color: colors.muted, fontSize: 15, marginBottom: 8 },
+  card: { borderRadius: 14, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.bg, padding: 14 },
+  sectionTitle: { fontSize: 17, fontWeight: '700', color: colors.ink, letterSpacing: -0.2 },
   row: { flexDirection: 'row', gap: 10, marginTop: 4 },
   hairline: {
     borderBottomWidth: StyleSheet.hairlineWidth,

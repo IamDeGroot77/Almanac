@@ -51,7 +51,7 @@ export default function BlockCard({ block, next, category, nextCategory, color, 
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: 20, padding: 14, borderRadius: 12, borderWidth: 2, backgroundColor: colors.bg },
+  card: { marginTop: 20, padding: 14, borderRadius: 14, borderWidth: 2, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   headerText: { flex: 1, marginRight: 8 },
   kicker: { fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },

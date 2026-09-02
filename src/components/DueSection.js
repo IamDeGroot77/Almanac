@@ -39,7 +39,7 @@ export default function DueSection({ overdue, dueToday, contextFor, listProps })
 
 const styles = StyleSheet.create({
   section: { marginTop: 28 },
-  title: { fontSize: 18, fontWeight: '700', color: colors.ink, marginBottom: 4 },
+  title: { fontSize: 17, fontWeight: '700', color: colors.ink, letterSpacing: -0.2, marginBottom: 4 },
   overdue: { color: colors.danger },
   gap: { marginTop: 16 },
 });

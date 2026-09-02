@@ -74,7 +74,7 @@ export default function WrapUpCard({
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: 24, padding: 16, borderRadius: 12, backgroundColor: colors.accentSoft },
+  card: { marginTop: 24, padding: 16, borderRadius: 14, backgroundColor: colors.accentSoft },
   kicker: { fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: colors.accent },
   title: { fontSize: 17, fontWeight: '700', color: colors.ink, marginTop: 4 },
   sub: { fontSize: 14, color: colors.muted, marginTop: 2 },

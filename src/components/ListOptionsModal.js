@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 32,
   },
-  title: { fontSize: 18, fontWeight: '700', color: colors.ink, marginBottom: 14 },
+  title: { fontSize: 17, fontWeight: '700', color: colors.ink, letterSpacing: -0.2, marginBottom: 14 },
   label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginBottom: 8 },
   help: { fontSize: 12, color: colors.muted, marginTop: 8, marginBottom: 12 },
   option: { paddingVertical: 14 },

@@ -30,6 +30,15 @@ export default function RoutineCard({ routine, state, lists, routines = [], acti
     onStartItem(routine.id, item.id, item.text);
   };
 
+  if (progress.complete && !mine && !warmupFor) {
+    return (
+      <TouchableOpacity style={[styles.card, styles.cardComplete, styles.compact]} onLongPress={() => onEdit(routine)} delayLongPress={350} accessibilityRole="button" accessibilityHint="Long press to edit this routine">
+        <Text style={styles.compactText}>✓ {routine.name}</Text>
+        <Text style={styles.compactMeta}>{routine.minutesPerDay ? `${minutes} min today` : `${progress.done}/${progress.target}`}</Text>
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <View style={[styles.card, progress.complete && styles.cardComplete]}>
       <TouchableOpacity
@@ -145,12 +154,15 @@ const styles = StyleSheet.create({
   card: {
     marginTop: 12,
     padding: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.line,
     backgroundColor: colors.bg,
   },
   cardComplete: { borderColor: colors.accentSoft, backgroundColor: colors.accentSoft },
+  compact: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 },
+  compactText: { fontSize: 15, fontWeight: '600', color: colors.accent },
+  compactMeta: { fontSize: 12, color: colors.muted },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerText: { flex: 1 },
   name: { fontSize: 16, fontWeight: '700', color: colors.ink },

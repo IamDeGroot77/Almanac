@@ -246,7 +246,7 @@ function Bar({ label, ms, max }) {
 const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '700', color: colors.ink, marginBottom: 4 },
   section: { marginTop: 28, paddingTop: 20, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.ink, marginBottom: 10 },
+  sectionTitle: { fontSize: 17, fontWeight: '700', color: colors.ink, letterSpacing: -0.2, marginBottom: 10 },
   big: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' },
   bigValue: { fontSize: 34, fontWeight: '800', color: colors.accent },
   bigLabel: { fontSize: 14, color: colors.muted, flex: 1, minWidth: 160 },
