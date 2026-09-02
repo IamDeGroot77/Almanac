@@ -4,17 +4,19 @@ import TaskRow from './TaskRow';
 import { SmallButton } from './Buttons';
 import { colors, shared } from '../theme';
 import { tasksForList } from '../store';
+import { childrenOf } from '../pickNext';
 
 // One list of tasks with its own add box. Used for the day list and for each
-// standing list.
+// standing list. Steps (sub-tasks) render indented under their parent.
 export default function TaskList({
   listId,
   title,
   subtitle,
   tasks,
   emptyText,
-  onAdd,
+  emptyHint,
   tagFor,
+  onAdd,
   onToggle,
   onStart,
   onPause,
@@ -31,7 +33,6 @@ export default function TaskList({
   const [nameDraft, setNameDraft] = useState(title);
   const { all, done } = tasksForList(tasks, listId);
 
-  // Start each rename from the current name.
   useEffect(() => {
     if (renaming) setNameDraft(title);
   }, [renaming, title]);
@@ -40,6 +41,8 @@ export default function TaskList({
     onAdd(input, listId);
     setInput('');
   };
+
+  const rowProps = { tagFor, onToggle, onStart, onPause, onFinish, onDelete, onLongPress: onMove };
 
   return (
     <View style={styles.section}>
@@ -87,21 +90,28 @@ export default function TaskList({
         </TouchableOpacity>
       </View>
 
-      {all.length === 0 && <Text style={shared.muted}>{emptyText}</Text>}
+      {all.length === 0 && (
+        <View style={styles.empty}>
+          <Text style={shared.muted}>{emptyText}</Text>
+          {emptyHint ? <Text style={styles.emptyHint}>{emptyHint}</Text> : null}
+        </View>
+      )}
 
-      {all.map((t) => (
-        <TaskRow
-          key={t.id}
-          task={t}
-          tag={tagFor ? tagFor(t) : null}
-          onToggle={onToggle}
-          onStart={onStart}
-          onPause={onPause}
-          onFinish={onFinish}
-          onDelete={onDelete}
-          onLongPress={onMove}
-        />
-      ))}
+      {all.map((t) => {
+        const kids = childrenOf(tasks, t.id);
+        return (
+          <View key={t.id}>
+            <TaskRow task={t} steps={kids} tag={tagFor ? tagFor(t) : null} {...rowProps} />
+            {kids.all.length > 0 && (
+              <View style={styles.steps}>
+                {[...kids.open, ...kids.done].map((step) => (
+                  <TaskRow key={step.id} task={step} isStep tag={null} {...rowProps} />
+                ))}
+              </View>
+            )}
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -119,4 +129,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 12, color: colors.muted, marginTop: 1 },
   renameInput: { fontSize: 18, fontWeight: '700', paddingVertical: 6, marginRight: 10 },
   inputRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  empty: { paddingVertical: 4 },
+  emptyHint: { fontSize: 12, color: colors.muted, marginTop: -4 },
+  steps: { marginLeft: 34, borderLeftWidth: 2, borderLeftColor: colors.line, paddingLeft: 8 },
 });

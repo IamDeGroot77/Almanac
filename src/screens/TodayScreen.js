@@ -47,6 +47,7 @@ export default function TodayScreen({
   dayListId,
   daySummary,
   wrapUp, // null | props for WrapUpCard
+  onJustOneThing,
   listProps,
 }) {
   const isToday = dayOffset === 0;
@@ -121,6 +122,13 @@ export default function TodayScreen({
         </View>
       )}
 
+      {isToday && onJustOneThing && (
+        <TouchableOpacity style={styles.oneThing} onPress={onJustOneThing} accessibilityRole="button">
+          <Text style={styles.oneThingText}>Just one thing</Text>
+          <Text style={styles.oneThingHint}>Pick the next task worth starting and open it full screen.</Text>
+        </TouchableOpacity>
+      )}
+
       <TaskList
         listId={dayListId}
         title={(isToday ? "Today's tasks" : "Tomorrow's tasks") + (filterName ? ` for ${filterName}` : '')}
@@ -155,5 +163,13 @@ const styles = StyleSheet.create({
   segmentTextActive: { color: colors.ink },
   people: { marginTop: 12 },
   routines: { marginTop: 28 },
+  oneThing: {
+    marginTop: 24,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: colors.accent,
+  },
+  oneThingText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  oneThingHint: { color: colors.accentSoft, fontSize: 12, marginTop: 2 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.ink },
 });

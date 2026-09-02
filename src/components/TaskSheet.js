@@ -33,7 +33,13 @@ export default function TaskSheet({
   onSetNotes,
   onMove,
   onClose,
+  steps, // { all, open, done } for this task
+  onAddStep,
+  onBreakDown,
+  onToggleStep,
+  onDeleteStep,
 }) {
+  const [stepText, setStepText] = useState('');
   const [customDue, setCustomDue] = useState('');
   const [customTime, setCustomTime] = useState('');
   const [dueError, setDueError] = useState('');
@@ -173,6 +179,66 @@ export default function TaskSheet({
                 ))}
               </View>
 
+              {!task.parentId && (
+                <View>
+                  <Text style={[styles.label, styles.spaced]}>
+                    Steps {steps && steps.all.length ? `· ${steps.done.length}/${steps.all.length}` : ''}
+                  </Text>
+                  {steps?.all.map((st) => (
+                    <View key={st.id} style={[styles.stepRow, shared.hairline]}>
+                      <TouchableOpacity
+                        style={styles.stepMain}
+                        onPress={() => onToggleStep(st.id)}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: st.done }}
+                      >
+                        <Text style={[styles.stepBox, st.done && styles.stepBoxDone]}>{st.done ? '✓' : ''}</Text>
+                        <Text style={[styles.stepText, st.done && styles.stepTextDone]}>
+                          {st.text}
+                          {st.due ? <Text style={styles.stepDue}>  {describeDue(st)}</Text> : null}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => onDeleteStep(st.id)} hitSlop={10} accessibilityLabel="Remove step">
+                        <Text style={styles.stepRemove}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  <View style={styles.inputRow}>
+                    <TextInput
+                      style={[shared.input, styles.smallInput]}
+                      value={stepText}
+                      onChangeText={setStepText}
+                      placeholder="Add a step, the smaller the better"
+                      placeholderTextColor={colors.muted}
+                      returnKeyType="done"
+                      submitBehavior="submit"
+                      onSubmitEditing={() => {
+                        onAddStep(task.id, stepText);
+                        setStepText('');
+                      }}
+                    />
+                    <TouchableOpacity
+                      style={styles.apply}
+                      onPress={() => {
+                        onAddStep(task.id, stepText);
+                        setStepText('');
+                      }}
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.applyText}>Add</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {(!steps || steps.all.length === 0) && (
+                    <View style={styles.breakRow}>
+                      <Chip label="Break it down" active={false} onPress={() => onBreakDown(task.id)} />
+                      <Text style={styles.breakHint}>
+                        Starter steps for this kind of task{task.due ? ', spread out to the due date' : ''}. Edit freely.
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
               <Text style={[styles.label, styles.spaced]}>Notes</Text>
               <TextInput
                 style={[shared.input, styles.notes]}
@@ -249,6 +315,27 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: 'row', gap: 8, marginTop: 8, alignItems: 'center' },
   smallInput: { paddingVertical: 8, fontSize: 14 },
   notes: { flex: 0, minHeight: 64, textAlignVertical: 'top' },
+  stepRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
+  stepMain: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  stepBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+    textAlign: 'center',
+    lineHeight: 18,
+    fontSize: 12,
+    color: '#FFFFFF',
+    marginRight: 10,
+  },
+  stepBoxDone: { backgroundColor: colors.accent },
+  stepText: { flex: 1, fontSize: 15, color: colors.ink },
+  stepTextDone: { color: colors.muted, textDecorationLine: 'line-through' },
+  stepDue: { fontSize: 12, color: colors.muted },
+  stepRemove: { color: colors.muted, fontSize: 15, paddingHorizontal: 8 },
+  breakRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 },
+  breakHint: { flex: 1, fontSize: 12, color: colors.muted },
   apply: { paddingHorizontal: 12, paddingVertical: 8 },
   applyText: { color: colors.accent, fontWeight: '600' },
   error: { color: colors.danger, fontSize: 12, marginTop: 6 },

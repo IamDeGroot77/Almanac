@@ -66,8 +66,8 @@ export function makeApi(accessToken) {
         showCompleted: true,
         showHidden: true,
       }),
-    insertTask: (listId, task) =>
-      call('POST', `/lists/${encodeURIComponent(listId)}/tasks`, { body: task }),
+    insertTask: (listId, task, parent) =>
+      call('POST', `/lists/${encodeURIComponent(listId)}/tasks`, { body: task, query: parent ? { parent } : undefined }),
     patchTask: (listId, taskId, patch) =>
       call('PATCH', `/lists/${encodeURIComponent(listId)}/tasks/${encodeURIComponent(taskId)}`, {
         body: patch,

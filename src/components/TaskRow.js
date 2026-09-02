@@ -7,7 +7,7 @@ import { describeDue, dueStatus } from '../due';
 //  - tapping the circle toggles done / not started (instant check-off)
 //  - Start begins timing; Pause banks it; Finish completes and records it
 //  - long press opens the task sheet
-export default function TaskRow({ task, tag, context, onToggle, onStart, onPause, onFinish, onDelete, onLongPress }) {
+export default function TaskRow({ task, tag, context, steps, isStep, onToggle, onStart, onPause, onFinish, onDelete, onLongPress }) {
   const running = isRunning(task);
   const paused = isPaused(task);
   const now = useNow(running);
@@ -15,6 +15,14 @@ export default function TaskRow({ task, tag, context, onToggle, onStart, onPause
 
   const meta = [];
   if (context) meta.push({ text: context });
+  if (steps && steps.all.length > 0) {
+    const next = steps.open[0];
+    meta.push({
+      text: next ? `Next: ${next.text}` : 'All steps done',
+      active: !!next && !task.done,
+    });
+    meta.push({ text: `${steps.done.length}/${steps.all.length} steps` });
+  }
   if (task.canvasCourse) {
     meta.push({
       text:
@@ -46,7 +54,7 @@ export default function TaskRow({ task, tag, context, onToggle, onStart, onPause
   }
 
   return (
-    <View style={[styles.row, shared.hairline]}>
+    <View style={[styles.row, shared.hairline, isStep && styles.stepRow]}>
       <TouchableOpacity
         style={styles.main}
         onPress={() => onToggle(task.id)}
@@ -63,7 +71,7 @@ export default function TaskRow({ task, tag, context, onToggle, onStart, onPause
         </View>
         <View style={styles.body}>
           <View style={styles.textRow}>
-            <Text style={[styles.text, task.done && styles.textDone]}>{task.text}</Text>
+            <Text style={[styles.text, isStep && styles.stepText, task.done && styles.textDone]}>{task.text}</Text>
             {tag ? <Text style={styles.tag}>{tag}</Text> : null}
           </View>
           {meta.length > 0 ? (
@@ -113,6 +121,8 @@ function Action({ label, primary, onPress, hint }) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 6 },
+  stepRow: { paddingVertical: 7 },
+  stepText: { fontSize: 15 },
   main: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   circle: {
     width: 22,

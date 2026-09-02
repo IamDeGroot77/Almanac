@@ -431,19 +431,33 @@ export function useAlmanacStore() {
           ),
         }));
       },
+      // Returns { parentReady: parentId } when this was the last open step.
       finishTask(id) {
-        edit((s) => finishIn(s, id, Date.now()));
+        let result = { parentReady: null };
+        edit((s) => {
+          const target = s.tasks.find((t) => t.id === id);
+          const partial = finishIn(s, id, Date.now());
+          if (target?.parentId && partial.tasks) {
+            const siblingsOpen = partial.tasks.some((t) => t.parentId === target.parentId && !t.done);
+            const parent = partial.tasks.find((t) => t.id === target.parentId);
+            if (!siblingsOpen && parent && !parent.done) result = { parentReady: parent.id };
+          }
+          return partial;
+        });
+        return result;
       },
       // Returns the removed task so it can be restored (Undo).
+      // Deleting a task deletes its steps. Returns the removed tasks (Undo).
       deleteTask(id) {
-        let removed = null;
+        let removed = [];
         edit((s) => {
-          const gone = s.tasks.find((t) => t.id === id);
-          removed = gone || null;
-          const stone = gone && tombstone(gone);
+          const gone = s.tasks.filter((t) => t.id === id || t.parentId === id);
+          removed = gone;
+          const stones = gone.map(tombstone).filter(Boolean);
+          const ids = new Set(gone.map((t) => t.id));
           return {
-            tasks: s.tasks.filter((t) => t.id !== id),
-            sync: stone ? { ...s.sync, deletedTasks: [...s.sync.deletedTasks, stone] } : s.sync,
+            tasks: s.tasks.filter((t) => !ids.has(t.id)),
+            sync: stones.length ? { ...s.sync, deletedTasks: [...s.sync.deletedTasks, ...stones] } : s.sync,
           };
         });
         return removed;
@@ -471,21 +485,56 @@ export function useAlmanacStore() {
           days: { ...s.days, [key]: { ...(s.days[key] || {}), energy: { ...(s.days[key]?.energy || {}), [slot]: value } } },
         }));
       },
+      // Moving a task takes its steps along.
       moveTask(id, listId) {
         const now = Date.now();
         edit((s) => ({
-          tasks: s.tasks.map((t) => (t.id === id ? { ...t, listId, updatedAt: now } : t)),
+          tasks: s.tasks.map((t) => (t.id === id || t.parentId === id ? { ...t, listId, updatedAt: now } : t)),
         }));
+      },
+      // ----- steps (sub-tasks) -----
+      // Adds a step under a task; returns its id. Steps live on the parent's
+      // list and person. Optional due date for backward-planned steps.
+      addStep(parentId, text, due = null) {
+        const trimmed = (text || '').trim();
+        if (!trimmed) return null;
+        const now = Date.now();
+        const id = newId('t');
+        edit((s) => {
+          const parent = s.tasks.find((t) => t.id === parentId);
+          if (!parent) return {};
+          return {
+            tasks: [
+              ...s.tasks,
+              {
+                id,
+                text: trimmed,
+                done: false,
+                listId: parent.listId,
+                parentId,
+                personId: parent.personId || null,
+                due,
+                dueTime: null,
+                createdAt: now,
+                doneAt: null,
+                updatedAt: now,
+              },
+            ],
+          };
+        });
+        return id;
       },
       // Returns the removed tasks so they can be restored (Undo).
       clearCompleted(listId) {
         let removed = [];
         edit((s) => {
-          const gone = s.tasks.filter((t) => t.listId === listId && t.done);
+          const doneTop = s.tasks.filter((t) => t.listId === listId && t.done && !t.parentId);
+          const topIds = new Set(doneTop.map((t) => t.id));
+          const gone = s.tasks.filter((t) => topIds.has(t.id) || topIds.has(t.parentId));
           removed = gone;
           const stones = gone.map(tombstone).filter(Boolean);
           return {
-            tasks: s.tasks.filter((t) => !(t.listId === listId && t.done)),
+            tasks: s.tasks.filter((t) => !(topIds.has(t.id) || topIds.has(t.parentId))),
             sync: { ...s.sync, deletedTasks: [...s.sync.deletedTasks, ...stones] },
           };
         });
@@ -547,7 +596,8 @@ export function useAlmanacStore() {
         const now = Date.now();
         edit((s) => ({
           tasks: s.tasks
-            .filter((t) => !drop.has(t.id))
+            .filter((t) => !drop.has(t.id) && !drop.has(t.parentId))
+            .map((t) => (carry.has(t.parentId) ? { ...t, listId: today, startedAt: null, updatedAt: now } : t))
             // A timer left running overnight is meaningless; carried tasks start
             // fresh. carriedCount feeds the "what keeps slipping" insight.
             .map((t) =>
@@ -594,7 +644,7 @@ export function useAlmanacStore() {
 // Unfinished tasks on day lists dated before today, oldest day first.
 export function pastUnfinished(tasks, today = almanacToday()) {
   return tasks
-    .filter((t) => !t.done && isDayList(t.listId) && dayOfList(t.listId) < today)
+    .filter((t) => !t.done && !t.parentId && isDayList(t.listId) && dayOfList(t.listId) < today)
     .sort(
       (a, b) =>
         dayOfList(a.listId).localeCompare(dayOfList(b.listId)) || a.createdAt - b.createdAt
@@ -610,8 +660,9 @@ export function personName(people, personId) {
 }
 
 
+// Top-level tasks on a list (steps are rendered under their parent).
 export function tasksForList(tasks, listId) {
-  const inList = tasks.filter((t) => t.listId === listId);
+  const inList = tasks.filter((t) => t.listId === listId && !t.parentId);
   const open = inList.filter((t) => !t.done);
   const done = inList.filter((t) => t.done);
   return { open, done, all: [...open, ...done] };

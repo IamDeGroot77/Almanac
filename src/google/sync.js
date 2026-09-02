@@ -167,8 +167,9 @@ export async function runSync(snapshot, accessToken) {
     const remoteById = new Map(remoteTasks.map((r) => [r.id, r]));
     const seenRemote = new Set();
 
-    for (const original of tasks) {
-      if (original.listId !== list.id) continue;
+    const googleIdOfLocal = new Map(); // local id -> googleId, filled as we go
+    const ordered = tasks.filter((t) => t.listId === list.id).sort((a, b) => (a.parentId ? 1 : 0) - (b.parentId ? 1 : 0));
+    for (const original of ordered) {
       handled.add(original.id);
       let t = original;
 
@@ -179,11 +180,16 @@ export async function runSync(snapshot, accessToken) {
       }
 
       if (!t.googleId) {
-        const created = await api.insertTask(gl, toRemote(t));
+        const parentGoogleId = t.parentId
+          ? googleIdOfLocal.get(t.parentId) || tasks.find((x) => x.id === t.parentId)?.googleId || null
+          : null;
+        const created = await api.insertTask(gl, toRemote(t), parentGoogleId);
         seenRemote.add(created.id);
+        googleIdOfLocal.set(t.id, created.id);
         nextTasks.push(fromRemote(t, created, gl));
         continue;
       }
+      googleIdOfLocal.set(t.id, t.googleId);
 
       const remote = remoteById.get(t.googleId);
       if (!remote) {
@@ -219,6 +225,9 @@ export async function runSync(snapshot, accessToken) {
         notes: r.notes || '',
         done,
         listId: list.id,
+        parentId: r.parent
+          ? nextTasks.find((x) => x.googleId === r.parent)?.id || tasks.find((x) => x.googleId === r.parent)?.id || null
+          : null,
         personId: list.personId || null,
         due: dueFromRemote(r.due),
         dueTime: null,

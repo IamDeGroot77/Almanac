@@ -9,7 +9,7 @@ import { APP_CATALOG } from '../apps';
 // One task, full screen. Opens when you Start something. Everything else is
 // out of sight, the timer is big, and for a phone-free task it offers to
 // hand off to a focus or timer app.
-export default function FocusModal({ task, prefs, onPause, onFinish, onPhoneFree, onClose }) {
+export default function FocusModal({ task, nextStep, stepsSummary, prefs, onPause, onFinish, onFinishStep, onPhoneFree, onClose }) {
   const [handoffNote, setHandoffNote] = useState('');
   const now = useNow(!!task, 1000);
   if (!task) return null;
@@ -39,8 +39,21 @@ export default function FocusModal({ task, prefs, onPause, onFinish, onPhoneFree
         </TouchableOpacity>
 
         <View style={styles.center}>
-          <Text style={styles.kicker}>Right now</Text>
-          <Text style={styles.task}>{task.text}</Text>
+          <Text style={styles.kicker}>{nextStep ? 'Next smallest step' : 'Right now'}</Text>
+          {nextStep ? (
+            <View style={styles.stepBlock}>
+              <Text style={styles.task}>{nextStep.text}</Text>
+              <Text style={styles.parent}>
+                {task.text}
+                {stepsSummary ? ` · ${stepsSummary}` : ''}
+              </Text>
+              <TouchableOpacity style={styles.stepDone} onPress={() => onFinishStep(nextStep.id)} accessibilityRole="button">
+                <Text style={styles.stepDoneText}>Step done ✓</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <Text style={styles.task}>{task.text}</Text>
+          )}
           <Text style={[styles.timer, over && styles.timerOver]}>{formatDuration(elapsed) || '0m'}</Text>
           {est ? (
             <View style={styles.estimate}>
@@ -96,6 +109,10 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   kicker: { fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: colors.muted },
   task: { fontSize: 24, fontWeight: '700', color: colors.ink, textAlign: 'center', marginTop: 8 },
+  stepBlock: { alignItems: 'center' },
+  parent: { fontSize: 14, color: colors.muted, marginTop: 6, textAlign: 'center' },
+  stepDone: { marginTop: 10, borderWidth: 1, borderColor: colors.accent, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 },
+  stepDoneText: { color: colors.accent, fontWeight: '700', fontSize: 14 },
   timer: { fontSize: 64, fontWeight: '800', color: colors.accent, marginTop: 24, fontVariant: ['tabular-nums'] },
   timerOver: { color: colors.warn },
   estimate: { width: '80%', marginTop: 12, alignItems: 'center' },

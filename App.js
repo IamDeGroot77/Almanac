@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
@@ -24,6 +24,8 @@ import useTaskCheckins from './src/checkins';
 import useEnergyCheckins from './src/energy';
 import useUndo from './src/hooks/useUndo';
 import UndoBar from './src/components/UndoBar';
+import { pickNext, nextStepOf, childrenOf } from './src/pickNext';
+import { suggestSteps, planDates } from './src/breakdown';
 
 import TabBar from './src/components/TabBar';
 import TodayScreen from './src/screens/TodayScreen';
@@ -122,6 +124,36 @@ function AlmanacApp() {
         }
       : null;
 
+  // Finishing the last step offers to finish the parent too.
+  const finishTask = (id) => {
+    const { parentReady } = store.finishTask(id);
+    if (!parentReady) return;
+    const parent = store.tasks.find((t) => t.id === parentReady);
+    if (!parent) return;
+    Alert.alert('All steps done', `Finish "${parent.text}" too?`, [
+      { text: 'Not yet', style: 'cancel' },
+      { text: 'Finish it', onPress: () => store.finishTask(parentReady) },
+    ]);
+  };
+
+  // "Break it down": starter steps, dated back from the deadline when there is one.
+  const breakDown = (taskId) => {
+    const task = store.tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    const steps = suggestSteps(task.text);
+    const dates = planDates(steps.length, task.due);
+    steps.forEach((text, i) => store.addStep(taskId, text, dates[i]));
+  };
+
+  // "Just one thing": pick the next task worth starting and open Focus on it.
+  const justOneThing = () => {
+    const running = store.tasks.filter((t) => !t.done && t.startedAt).map((t) => t.id);
+    const pick = pickNext(people.visibleTasks, { running });
+    if (!pick) return;
+    store.startTask(pick.id);
+    setFocusTaskId(pick.id);
+  };
+
   const listProps = {
     tasks: people.visibleTasks,
     tagFor: people.tagFor,
@@ -132,7 +164,7 @@ function AlmanacApp() {
       setFocusTaskId(id);
     },
     onPause: store.pauseTask,
-    onFinish: store.finishTask,
+    onFinish: finishTask,
     onDelete: (id) => {
       const removed = store.deleteTask(id);
       if (removed) offerUndo(`Deleted "${removed.text}"`, () => store.restoreTasks([removed]));
@@ -201,6 +233,7 @@ function AlmanacApp() {
             dayListId={derived.dayListId}
             daySummary={derived.daySummary}
             wrapUp={wrapUp}
+            onJustOneThing={justOneThing}
             listProps={listProps}
           />
         )}
@@ -300,6 +333,13 @@ function AlmanacApp() {
       />
       <FocusModal
         task={focusTask}
+        nextStep={focusTask ? nextStepOf(store.tasks, focusTask.id) : null}
+        stepsSummary={
+          focusTask && childrenOf(store.tasks, focusTask.id).all.length
+            ? `${childrenOf(store.tasks, focusTask.id).done.length}/${childrenOf(store.tasks, focusTask.id).all.length} steps`
+            : null
+        }
+        onFinishStep={(stepId) => store.finishTask(stepId)}
         prefs={store.prefs}
         onPhoneFree={store.setTaskPhoneFree}
         onPause={(id) => {
@@ -307,12 +347,17 @@ function AlmanacApp() {
           setFocusTaskId(null);
         }}
         onFinish={(id) => {
-          store.finishTask(id);
+          finishTask(id);
           setFocusTaskId(null);
         }}
         onClose={() => setFocusTaskId(null)}
       />
       <TaskSheet
+        steps={sheetTask ? childrenOf(store.tasks, sheetTask.id) : null}
+        onAddStep={store.addStep}
+        onBreakDown={breakDown}
+        onToggleStep={store.toggleTask}
+        onDeleteStep={(id) => store.deleteTask(id)}
         task={sheetTask}
         lists={store.lists}
         people={store.people}

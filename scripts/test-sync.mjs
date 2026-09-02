@@ -104,7 +104,7 @@ globalThis.fetch = async (url, init = {}) => {
     if ((m = path.match(/^\/lists\/([^/]+)\/tasks$/))) {
       const id = decodeURIComponent(m[1]);
       if (method === 'GET') return ok({ items: backend.listTasks(id) });
-      if (method === 'POST') return ok(backend.insertTask(id, body));
+      if (method === 'POST') return ok(backend.insertTask(id, { ...body, ...(u.searchParams.get('parent') ? { parent: u.searchParams.get('parent') } : {}) }));
     }
     if ((m = path.match(/^\/lists\/([^/]+)\/tasks\/([^/]+)$/))) {
       const id = decodeURIComponent(m[1]);
@@ -295,5 +295,23 @@ state.localVersion = 11;
 await sync();
 assert.equal(lists.get('gl_default').tasks.get(dentistId).due, '2026-09-20T00:00:00.000Z', 'local due pushed');
 console.log('11. due dates both ways ok');
+
+// 12. Steps nest under their parent in Google, and a step created in Google
+//     lands under the right local parent.
+const parentId = 'p1';
+const t8 = Date.now();
+state.tasks.push({ id: parentId, text: 'Write paper', done: false, listId: home.id, createdAt: t8, doneAt: null, updatedAt: t8 });
+state.tasks.push({ id: 's1', text: 'Outline', done: false, listId: home.id, parentId, createdAt: t8 + 1, doneAt: null, updatedAt: t8 + 1 });
+state.localVersion = 12;
+await sync();
+const paper = find('Write paper');
+const outline = find('Outline');
+assert.ok(paper.googleId && outline.googleId, 'both pushed');
+assert.equal(lists.get(homeId).tasks.get(outline.googleId).parent, paper.googleId, 'step inserted with parent');
+const remoteStep = { id: `gt${++seq}`, title: 'Draft', status: 'needsAction', parent: paper.googleId, updated: nowIso() };
+lists.get(homeId).tasks.set(remoteStep.id, remoteStep);
+await sync();
+assert.equal(find('Draft').parentId, parentId, 'remote step mapped to local parent');
+console.log('12. steps sync with parents ok');
 
 console.log('\nAll sync scenarios passed.');
