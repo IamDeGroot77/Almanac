@@ -4,12 +4,13 @@ import { activeItems, itemProgress, periodKey, periodLabel, daysLeftInPeriod, ro
 
 // One routine for the current period: plain items you tick, quota items that
 // count themselves from finished tasks.
-export default function RoutineCard({ routine, state, lists, onToggleItem, onEdit }) {
+export default function RoutineCard({ routine, state, lists, routines = [], onToggleItem, onEdit }) {
   const now = new Date();
   const key = periodKey(routine, now);
   const items = activeItems(routine, now);
   const progress = routineProgress(routine, state, now);
-  const listName = (id) => lists.find((l) => l.id === id)?.name || 'a deleted list';
+  const sourceName = (item) =>
+    item.routineId ? routines.find((r) => r.id === item.routineId)?.name || 'a deleted routine' : lists.find((l) => l.id === item.listId)?.name || 'a deleted list';
   const pct = progress.target ? progress.done / progress.target : 0;
 
   return (
@@ -63,7 +64,7 @@ export default function RoutineCard({ routine, state, lists, onToggleItem, onEdi
               {p.complete ? <Text style={styles.check}>✓</Text> : <Text style={styles.quotaNum}>{p.done}</Text>}
             </View>
             <Text style={[styles.text, p.complete && styles.textDone]}>
-              {p.done} of {item.count} from {listName(item.listId)}
+              {p.done} of {item.count} from {sourceName(item)}
             </Text>
           </View>
         );

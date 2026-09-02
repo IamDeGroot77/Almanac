@@ -19,7 +19,7 @@ import { newId } from '../ids';
 import { WEEKDAYS, describeDays } from '../routines';
 
 // Create or edit a routine: name, cadence, who it's for, and its items.
-export default function RoutineEditorModal({ routine, lists, people, onSave, onDelete, onClose }) {
+export default function RoutineEditorModal({ routine, lists, routines = [], people, onSave, onDelete, onClose }) {
   const editing = !!routine?.id;
   const [name, setName] = useState('');
   const [cadence, setCadence] = useState('daily');
@@ -55,9 +55,15 @@ export default function RoutineEditorModal({ routine, lists, people, onSave, onD
 
   const addQuota = () => {
     if (!quotaListId) return;
-    setItems([...items, { id: newId('ri'), type: 'quota', listId: quotaListId, count: quotaCount }]);
+    const item = quotaListId.startsWith('r:')
+      ? { id: newId('ri'), type: 'quota', routineId: quotaListId.slice(2), count: quotaCount }
+      : { id: newId('ri'), type: 'quota', listId: quotaListId, count: quotaCount };
+    setItems([...items, item]);
     setQuotaCount(1);
   };
+  const otherRoutines = routines.filter((r) => r.id !== routine?.id);
+  const sourceName = (it) =>
+    it.routineId ? routines.find((r) => r.id === it.routineId)?.name || 'a deleted routine' : listName(it.listId);
 
   const removeItem = (id) => setItems(items.filter((it) => it.id !== id));
 
@@ -132,7 +138,7 @@ export default function RoutineEditorModal({ routine, lists, people, onSave, onD
                 <View key={it.id} style={[styles.itemRow, shared.hairline]}>
                   <View style={styles.itemBody}>
                     <Text style={styles.itemText}>
-                      {it.type === 'task' ? it.text : `${it.count} from ${listName(it.listId)}`}
+                      {it.type === 'task' ? it.text : `${it.count} from ${sourceName(it)}`}
                     </Text>
                     {it.type === 'task' && cadence === 'daily' ? (
                       <Text style={styles.itemMeta}>{describeDays(it.days)}</Text>
@@ -176,8 +182,8 @@ export default function RoutineEditorModal({ routine, lists, people, onSave, onD
               )}
 
               <Text style={[styles.label, styles.spaced]}>Add a quota</Text>
-              {lists.length === 0 ? (
-                <Text style={shared.muted}>Create a named list first, then you can add "N from that list".</Text>
+              {lists.length === 0 && otherRoutines.length === 0 ? (
+                <Text style={shared.muted}>Create a named list or another routine first, then you can add "N from it".</Text>
               ) : (
                 <View>
                   <View style={styles.quotaRow}>
@@ -193,7 +199,7 @@ export default function RoutineEditorModal({ routine, lists, people, onSave, onD
                     <Text style={styles.from}>from</Text>
                   </View>
                   <PersonChips
-                    people={lists.map((l) => ({ id: l.id, name: l.name }))}
+                    people={[...lists.map((l) => ({ id: l.id, name: l.name })), ...otherRoutines.map((r) => ({ id: `r:${r.id}`, name: `${r.name} (routine)` }))]}
                     selected={quotaListId}
                     onSelect={setQuotaListId}
                     compact

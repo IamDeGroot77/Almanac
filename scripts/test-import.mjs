@@ -81,4 +81,34 @@ Today:
   assert.equal(plan.counts.tasks, 2);
 }
 
+// 5. Routines, persons, and horizons from header options.
+{
+  const plan = parseImport(
+    `Exercise (weekly):
+- 20 min walk
+- push-ups
+Daily checklist (daily):
+- eat at least twice
+- 1 from Exercise
+Zeke's day (daily, for Zeke):
+- brush teeth
+Within 3 months (3 months):
+- fix the fence
+Zeke (for Zeke):
+- new shoes
+`,
+    { people, lists }
+  );
+  assert.equal(plan.counts.routines, 3);
+  assert.equal(plan.routines[0].cadence, 'weekly');
+  assert.equal(plan.routines[1].items[1].type, 'quota');
+  assert.equal(plan.routines[1].items[1].fromName, 'Exercise');
+  assert.equal(plan.routines[2].personId, 'zeke');
+  const horizon = plan.lists.find((l) => l.name === 'Within 3 months');
+  assert.equal(horizon.horizonDays, 90);
+  const zeke = plan.lists.find((l) => l.name === 'Zeke');
+  assert.equal(zeke.personId, 'zeke');
+  assert.equal(plan.counts.tasks, 2);
+}
+
 console.log('All import scenarios passed.');

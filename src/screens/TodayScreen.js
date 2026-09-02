@@ -8,6 +8,7 @@ import EventsSection from '../components/EventsSection';
 import TaskList from '../components/TaskList';
 import DueSection from '../components/DueSection';
 import RoutineCard from '../components/RoutineCard';
+import ConsiderSection from '../components/ConsiderSection';
 import WrapUpCard from '../components/WrapUpCard';
 import DayBracket from '../components/DayBracket';
 import WeekStrip from '../components/WeekStrip';
@@ -57,6 +58,10 @@ export default function TodayScreen({
   nowMode,
   setNowMode,
   allTasks,
+  considerations,
+  onConsiderToday,
+  onConsiderLater,
+  allRoutines,
 }) {
   const isToday = dayOffset === 0;
   const dayKey = almanacDayKeyFromOffset(dayOffset);
@@ -148,6 +153,8 @@ export default function TodayScreen({
         <DueSection overdue={dueOverdue} dueToday={dueToday} contextFor={contextFor} listProps={listProps} />
       )}
 
+      {isToday && !nowMode && <ConsiderSection items={considerations} onToday={onConsiderToday} onLater={onConsiderLater} />}
+
       {isToday && !nowMode && routines.length > 0 && (
         <View style={styles.routines}>
           <Text style={styles.sectionTitle}>Routines</Text>
@@ -157,6 +164,7 @@ export default function TodayScreen({
               routine={r}
               state={routineState}
               lists={lists}
+              routines={allRoutines}
               onToggleItem={onToggleRoutineItem}
               onEdit={onEditRoutine}
             />

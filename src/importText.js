@@ -1,25 +1,32 @@
 import { parseDueInput, parseTimeInput } from './due.js';
 import { almanacDayKeyFromOffset } from './clock.js';
 import { dayKey } from './dates.js';
+import { HORIZONS } from './consider.js';
 
-// Turns a pasted brain dump into lists and tasks. Pure, so it can be tested
-// and previewed before anything is added.
+// Turns a pasted brain dump into lists, routines, and tasks. Pure, so it can
+// be tested and previewed before anything is added.
 //
-//   Groceries:            <- a list (a line ending in ":" or starting with #)
-//   - milk                <- a task
-//   - call dentist by fri <- "by <date>" / "due <date>" / "@<date>" sets a due date
-//   - pay rent 9/1 5pm    <- a trailing date and time also work
-//     - find the login    <- an indented line under a task is a step
-//   - sign form for zeke  <- "for <person>" tags the person
+//   Groceries:                     <- a list (a line ending in ":" or starting with #)
+//   Within 3 months (3 months):    <- a timeline list: due in 3 months, nudges after 3 weeks
+//   Zeke (for Zeke):               <- a list tagged for a person
+//   Daily checklist (daily):       <- a routine that starts over every day
+//   Exercise (weekly, for me):     <- a routine that starts over every week
+//   - milk                         <- a task (or a routine item)
+//   - 1 from Exercise              <- in a routine: a quota, counted from that list or routine
+//   - call dentist by fri 3pm      <- "by/due/on <date>" and a time set the due date
+//   - pay rent 9/1 5pm             <- a trailing date and time also work
+//     - find the login             <- an indented line under a task is a step
+//   - sign form for zeke           <- "for <person>" tags the person
+//   - book flights // check miles  <- "// note" adds a note
 //   Today: / Tomorrow: / Monday:   <- headers that mean a day list
 //
 // Lines before any header go to a list called "Inbox".
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-export function parseImport(text, { people = [], lists = [], now = new Date() } = {}) {
-  const plan = { lists: [], counts: { lists: 0, newLists: 0, tasks: 0, steps: 0 } };
-  let current = null;
+export function parseImport(text, { people = [], lists = [], routines = [], now = new Date() } = {}) {
+  const plan = { lists: [], routines: [], counts: { lists: 0, newLists: 0, tasks: 0, steps: 0, routines: 0, items: 0 } };
+  let current = null; // { kind: 'list' | 'routine', ... }
   let lastTask = null;
 
   const findPerson = (name) => {
@@ -28,15 +35,27 @@ export function parseImport(text, { people = [], lists = [], now = new Date() } 
     return p ? (p.id === 'me' ? null : p.id) : undefined;
   };
 
-  const openList = (rawName) => {
-    const name = rawName.trim().replace(/^#+\s*/, '').replace(/:$/, '').trim();
+  const openHeader = (rawLine) => {
+    const { name, options } = parseHeader(rawLine, findPerson);
     if (!name) return;
-    const dayId = dayListFor(name, now);
-    const existing = dayId ? null : lists.find((l) => l.name.toLowerCase() === name.toLowerCase());
-    current = { name: existing ? existing.name : name, id: dayId || existing?.id || null, isNew: !dayId && !existing, tasks: [] };
-    plan.lists.push(current);
-    plan.counts.lists += 1;
-    if (current.isNew) plan.counts.newLists += 1;
+    if (options.cadence) {
+      const existing = routines.find((r) => r.name.toLowerCase() === name.toLowerCase());
+      current = { kind: 'routine', name: existing ? existing.name : name, id: existing?.id || null, isNew: !existing, cadence: options.cadence, personId: options.personId ?? null, items: [] };
+      plan.routines.push(current);
+    } else {
+      const dayId = dayListFor(name, now);
+      const existing = dayId ? null : lists.find((l) => l.name.toLowerCase() === name.toLowerCase());
+      current = {
+        kind: 'list',
+        name: existing ? existing.name : name,
+        id: dayId || existing?.id || null,
+        isNew: !dayId && !existing,
+        personId: options.personId ?? null,
+        horizonDays: options.horizonDays ?? null,
+        tasks: [],
+      };
+      plan.lists.push(current);
+    }
     lastTask = null;
   };
 
@@ -49,12 +68,23 @@ export function parseImport(text, { people = [], lists = [], now = new Date() } 
 
     const isHeader = !bullet && (/^#/.test(line) || /:$/.test(line));
     if (isHeader) {
-      openList(line);
+      openHeader(line);
       continue;
     }
-    if (!current) openList('Inbox');
+    if (!current) openHeader('Inbox:');
 
-    const item = parseTaskLine(body, findPerson, now);
+    if (current.kind === 'routine') {
+      const quota = body.match(/^(\d+)\s+from\s+(.+)$/i);
+      if (quota) current.items.push({ type: 'quota', count: Number(quota[1]), fromName: quota[2].trim() });
+      else {
+        const item = parseTaskLine(body, findPerson);
+        if (item) current.items.push({ type: 'task', text: item.text });
+      }
+      plan.counts.items += 1;
+      continue;
+    }
+
+    const item = parseTaskLine(body, findPerson);
     if (!item) continue;
     if (indent >= 2 && lastTask && bullet) {
       lastTask.steps.push(item);
@@ -65,10 +95,44 @@ export function parseImport(text, { people = [], lists = [], now = new Date() } 
       plan.counts.tasks += 1;
     }
   }
-  plan.lists = plan.lists.filter((l) => l.tasks.length > 0);
+  plan.lists = plan.lists.filter((l) => l.tasks.length > 0 || l.isNew);
+  plan.routines = plan.routines.filter((r) => r.items.length > 0 || r.isNew);
   plan.counts.lists = plan.lists.length;
   plan.counts.newLists = plan.lists.filter((l) => l.isNew).length;
+  plan.counts.routines = plan.routines.length;
   return plan;
+}
+
+// "Exercise (weekly, for Zeke):" -> { name: 'Exercise', options: { cadence: 'weekly', personId: 'zeke' } }
+export function parseHeader(rawLine, findPerson = () => undefined) {
+  let name = rawLine.trim().replace(/^#+\s*/, '').replace(/:$/, '').trim();
+  const options = {};
+  const m = name.match(/^(.*?)\s*\(([^)]*)\)\s*$/);
+  if (m) {
+    name = m[1].trim();
+    for (const part of m[2].split(',').map((p) => p.trim().toLowerCase()).filter(Boolean)) {
+      if (part === 'daily' || part === 'every day') options.cadence = 'daily';
+      else if (part === 'weekly' || part === 'every week') options.cadence = 'weekly';
+      else if (/^for\s+/.test(part)) {
+        const id = findPerson(part.replace(/^for\s+/, ''));
+        if (id !== undefined) options.personId = id;
+      } else {
+        const h = parseHorizon(part);
+        if (h) options.horizonDays = h;
+      }
+    }
+  }
+  return { name, options };
+}
+
+function parseHorizon(part) {
+  const m = part.match(/^(\d+)\s*(day|days|week|weeks|month|months)$/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  const days = m[2].startsWith('day') ? n : m[2].startsWith('week') ? n * 7 : n * 30;
+  // Snap to a supported horizon so the nudge pattern is defined.
+  const h = HORIZONS.filter((x) => x.days).reduce((best, x) => (Math.abs(x.days - days) < Math.abs(best.days - days) ? x : best));
+  return h.days;
 }
 
 function dayListFor(name, now) {
@@ -86,7 +150,7 @@ function dayListFor(name, now) {
   return null;
 }
 
-// "call dentist by fri 3pm for zeke" -> { text, due, dueTime, personId, notes }
+// "call dentist by fri 3pm for zeke // bring card" -> { text, due, dueTime, personId, notes }
 export function parseTaskLine(body, findPerson) {
   let text = body;
   let personId = null;
@@ -109,7 +173,6 @@ export function parseTaskLine(body, findPerson) {
     }
   }
 
-  // Trailing time then date: "... 9/15 5pm", "... by fri 3:30pm", "... due 2026-09-15".
   const timeMatch = text.match(/\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)|\d{1,2}:\d{2})\s*$/i);
   if (timeMatch) {
     const t = parseTimeInput(timeMatch[1]);
@@ -135,9 +198,11 @@ export function parseTaskLine(body, findPerson) {
 
 export function describePlan(plan) {
   const c = plan.counts;
-  if (!c.tasks) return 'Nothing to add yet. Headers end with a colon; tasks start with a dash.';
-  const parts = [`${c.tasks} ${c.tasks === 1 ? 'task' : 'tasks'}`];
+  if (!c.tasks && !c.items && !c.newLists && !c.routines) return 'Nothing to add yet. Headers end with a colon; tasks start with a dash.';
+  const parts = [];
+  if (c.tasks) parts.push(`${c.tasks} ${c.tasks === 1 ? 'task' : 'tasks'}`);
   if (c.steps) parts.push(`${c.steps} ${c.steps === 1 ? 'step' : 'steps'}`);
-  parts.push(`${c.lists} ${c.lists === 1 ? 'list' : 'lists'}${c.newLists ? ` (${c.newLists} new)` : ''}`);
+  if (c.lists) parts.push(`${c.lists} ${c.lists === 1 ? 'list' : 'lists'}${c.newLists ? ` (${c.newLists} new)` : ''}`);
+  if (c.routines) parts.push(`${c.routines} ${c.routines === 1 ? 'routine' : 'routines'} with ${c.items} ${c.items === 1 ? 'item' : 'items'}`);
   return parts.join(' · ');
 }

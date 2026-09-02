@@ -2,9 +2,10 @@ import { Alert, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } fro
 import { colors, shared } from '../theme';
 import PersonChips from './PersonChips';
 import { personOf } from '../store';
+import { HORIZONS, horizonFor } from '../consider';
 
 // Options for a named list: who it's for, rename, delete.
-export default function ListOptionsModal({ list, people, onSetPerson, onRename, onDelete, onClose }) {
+export default function ListOptionsModal({ list, people, onSetPerson, onSetHorizon, onRename, onDelete, onClose }) {
   if (!list) return null;
 
   const confirmDelete = () =>
@@ -36,6 +37,14 @@ export default function ListOptionsModal({ list, people, onSetPerson, onRename, 
             compact
           />
           <Text style={styles.help}>New tasks added here are tagged for this person.</Text>
+
+          <Text style={styles.label}>Timeline</Text>
+          <PersonChips people={HORIZONS.map((h) => ({ id: h.id, name: h.name }))} selected={horizonFor(list).id} onSelect={(id) => onSetHorizon(list.id, HORIZONS.find((h) => h.id === id)?.days || null)} compact />
+          <Text style={styles.help}>
+            {horizonFor(list).days
+              ? `Tasks here are due ${horizonFor(list).name} out, and after ${horizonFor(list).nudgeDays} quiet days each one comes up on Today as worth considering.`
+              : 'Give this list a horizon and every task gets a due date that far out, with gentle nudges along the way.'}
+          </Text>
 
           <TouchableOpacity
             style={[styles.option, shared.hairline]}

@@ -25,6 +25,9 @@ import useTaskCheckins from './src/checkins';
 import useEnergyCheckins from './src/energy';
 import useDayBracketNotifications, { DEFAULT_BEDTIME_HOUR } from './src/dayBracket';
 import { planAutoStart, describeAutoStart } from './src/dayAuto';
+import { considerations } from './src/consider';
+import useCalendarRules from './src/useCalendarRules';
+import { dayListId } from './src/store';
 import useUndo from './src/hooks/useUndo';
 import UndoBar from './src/components/UndoBar';
 import { pickNext, nextStepOf, childrenOf } from './src/pickNext';
@@ -146,6 +149,7 @@ function AlmanacApp() {
   useTaskCheckins(store, { minutes: store.prefs.checkinMinutes ?? 30 });
   useEnergyCheckins(store, { enabled: store.prefs.energyCheckins !== false });
   const justOneRef = useRef(null);
+  useCalendarRules(store);
   useDayBracketNotifications(store, { bedtimeHour: store.prefs.bedtimeHour ?? DEFAULT_BEDTIME_HOUR, onJustOneThing: () => justOneRef.current?.() });
   const { undo, offer: offerUndo } = useUndo();
   const focusSession = useFocusSession();
@@ -314,6 +318,10 @@ function AlmanacApp() {
             nowMode={nowMode}
             setNowMode={setNowMode}
             allTasks={people.visibleTasks}
+            considerations={considerations({ ...store, tasks: people.visibleTasks })}
+            onConsiderToday={(id) => store.moveTask(id, dayListId(day.today))}
+            onConsiderLater={(id) => store.snoozeConsideration(id)}
+            allRoutines={store.routines}
           />
         )}
         {tab === 'lists' && (
@@ -340,9 +348,14 @@ function AlmanacApp() {
             refreshing={sync.state === 'syncing'}
             listProps={listProps}
             google={google}
+            allRoutines={store.routines}
             onImport={(plan) => {
               const added = store.importPlan(plan);
-              setToast({ text: `Added ${added.tasks} ${added.tasks === 1 ? 'task' : 'tasks'}${added.lists ? ` and ${added.lists} new ${added.lists === 1 ? 'list' : 'lists'}` : ''}.`, at: Date.now() });
+              const bits = [];
+              if (added.tasks) bits.push(`${added.tasks} ${added.tasks === 1 ? 'task' : 'tasks'}`);
+              if (added.lists) bits.push(`${added.lists} new ${added.lists === 1 ? 'list' : 'lists'}`);
+              if (added.routines) bits.push(`${added.routines} new ${added.routines === 1 ? 'routine' : 'routines'}`);
+              setToast({ text: bits.length ? `Added ${bits.join(', ')}.` : 'Nothing new to add.', at: Date.now() });
             }}
           />
         )}
@@ -368,6 +381,7 @@ function AlmanacApp() {
             google={google}
             sync={sync}
             reminderStatus={reminderStatus}
+            lists={store.lists}
             people={store.people}
             onAddPerson={() => setAddingPerson(true)}
             sleep={sleep}
@@ -422,6 +436,7 @@ function AlmanacApp() {
         list={optionsList}
         people={store.people}
         onSetPerson={store.setListPerson}
+        onSetHorizon={store.setListHorizon}
         onRename={setRenamingListId}
         onDelete={store.deleteList}
         onClose={() => setOptionsListId(null)}
@@ -429,6 +444,7 @@ function AlmanacApp() {
       <RoutineEditorModal
         routine={editingRoutine}
         lists={store.lists}
+        routines={store.routines}
         people={store.people}
         onSave={store.saveRoutine}
         onDelete={store.deleteRoutine}

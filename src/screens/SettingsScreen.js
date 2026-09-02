@@ -17,6 +17,7 @@ import { formatDuration } from '../durations';
 import { formatTime } from '../dates';
 import { isWeb } from '../platform';
 import DriveSection from '../components/DriveSection';
+import CalendarRulesSection from '../components/CalendarRulesSection';
 
 export default function SettingsScreen({
   google,
@@ -27,6 +28,7 @@ export default function SettingsScreen({
   sleep,
   prefs,
   onSetPref,
+  lists = [],
   canvas,
   canvasSync,
   canvasCourses,
@@ -286,6 +288,8 @@ export default function SettingsScreen({
           compact
         />
       </View>
+
+      <CalendarRulesSection rules={prefs.calendarRules || []} lists={lists} onChange={(rules) => onSetPref('calendarRules', rules)} />
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>People</Text>

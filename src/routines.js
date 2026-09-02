@@ -6,6 +6,7 @@ import { almanacToday } from './clock.js';
 // Items:
 //   { id, type: 'task',  text, days?: number[] }   // days: 0=Sun..6=Sat, daily only
 //   { id, type: 'quota', listId, count }           // "count tasks from listId"
+//   { id, type: 'quota', routineId, count }        // "count items ticked on routineId" (e.g. 1 workout a day)
 // Plain items are ticked per period in state.routineDone[routineId][periodKey][itemId].
 // Quota progress is derived from tasks finished in the period.
 //
@@ -73,9 +74,17 @@ export function itemProgress(routine, item, { tasks, routineDone }, date) {
     return { done: done ? 1 : 0, target: 1, complete: done };
   }
   const { start, end } = periodBounds(routine, date);
-  const done = tasks.filter(
-    (t) => t.listId === item.listId && t.done && t.doneAt >= start.getTime() && t.doneAt < end.getTime()
-  ).length;
+  let done = 0;
+  if (item.routineId) {
+    // Ticks on the other routine, whatever period they were filed under.
+    for (const period of Object.values(routineDone?.[item.routineId] || {})) {
+      for (const at of Object.values(period)) if (at >= start.getTime() && at < end.getTime()) done += 1;
+    }
+  } else {
+    done = tasks.filter(
+      (t) => t.listId === item.listId && t.done && t.doneAt >= start.getTime() && t.doneAt < end.getTime()
+    ).length;
+  }
   return { done: Math.min(done, item.count), target: item.count, complete: done >= item.count };
 }
 

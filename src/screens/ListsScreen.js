@@ -36,6 +36,7 @@ export default function ListsScreen({
   contextFor,
   google,
   onImport,
+  allRoutines = [],
 }) {
   const [query, setQuery] = useState('');
   const searchResults = query ? allTasks.filter((t) => matchesQuery(t, query, allLists)).slice(0, 50) : [];
@@ -126,7 +127,7 @@ export default function ListsScreen({
       ))}
         </View>
       )}
-      <ImportBox people={people} lists={allLists} onImport={onImport} />
+      <ImportBox people={people} lists={allLists} routines={allRoutines} onImport={onImport} />
       {!isWeb && google ? <DropBoxSection google={google} /> : null}
     </Screen>
   );

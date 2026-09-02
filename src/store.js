@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dayKey, todayKey } from './dates';
 import { almanacToday, almanacDayKeyFromOffset, openDayKey } from './clock.js';
 import { newId, DONE_RETENTION_MS } from './ids';
+import { dueForHorizon } from './consider';
 
 export { newId, DONE_RETENTION_MS };
 
@@ -52,6 +53,7 @@ const emptyState = () => ({
   prefsUpdatedAt: 0, // when a shared preference last changed
   driveRevision: 0, // revision of the Drive file this device last wrote
   usage: {}, // dayKey -> { opens } — this device only, never synced
+  eventTasks: {}, // 'eventId:ruleId' -> taskId, tasks made by calendar rules (phone only)
   prefs: {
     focusApp: 'focusFriend', // hand-off apps, see apps.js
     timerApp: null,
@@ -130,7 +132,7 @@ function markDeleted(deleted, kind, ids) {
   return { ...base, [kind]: next };
 }
 
-const SHARED_PREF_KEYS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep', 'bedtimeHour'];
+const SHARED_PREF_KEYS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep', 'bedtimeHour', 'calendarRules'];
 
 const TIME_LOG_MAX = 2000;
 
@@ -224,22 +226,61 @@ export function useAlmanacStore() {
         if (!trimmed) return null;
         const now = Date.now();
         const id = newId('t');
-        edit((s) => ({
-          tasks: [
-            ...s.tasks,
-            {
-              id,
-              text: trimmed,
-              done: false,
-              listId,
-              personId: personId === 'me' ? null : personId,
-              createdAt: now,
-              doneAt: null,
-              updatedAt: now,
-            },
-          ],
-        }));
+        edit((s) => {
+          const list = s.lists.find((l) => l.id === listId);
+          const due = dueForHorizon(list, now);
+          return {
+            tasks: [
+              ...s.tasks,
+              {
+                id,
+                text: trimmed,
+                done: false,
+                listId,
+                personId: personId === 'me' ? null : personId,
+                due,
+                dueTime: null,
+                createdAt: now,
+                doneAt: null,
+                updatedAt: now,
+              },
+            ],
+          };
+        });
         return id;
+      },
+      // Timeline lists: 30/90/180-day horizon (null clears it). Open tasks
+      // without a date get one at the horizon.
+      setListHorizon(id, horizonDays) {
+        const now = Date.now();
+        edit((s) => {
+          const list = { ...s.lists.find((l) => l.id === id), horizonDays: horizonDays || null, updatedAt: now };
+          return {
+            lists: s.lists.map((l) => (l.id === id ? list : l)),
+            tasks: s.tasks.map((t) => (t.listId === id && !t.done && !t.due && horizonDays ? { ...t, due: dueForHorizon(list, now), updatedAt: now } : t)),
+          };
+        });
+      },
+      // "Not yet" on a consideration: ask again after another nudge period.
+      snoozeConsideration(id) {
+        edit((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, nudgedAt: Date.now() } : t)) }));
+      },
+      // Tasks made by calendar rules (src/calendarRules.js), remembered by event.
+      addEventTasks(made) {
+        const now = Date.now();
+        edit((s) => {
+          const tasks = [...s.tasks];
+          const eventTasks = { ...(s.eventTasks || {}) };
+          let order = now;
+          for (const m of made) {
+            if (eventTasks[m.key]) continue;
+            const id = newId('t');
+            tasks.push({ id, text: m.text, done: false, listId: m.listId, personId: null, due: m.due || null, dueTime: null, notes: m.notes || null, createdAt: order, doneAt: null, updatedAt: now });
+            eventTasks[m.key] = id;
+            order += 1;
+          }
+          return { tasks, eventTasks };
+        });
       },
       setTaskPerson(id, personId) {
         const now = Date.now();
@@ -675,22 +716,50 @@ export function useAlmanacStore() {
       // lists, then the tasks and their steps. Returns what it added.
       importPlan(plan) {
         const now = Date.now();
-        const added = { lists: 0, tasks: 0, steps: 0 };
+        const added = { lists: 0, tasks: 0, steps: 0, routines: 0 };
         edit((s) => {
           const lists = [...s.lists];
           const tasks = [...s.tasks];
+          const routines = [...s.routines];
           let order = now;
+          const byName = (arr, name) => arr.find((x) => x.name.toLowerCase() === name.toLowerCase());
+          // Lists first (routines may quota from them), then routines, then tasks.
           for (const l of plan.lists) {
-            let listId = l.id;
-            if (!listId) {
-              const existing = lists.find((x) => x.name.toLowerCase() === l.name.toLowerCase());
-              if (existing) listId = existing.id;
-              else {
-                listId = newId('l');
-                lists.push({ id: listId, name: l.name, personId: null, createdAt: now, updatedAt: now });
-                added.lists += 1;
+            if (l.id) continue;
+            const existing = byName(lists, l.name);
+            if (existing) {
+              if (l.horizonDays && !existing.horizonDays) Object.assign(existing, { horizonDays: l.horizonDays, updatedAt: now });
+              continue;
+            }
+            lists.push({ id: newId('l'), name: l.name, personId: l.personId || null, horizonDays: l.horizonDays || null, createdAt: now, updatedAt: now });
+            added.lists += 1;
+          }
+          for (const r of plan.routines || []) {
+            const existing = byName(routines, r.name);
+            const target = existing || { id: newId('r'), name: r.name, cadence: r.cadence, personId: r.personId || null, items: [], createdAt: now };
+            if (!existing) {
+              routines.push(target);
+              added.routines += 1;
+            }
+            const items = [...target.items];
+            for (const it of r.items) {
+              if (it.type === 'task') {
+                if (!items.some((x) => x.type === 'task' && x.text.toLowerCase() === it.text.toLowerCase())) items.push({ id: newId('ri'), type: 'task', text: it.text, days: [] });
+              } else {
+                const list = byName(lists, it.fromName);
+                const routine = !list && byName(routines, it.fromName);
+                if (!list && !routine) continue;
+                const dup = items.some((x) => x.type === 'quota' && (list ? x.listId === list.id : x.routineId === routine.id));
+                if (!dup) items.push(list ? { id: newId('ri'), type: 'quota', listId: list.id, count: it.count } : { id: newId('ri'), type: 'quota', routineId: routine.id, count: it.count });
               }
             }
+            target.items = items;
+            target.updatedAt = now;
+          }
+          for (const l of plan.lists) {
+            const listId = l.id || byName(lists, l.name)?.id;
+            if (!listId) continue;
+            const listObj = lists.find((x) => x.id === listId);
             for (const t of l.tasks) {
               const id = newId('t');
               tasks.push({
@@ -698,8 +767,8 @@ export function useAlmanacStore() {
                 text: t.text,
                 done: false,
                 listId,
-                personId: t.personId || null,
-                due: t.due || null,
+                personId: t.personId || l.personId || null,
+                due: t.due || dueForHorizon(listObj, now) || null,
                 dueTime: t.due ? t.dueTime || null : null,
                 notes: t.notes || null,
                 createdAt: order,
@@ -728,7 +797,7 @@ export function useAlmanacStore() {
               }
             }
           }
-          return { lists, tasks };
+          return { lists, tasks, routines };
         });
         return added;
       },

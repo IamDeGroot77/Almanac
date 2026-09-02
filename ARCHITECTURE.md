@@ -63,6 +63,12 @@ snapshots, and native features hide behind small modules.
 
 - "Paste a list" on the Lists tab (`components/ImportBox.js`) turns a brain dump into lists, tasks, steps, dates, times, people, and notes. The parser is `src/importText.js` (pure, tested by `scripts/test-import.mjs`); the store applies the plan in one edit (`importPlan`), so it syncs to Google Tasks and the other device like any edit.
 
+## Lists that do something
+
+- Timeline lists (`src/consider.js`, tested by `scripts/test-lists.mjs`): a named list with a horizon (30/90/180 days, set in list options or via "(3 months)" in an import header) gives every task a due date that far out; after the nudge period (7/21/30 days) a task shows on Today under "Worth considering" with Today / Not yet (`snoozeConsideration` stamps `nudgedAt`).
+- Routine quotas can count another routine's ticks (`{ type: 'quota', routineId, count }`), so a daily checklist can say "1 from Exercise" where Exercise is a weekly routine of workouts.
+- Calendar rules (`src/calendarRules.js` pure, `src/useCalendarRules.js` on the phone, Settings → Calendar rules, pref `calendarRules` shared across devices): when an event whose title contains a keyword has ended, a task is made from a template ("Write article: {title}") on a chosen list, due N days later; `eventTasks` remembers which events were handled.
+
 ## Adherence (the phone does the initiating)
 
 - The morning brief follows the alarm clock: `modules/almanac-alarm` reads `AlarmManager.getNextAlarmClock`; `scheduleMorningBrief` in `src/notifications.js` schedules a one-off a minute after an alarm within 20 hours, else the brief is sent when the day auto-starts (`sendBriefIfDue`, once per day). Re-checked whenever the app comes to the foreground or goes to the background, so set the alarm before closing Almanac for the night if you want the brief tied to it.

@@ -5,10 +5,10 @@ import { PrimaryButton, SmallButton } from './Buttons';
 import { parseImport, describePlan } from '../importText';
 
 // Paste a brain dump; it becomes lists and tasks in one tap.
-export default function ImportBox({ people, lists, onImport, onDone }) {
+export default function ImportBox({ people, lists, routines = [], onImport, onDone }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
-  const plan = useMemo(() => parseImport(text, { people, lists }), [text, people, lists]);
+  const plan = useMemo(() => parseImport(text, { people, lists, routines }), [text, people, lists, routines]);
 
   if (!open) {
     return (
@@ -29,8 +29,10 @@ export default function ImportBox({ people, lists, onImport, onDone }) {
         <SmallButton label="Close" onPress={() => setOpen(false)} />
       </View>
       <Text style={shared.muted}>
-        A line ending in a colon starts a list (Today, Tomorrow, and weekdays go to that day). "- task by fri 3pm for
-        Zeke" sets a date, time, and person. Indent a dash under a task to make it a step. "// note" adds a note.
+        A line ending in a colon starts a list; Today, Tomorrow, and weekdays go to that day. Add options in
+        parentheses: "Exercise (weekly):" or "Zeke's day (daily, for Zeke):" make routines, "Soon (3 months):" makes
+        a timeline list. "- task by fri 3pm for Zeke" sets a date, time, and person; "- 1 from Exercise" in a
+        routine is a quota. Indent a dash under a task to make it a step. "// note" adds a note.
       </Text>
       <TextInput
         style={[shared.input, styles.box]}
@@ -46,14 +48,19 @@ export default function ImportBox({ people, lists, onImport, onDone }) {
       {plan.lists.map((l) => (
         <Text key={l.name + (l.id || '')} style={styles.previewLine}>
           {l.name}
-          {l.isNew ? ' (new)' : ''}: {l.tasks.map((t) => t.text).join(' · ')}
+          {l.isNew ? ' (new list)' : ''}: {l.tasks.map((t) => t.text).join(' · ') || 'empty'}
+        </Text>
+      ))}
+      {plan.routines.map((r) => (
+        <Text key={'r' + r.name} style={styles.previewLine}>
+          {r.name} ({r.cadence} routine{r.isNew ? ', new' : ''}): {r.items.map((it) => (it.type === 'task' ? it.text : `${it.count} from ${it.fromName}`)).join(' · ') || 'empty'}
         </Text>
       ))}
       <View style={styles.row}>
         <PrimaryButton
           label="Add these"
           onPress={() => {
-            if (!plan.counts.tasks) return;
+            if (!plan.counts.tasks && !plan.counts.newLists && !plan.counts.routines) return;
             onImport(plan);
             setText('');
             setOpen(false);
