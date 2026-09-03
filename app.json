@@ -21,6 +21,8 @@
       },
       "permissions": [
         "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.READ_CALENDAR",
         "android.permission.WRITE_CALENDAR"
       ]
     },
@@ -65,6 +67,12 @@
     "owner": "iamdegroot77s-team",
     "experiments": {
       "baseUrl": "/Almanac/app"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/729e1faa-0a56-4a1c-86bd-c9c72242b5fc"
     }
   }
 }

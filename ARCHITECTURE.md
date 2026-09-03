@@ -99,6 +99,10 @@ snapshots, and native features hide behind small modules.
 
 - `src/achievements.js` (pure, tested by `scripts/test-achievements.mjs`): forgiving runs (one missed day in seven is absorbed, skips count as met) for opening the app, starting the day, and each daily routine, with the best run kept; a catalog of achievements with progress functions. `achievements` in the store (shared, earliest earn time wins in merge) records earn times; App checks after edits settle and toasts new ones. Shown on Insights under "Runs and badges". A day closed with nothing open sets `days[key].cleanSlate`.
 
+## Battery and heat
+
+- Syncs are batched: Google Tasks 30 s after the last edit, Drive 45 s after the last edit and never more than every 3 minutes; a foreground only re-syncs after 5 minutes. Calendar rules read the calendar at most every 15 minutes. Achievements are checked at most once a minute. The bedtime nudge is scheduled once per setting. Home memoises its run calculations. Metro ignores docs/ and dist-web/ (metro.config.js).
+
 ## Adherence (the phone does the initiating)
 
 - The morning brief follows the alarm clock: `modules/almanac-alarm` reads `AlarmManager.getNextAlarmClock`; `scheduleMorningBrief` in `src/notifications.js` schedules a one-off a minute after an alarm within 20 hours, else the brief is sent when the day auto-starts (`sendBriefIfDue`, once per day). Re-checked whenever the app comes to the foreground or goes to the background, so set the alarm before closing Almanac for the night if you want the brief tied to it.

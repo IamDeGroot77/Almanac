@@ -75,14 +75,14 @@ export default function useDayBracketNotifications(store, { bedtimeHour, onJustO
         await ensureDayBracketCategories();
         await Notifications.scheduleNotificationAsync({
           identifier: BED_ID,
-          content: { title: 'Wrapping up?', body: bedtimeBody(openCount), categoryIdentifier: BED_CATEGORY },
+          content: { title: 'Wrapping up?', body: 'Tap Going to bed and anything still open goes to tomorrow\'s review.', categoryIdentifier: BED_CATEGORY },
           trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: bedtimeHour, minute: 0 },
         });
       } catch (err) {
         console.warn('Bedtime nudge scheduling failed', err);
       }
     })();
-  }, [bedtimeHour, store.loaded, openCount]);
+  }, [bedtimeHour, store.loaded]);
 }
 
 function openCountOf(s) {

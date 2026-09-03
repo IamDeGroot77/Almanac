@@ -229,11 +229,14 @@ function AlmanacApp() {
     setToast({ text: bits.length ? `Added ${bits.join(', ')}.` : 'Nothing new to add (everything was already there).', at: Date.now() });
   };
   const justOneRef = useRef(null);
+  const lastAchievementCheck = useRef(0);
   useCalendarRules(store);
   // Achievements: check after edits settle, award, and say so once.
   useEffect(() => {
     if (!store.loaded) return;
+    if (Date.now() - lastAchievementCheck.current < 60000) return;
     const t = setTimeout(() => {
+      lastAchievementCheck.current = Date.now();
       const ids = newlyEarned(store);
       if (!ids.length) return;
       store.awardAchievements(ids);
@@ -242,7 +245,7 @@ function AlmanacApp() {
     }, 1500);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store.loaded, store.localVersion, store.usage, store.days]);
+  }, [store.loaded, store.localVersion]);
   useDayBracketNotifications(store, { bedtimeHour: store.prefs.bedtimeHour ?? DEFAULT_BEDTIME_HOUR, onJustOneThing: () => justOneRef.current?.() });
   const { undo, offer: offerUndo } = useUndo();
   const focusSession = useFocusSession();

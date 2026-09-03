@@ -4,8 +4,9 @@ import { getValidAccessToken } from '../google/auth';
 import { makeDrive, DriveApiError } from './driveApi';
 import { mergeStates, shareable, sameShareable } from './merge';
 
-const DEBOUNCE_MS = 5000;
-const MIN_INTERVAL_MS = 20000;
+const DEBOUNCE_MS = 45000; // edits are batched
+const MIN_INTERVAL_MS = 3 * 60 * 1000;
+const FOREGROUND_MIN_MS = 5 * 60 * 1000;
 const BACKOFF_MS = [30000, 60000, 120000, 300000, 900000]; // after repeated failures
 
 // Keeps this device and the private Drive file in step: download, merge,
@@ -86,7 +87,11 @@ export default function useDriveSync(store, auth) {
   }, [auth.account, store.loaded]);
 
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (s) => s === 'active' && syncNow());
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s !== 'active') return;
+      if (Date.now() - lastRun.current < FOREGROUND_MIN_MS) return;
+      syncNow();
+    });
     return () => sub.remove();
   }, [syncNow]);
 

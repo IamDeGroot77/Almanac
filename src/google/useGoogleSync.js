@@ -5,7 +5,9 @@ import { runSync } from './sync';
 import { GoogleApiError } from './tasksApi';
 import { isWeb } from '../platform';
 
-const DEBOUNCE_MS = 3000;
+const DEBOUNCE_MS = 30000; // edits are batched; the phone is not a live wire
+const FOREGROUND_MIN_MS = 5 * 60 * 1000;
+let lastForegroundSync = 0;
 
 // Drives runSync: on sign-in, when the app comes to the foreground, on
 // demand, and a few seconds after any local change.
@@ -63,7 +65,10 @@ export default function useGoogleSync(store, auth) {
   // Foreground.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') syncNow();
+      if (state !== 'active') return;
+      if (Date.now() - lastForegroundSync < FOREGROUND_MIN_MS) return;
+      lastForegroundSync = Date.now();
+      syncNow();
     });
     return () => sub.remove();
   }, [syncNow]);

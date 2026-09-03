@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, shared } from '../theme';
 import Screen from '../components/Screen';
@@ -37,7 +38,7 @@ export default function HomeScreen({
   importProps,
 }) {
   const now = useNow(!!running, 30000);
-  const runs = streaks(store, Date.now()).filter((s) => s.run > 0);
+  const runs = useMemo(() => streaks(store, Date.now()).filter((s) => s.run > 0), [store.usage, store.days, store.routineDone, store.routineLog, store.routines]);
   const hour = new Date().getHours();
   const greeting = hour < 5 ? 'Still up' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const routinesWithGoal = (store.routines || []).filter((r) => r.minutesPerDay);

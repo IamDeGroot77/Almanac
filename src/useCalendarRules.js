@@ -8,6 +8,8 @@ import { isWeb } from './platform';
 // last three days of events and make tasks for any finished event that
 // matches a rule. Docs: https://docs.expo.dev/versions/v57.0.0/sdk/calendar/
 const DAY = 86400000;
+const MIN_INTERVAL_MS = 15 * 60 * 1000;
+let lastRun = 0;
 
 export default function useCalendarRules(store) {
   const storeRef = useRef(store);
@@ -19,6 +21,8 @@ export default function useCalendarRules(store) {
       const s = storeRef.current;
       const rules = s.prefs.calendarRules || [];
       if (!rules.length) return;
+      if (Date.now() - lastRun < MIN_INTERVAL_MS) return;
+      lastRun = Date.now();
       try {
         const perm = await Calendar.getCalendarPermissions();
         if (perm.status !== 'granted') return;
