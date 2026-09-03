@@ -51,6 +51,7 @@ import ListsScreen from './src/screens/ListsScreen';
 import JournalScreen from './src/screens/JournalScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import YouScreen from './src/screens/YouScreen';
+import ErrorBoundary from './src/components/ErrorBoundary';
 import { quoteOfDay, parseQuotes } from './src/quotes';
 import { useArt } from './src/art';
 import InsightsScreen from './src/screens/InsightsScreen';
@@ -395,6 +396,7 @@ function AlmanacApp() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <View style={styles.body}>
+        <ErrorBoundary key={tab} name={tab}>
         {tab === 'home' && (
           <HomeScreen
             store={store}
@@ -610,6 +612,7 @@ function AlmanacApp() {
         {view === 'calendar' && <CalendarScreen store={store} google={google} onOpenTask={(task) => setSheetTaskId(task.id)} />}
         {tab === 'files' && <FilesScreen google={google} />}
         {view === 'settings' && <SettingsScreen {...settingsProps} />}
+        </ErrorBoundary>
       </View>
 
       <UndoBar undo={undo} />
