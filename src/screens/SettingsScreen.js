@@ -20,6 +20,7 @@ import CalendarRulesSection from '../components/CalendarRulesSection';
 import DayPlanSection from '../components/DayPlanSection';
 import DopamenuSection from '../components/DopamenuSection';
 import Collapsible from '../components/Collapsible';
+import DropBoxSection from '../components/DropBoxSection';
 
 // Settings in five groups, each one line until opened: Look and feel, Your
 // day, Sleep, Connections, People. The laptop shows only what runs there.
@@ -289,6 +290,7 @@ export default function SettingsScreen({
               linkedCount={linkedEventCount}
             />
             <CalendarRulesSection rules={prefs.calendarRules || []} lists={lists} onChange={(rules) => onSetPref('calendarRules', rules)} />
+            <DropBoxSection google={google} />
             <Text style={styles.label}>Hand-off apps</Text>
             <Text style={shared.muted}>When you start a phone-free task or a timed routine item, Almanac opens one of these.</Text>
             <Text style={styles.subLabel}>Focus app</Text>

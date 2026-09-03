@@ -7,7 +7,6 @@ import TaskList from '../components/TaskList';
 import { SmallButton } from '../components/Buttons';
 import SearchBox, { matchesQuery } from '../components/SearchBox';
 import { personOf, personName } from '../store';
-import DropBoxSection from '../components/DropBoxSection';
 import ImportBox from '../components/ImportBox';
 import { isWeb } from '../platform';
 
@@ -44,7 +43,7 @@ export default function ListsScreen({
   const [stage, setStage] = useState(1);
   const show = (n) => !diag || stage >= n;
   if (diag) console.log('Lists step-by-step: showing parts up to', stage);
-  const STEPS = ['header', 'search', 'lists', 'routines', 'paste box', 'drop box'];
+  const STEPS = ['header', 'search', 'lists', 'routines', 'paste box'];
   const searchResults = query ? allTasks.filter((t) => matchesQuery(t, query, allLists)).slice(0, 50) : [];
   return (
     <Screen refreshing={refreshing} onRefresh={onRefresh}>
@@ -148,7 +147,6 @@ export default function ListsScreen({
         </View>
       )}
       {show(5) ? <ImportBox people={people} lists={allLists} routines={allRoutines} categories={categories} onImport={onImport} /> : null}
-      {show(6) && !isWeb && google ? <DropBoxSection google={google} /> : null}
     </Screen>
   );
 }
