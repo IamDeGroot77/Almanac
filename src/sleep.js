@@ -30,6 +30,10 @@ export function useSleepDetection(store) {
   });
   const applied = useRef(new Set());
   const healthEnabled = !!store.prefs?.healthSleep;
+  const storeRef = useRef(store);
+  storeRef.current = store;
+  const lastRead = useRef({ phone: 0, health: 0 });
+  const MIN_READ_MS = 15 * 60 * 1000;
 
   const ingestPhone = useCallback(() => {
     if (!Sleep.isAvailable() || !store.loaded) return;
@@ -43,7 +47,10 @@ export function useSleepDetection(store) {
   }, [store]);
 
   const ingestHealth = useCallback(async () => {
+    const store = storeRef.current;
     if (!healthEnabled || Health.status() !== 'available' || !store.loaded) return;
+    if (Date.now() - lastRead.current.health < MIN_READ_MS) return;
+    lastRead.current.health = Date.now();
     try {
       const sessions = await Health.readSleepAsync(7);
       setHealth((h) => ({ ...h, enabled: true, lastRead: sessions.length ? sessions[sessions.length - 1] : h.lastRead, error: null }));
@@ -58,9 +65,10 @@ export function useSleepDetection(store) {
     } catch (err) {
       setHealth((h) => ({ ...h, error: err.message }));
     }
-  }, [store, healthEnabled]);
+  }, [healthEnabled]);
 
   useEffect(() => {
+    if (!store.loaded) return;
     ingestPhone();
     ingestHealth();
     const sub = AppState.addEventListener('change', (s) => {
@@ -70,7 +78,8 @@ export function useSleepDetection(store) {
       }
     });
     return () => sub.remove();
-  }, [ingestPhone, ingestHealth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.loaded, healthEnabled]);
 
   const enable = useCallback(async () => {
     try {
