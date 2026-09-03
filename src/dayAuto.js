@@ -39,7 +39,10 @@ export function planAutoStart(state, now = Date.now()) {
   // laptop left open, a background edit). Morning means after 4 AM.
   const openDay = open ? state.days[open] : null;
   const overlong = openDay && open < todayKey && now - openDay.wokeAt >= LONG_DAY_MS && new Date(now).getHours() >= 4;
-  if (!sleptSince && gap < MIN_SLEEP_GAP_MS && !overlong) return null;
+  // Between midnight and 4 AM a quiet stretch is an evening, not a night's
+  // sleep: only detected sleep (or an explicit tap) starts a day then.
+  const smallHours = new Date(now).getHours() < 4;
+  if (!sleptSince && (gap < MIN_SLEEP_GAP_MS || smallHours) && !overlong) return null;
 
   const plan = { startKey: todayKey, wokeAt: detected ? detected.end : now, source: detected ? 'sleep' : 'open', closeKey: null, closeAt: null };
   if (open) {

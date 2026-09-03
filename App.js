@@ -221,7 +221,8 @@ function AlmanacApp() {
     if (openToday >= 3) setNowMode(true);
     const sub = AppState.addEventListener('change', (st) => st === 'active' && onAppOpenRef.current());
     // auto-start tick: while the app stays open across a night, the day still rolls over.
-    const tick = setInterval(() => onAppOpenRef.current(), 5 * 60 * 1000);
+    // Only while it is actually on screen; a background timer is not an open.
+    const tick = setInterval(() => AppState.currentState === 'active' && onAppOpenRef.current(), 5 * 60 * 1000);
     return () => {
       sub.remove();
       clearInterval(tick);

@@ -117,4 +117,20 @@ assert.equal(planAutoStart({ days: { [TODAY]: { wokeAt: NOW - 8 * H, sleptAt: NO
   assert.equal(dayOpenAt({ [TODAY]: { wokeAt: NOW - H, sleptAt: null } }, NOW - 2 * H), null);
 }
 
+// 12. A five-hour gap at 1 AM is an evening away from the phone, not a night's sleep:
+//     no new day from the gap alone. The same gap at 5 AM starts one.
+{
+  const oneAm = new Date(NOW);
+  oneAm.setHours(1, 0, 0, 0);
+  const at1 = { days: { [YESTERDAY]: { wokeAt: oneAm.getTime() - 15 * H, sleptAt: oneAm.getTime() - 5 * H } }, usage: {} };
+  assert.equal(planAutoStart(at1, oneAm.getTime()), null);
+  const fiveAm = new Date(NOW);
+  fiveAm.setHours(5, 0, 0, 0);
+  const at5 = { days: { [YESTERDAY]: { wokeAt: fiveAm.getTime() - 15 * H, sleptAt: fiveAm.getTime() - 5 * H } }, usage: {} };
+  assert.equal(planAutoStart(at5, fiveAm.getTime())?.startKey, TODAY);
+  // Detected sleep still counts in the small hours.
+  const early = { days: { [TODAY]: { sleep: { start: oneAm.getTime() - 6 * H, end: oneAm.getTime() - 10 * 60000, source: 'phone' } } }, usage: { [YESTERDAY]: { opens: 1, lastAt: oneAm.getTime() - 7 * H } } };
+  assert.equal(planAutoStart(early, oneAm.getTime())?.source, 'sleep');
+}
+
 console.log('All auto-start scenarios passed.');
