@@ -5,6 +5,7 @@ import { isWeb } from './platform';
 // Long-press the app icon: three shortcuts that skip the tabs.
 // Docs: https://github.com/EvanBacon/expo-quick-actions
 export const ACTIONS = [
+  { id: 'ask', title: 'Tell Almanac', icon: 'shortcut_almanac', params: { go: 'ask' } },
   { id: 'one', title: 'Just one thing', icon: 'shortcut_almanac', params: { go: 'one' } },
   { id: 'hold', title: 'Hold a thought', icon: 'shortcut_almanac', params: { go: 'hold' } },
   { id: 'journal', title: 'Journal', icon: 'shortcut_almanac', params: { go: 'journal' } },

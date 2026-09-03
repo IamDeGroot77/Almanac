@@ -55,6 +55,7 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import { quoteOfDay, parseQuotes } from './src/quotes';
 import { useArt } from './src/art';
 import useQuickActions from './src/quickActions';
+import useAssistant from './src/assistant/useAssistant';
 import useJournalLock from './src/journalLock';
 import { refreshWidgetSafe } from './src/widget/bridge';
 import InsightsScreen from './src/screens/InsightsScreen';
@@ -246,12 +247,15 @@ function AlmanacApp() {
     setToast({ text: bits.length ? `Added ${bits.join(', ')}.` : 'Nothing new to add (everything was already there).', at: Date.now() });
   };
   const justOneRef = useRef(null);
+  // The assistant: one box on Home that files a line where it belongs.
+  const assistant = useAssistant(store, { model: store.prefs.assistantModel || 'quick' });
+  const [askFocus, setAskFocus] = useState(0);
   // Icon shortcuts.
   useQuickActions((go) => {
     if (go === 'one') justOneRef.current?.();
-    else if (go === 'hold') {
+    else if (go === 'hold' || go === 'ask') {
       setTab('home');
-      setToast({ text: 'Hold it in working memory below.', at: Date.now() });
+      setAskFocus((n) => n + 1);
     } else if (go === 'journal') setTab('journal');
   });
   // Home-screen widget follows the state.
@@ -409,6 +413,7 @@ function AlmanacApp() {
   const optionsList = store.lists.find((l) => l.id === optionsListId) || null;
 
   const settingsProps = {
+    assistant,
     google,
     sync,
     reminderStatus,
@@ -456,6 +461,7 @@ function AlmanacApp() {
             blockInfo={blockInfoFor(store, block, blockPicksAll)}
             pinned={!!oneThing}
             restDay={!!store.days[day.today]?.rest}
+            ask={{ assistant, focusKey: askFocus, onOpenSettings: () => go('settings') }}
             onReplan={() => {
               const moved = store.replanRestOfToday(day.today, { bedtimeHour: store.prefs.bedtimeHour ?? 23 });
               if (!moved.length) return setToast({ text: 'Nothing safe to move; everything left is due today or already started.', at: Date.now() });

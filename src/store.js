@@ -523,6 +523,15 @@ export function useAlmanacStore() {
       startRoutineItem(routineId, itemId, text) {
         setState((s) => ({ ...s, routineActive: { routineId, itemId, text, startedAt: Date.now() } }));
       },
+      // Minutes reported after the fact ("did 20 minutes of exercise"), logged
+      // as one entry ending now.
+      logRoutineMinutes(routineId, minutes, text) {
+        const ms = Math.max(1, Math.round(minutes)) * 60000;
+        const now = Date.now();
+        const entry = { id: newId('rl'), routineId, itemId: 'reported', text: text || 'Reported', startedAt: now - ms, endedAt: now, durationMs: ms, reported: true };
+        edit((s) => ({ routineLog: [...(s.routineLog || []), entry].slice(-2000) }));
+        return entry;
+      },
       cancelRoutineItem() {
         setState((s) => ({ ...s, routineActive: null }));
       },
@@ -924,22 +933,25 @@ export function useAlmanacStore() {
         });
         return removed;
       },
-      addList(name, personId = null) {
+      addList(name, personId = null, categoryId = null) {
         const trimmed = name.trim();
-        if (!trimmed) return;
+        if (!trimmed) return null;
         const now = Date.now();
+        const id = newId('l');
         edit((s) => ({
           lists: [
             ...s.lists,
             {
-              id: newId('l'),
+              id,
               name: trimmed,
               personId: personId === 'me' ? null : personId,
+              categoryId: categoryId || null,
               createdAt: now,
               updatedAt: now,
             },
           ],
         }));
+        return id;
       },
       // Applies a plan from src/importText.js in one edit: creates any new
       // lists, then the tasks and their steps. Returns what it added.

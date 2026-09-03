@@ -13,10 +13,10 @@ export function SmallButton({ label, onPress, style }) {
   );
 }
 
-export function PrimaryButton({ label, onPress, style }) {
+export function PrimaryButton({ label, onPress, style, disabled = false }) {
   return (
-    <TouchableOpacity
-      style={[shared.primaryButton, style]}
+    <TouchableOpacity disabled={disabled}
+      style={[shared.primaryButton, style, disabled && { opacity: 0.5 }]}
       onPress={onPress}
       accessibilityRole="button"
     >

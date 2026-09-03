@@ -5,6 +5,7 @@ import Screen from '../components/Screen';
 import ScratchCard from '../components/ScratchCard';
 import ImportBox from '../components/ImportBox';
 import ReviewCard from '../components/ReviewCard';
+import AskCard from '../components/AskCard';
 import { SmallButton, PrimaryButton } from '../components/Buttons';
 import WeatherLine from '../components/WeatherLine';
 import { quoteOfDay } from '../quotes';
@@ -41,6 +42,7 @@ export default function HomeScreen({
   pinned = false,
   restDay = false,
   onReplan,
+  ask,
 }) {
   const now = useNow(!!running, 30000);
   const runs = useMemo(() => streaks(store, Date.now()).filter((s) => s.run > 0), [store.usage, store.days, store.routineDone, store.routineLog, store.routines]);
@@ -68,6 +70,8 @@ export default function HomeScreen({
           ) : null}
         </View>
       ) : null}
+
+      {ask ? <AskCard assistant={ask.assistant} autoFocus={ask.focusKey > 0} key={`ask-${ask.focusKey}`} onOpenSettings={ask.onOpenSettings} /> : null}
 
       {review?.show ? <ReviewCard tasks={review.tasks} tagFor={review.tagFor} onApply={review.onApply} onLater={review.onLater} /> : null}
 

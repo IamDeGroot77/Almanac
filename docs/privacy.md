@@ -85,3 +85,7 @@ app. The child has no account and no access.
 Almanac's use of information received from Google APIs adheres to the
 [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy),
 including the Limited Use requirements.
+
+## The assistant
+
+If you add an Anthropic API key in Settings > Assistant, each line you type into "Tell Almanac" is sent to Anthropic's API together with a snapshot of your lists, categories, people, routine names, this week's tasks, and working memory. Your journal is never sent. Nothing is sent unless you use the box. The key lives in the device keystore and is never synced. Remove the key and the box works offline.

@@ -23,10 +23,12 @@ import Collapsible from '../components/Collapsible';
 import { canScheduleExact, openExactAlarmSettings } from '../../modules/almanac-alarm';
 import { lockAvailable } from '../journalLock';
 import DropBoxSection from '../components/DropBoxSection';
+import AssistantSection from '../components/AssistantSection';
 
 // Settings in five groups, each one line until opened: Look and feel, Your
 // day, Sleep, Connections, People. The laptop shows only what runs there.
 export default function SettingsScreen({
+  assistant,
   google,
   sync,
   reminderStatus,
@@ -324,6 +326,10 @@ export default function SettingsScreen({
         ) : (
           <Text style={[shared.muted, styles.note]}>Canvas, calendar mirroring, and hand-off apps are set up on the phone.</Text>
         )}
+      </Collapsible>
+
+      <Collapsible title="Assistant" summary={assistant?.hasKey ? `Claude files what you tell it · ${prefs.assistantModel === 'careful' ? 'Careful' : 'Quick'}` : 'Not set up. Lines file the plain way.'}>
+        <AssistantSection assistant={assistant} model={prefs.assistantModel || 'quick'} onSetModel={(m) => onSetPref('assistantModel', m)} />
       </Collapsible>
 
       <Collapsible title="Privacy" summary={prefs.journalLock ? 'Journal locked with your fingerprint or face' : 'Journal opens without a check'}>
