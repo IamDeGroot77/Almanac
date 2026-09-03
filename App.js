@@ -581,6 +581,7 @@ function AlmanacApp() {
             google={google}
             allRoutines={store.routines}
             categories={store.categories || []}
+            diag={!!store.prefs.listsDiag}
             onImport={importPlanWithToast}
           />
         )}

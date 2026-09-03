@@ -306,9 +306,14 @@ export default function SettingsScreen({
         <PersonChips people={people} selected={null} onSelect={() => {}} onAdd={onAddPerson} compact />
       </Collapsible>
 
-      {__DEV__ && !isWeb ? (
-        <Collapsible title="Developer" summary="Test buttons">
-          <DevSection onStageReview={onStageReview} />
+      {!isWeb ? (
+        <Collapsible title="Developer" summary={prefs.listsDiag ? 'Lists step-by-step is on' : 'Test buttons'} open={!!prefs.listsDiag}>
+          <View style={styles.switchRow}>
+            <Text style={styles.label}>Lists tab, step by step</Text>
+            <Switch value={!!prefs.listsDiag} onValueChange={(v) => onSetPref('listsDiag', v)} />
+          </View>
+          <Text style={shared.muted}>For finding a crash: the Lists tab shows one part at a time with a button to reveal the next. The last part shown before a crash is the culprit.</Text>
+          {__DEV__ ? <DevSection onStageReview={onStageReview} /> : null}
         </Collapsible>
       ) : null}
 

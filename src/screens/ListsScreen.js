@@ -38,8 +38,13 @@ export default function ListsScreen({
   onImport,
   allRoutines = [],
   categories = [],
+  diag = false,
 }) {
   const [query, setQuery] = useState('');
+  const [stage, setStage] = useState(1);
+  const show = (n) => !diag || stage >= n;
+  if (diag) console.log('Lists step-by-step: showing parts up to', stage);
+  const STEPS = ['header', 'search', 'lists', 'routines', 'paste box', 'drop box'];
   const searchResults = query ? allTasks.filter((t) => matchesQuery(t, query, allLists)).slice(0, 50) : [];
   return (
     <Screen refreshing={refreshing} onRefresh={onRefresh}>
@@ -58,6 +63,14 @@ export default function ListsScreen({
         />
       </View>
 
+      {diag ? (
+        <View style={styles.diag}>
+          <Text style={styles.diagText}>Step-by-step mode · showing {stage} of {STEPS.length}: {STEPS.slice(0, stage).join(', ')}</Text>
+          {stage < STEPS.length ? <SmallButton label={`Show ${STEPS[stage]}`} onPress={() => setStage(stage + 1)} /> : null}
+        </View>
+      ) : null}
+
+      {show(2) ? (
       <SearchBox
         query={query}
         onChange={setQuery}
@@ -65,8 +78,9 @@ export default function ListsScreen({
         contextFor={contextFor}
         listProps={listProps}
       />
+      ) : null}
 
-      {query ? null : (
+      {query || !show(3) ? null : (
         <View>
       {lists.length === 0 && (
         <Text style={styles.hint}>
@@ -101,6 +115,8 @@ export default function ListsScreen({
         />
       ))}
 
+      {show(4) ? (
+      <View>
       <View style={styles.routinesHeader}>
         <Text style={styles.routinesTitle}>Routines</Text>
         <SmallButton label="+ New routine" onPress={onNewRoutine} />
@@ -127,10 +143,12 @@ export default function ListsScreen({
           <Text style={styles.chev}>›</Text>
         </TouchableOpacity>
       ))}
+      </View>
+      ) : null}
         </View>
       )}
-      <ImportBox people={people} lists={allLists} routines={allRoutines} categories={categories} onImport={onImport} />
-      {!isWeb && google ? <DropBoxSection google={google} /> : null}
+      {show(5) ? <ImportBox people={people} lists={allLists} routines={allRoutines} categories={categories} onImport={onImport} /> : null}
+      {show(6) && !isWeb && google ? <DropBoxSection google={google} /> : null}
     </Screen>
   );
 }
@@ -153,6 +171,8 @@ function groupedLists(lists, categories) {
 }
 
 const styles = StyleSheet.create({
+  diag: { marginTop: 12, padding: 10, borderRadius: 10, backgroundColor: colors.warnSoft, gap: 8 },
+  diagText: { fontSize: 13, color: colors.ink },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 26, fontWeight: '700', color: colors.ink },
   people: { marginTop: 14 },
