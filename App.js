@@ -56,6 +56,8 @@ import { quoteOfDay, parseQuotes } from './src/quotes';
 import { parseImport } from './src/importText';
 import { FALL_2026, SEED_ID } from './src/seeds/fall2026';
 import { useArt } from './src/art';
+import useQuickActions from './src/quickActions';
+import { refreshWidgetSafe } from './src/widget/bridge';
 import InsightsScreen from './src/screens/InsightsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import PlannerScreen from './src/screens/web/PlannerScreen';
@@ -246,6 +248,20 @@ function AlmanacApp() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store.loaded]);
+  // Icon shortcuts.
+  useQuickActions((go) => {
+    if (go === 'one') justOneRef.current?.();
+    else if (go === 'hold') {
+      setTab('home');
+      setToast({ text: 'Hold it in working memory below.', at: Date.now() });
+    } else if (go === 'journal') setTab('journal');
+  });
+  // Home-screen widget follows the state.
+  useEffect(() => {
+    if (!store.loaded) return;
+    refreshWidgetSafe(store);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.loaded, store.localVersion, store.days]);
   const lastAchievementCheck = useRef(0);
   useCalendarRules(store);
   // Achievements: check after edits settle, award, and say so once.

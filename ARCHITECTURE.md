@@ -107,6 +107,12 @@ snapshots, and native features hide behind small modules.
 
 - Syncs are batched: Google Tasks 30 s after the last edit, Drive 45 s after the last edit and never more than every 3 minutes; a foreground only re-syncs after 5 minutes. Calendar rules read the calendar at most every 15 minutes. Achievements are checked at most once a minute. The bedtime nudge is scheduled once per setting. Home memoises its run calculations. Metro ignores docs/ and dist-web/ (metro.config.js).
 
+## On the home screen
+
+- Widget (`react-native-android-widget`, config in app.json): `src/widget/model.js` (pure, tested by `scripts/test-widget.mjs`) computes Now/Next and the day's numbers from the saved state; `src/widget/index.js` renders it and registers the headless task handler from index.js; the app refreshes it after edits through `src/widget/bridge.js` (lazy require, so web and older builds are unaffected). Tapping opens the app.
+- Icon shortcuts (`expo-quick-actions`): Just one thing, Hold a thought, Journal (`src/quickActions.js`).
+- Both are native: they arrive with a compiled build, not an update. Version bumped to 1.4.0 so the update runtime matches.
+
 ## Adherence (the phone does the initiating)
 
 - The morning brief follows the alarm clock: `modules/almanac-alarm` reads `AlarmManager.getNextAlarmClock`; `scheduleMorningBrief` in `src/notifications.js` schedules a one-off a minute after an alarm within 20 hours, else the brief is sent when the day auto-starts (`sendBriefIfDue`, once per day). Re-checked whenever the app comes to the foreground or goes to the background, so set the alarm before closing Almanac for the night if you want the brief tied to it.

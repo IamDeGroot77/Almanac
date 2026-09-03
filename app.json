@@ -2,7 +2,7 @@
   "expo": {
     "name": "Almanac",
     "slug": "iamdegroot77",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "scheme": "almanac",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -53,6 +53,36 @@
         {
           "android": {
             "minSdkVersion": 26
+          }
+        }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "AlmanacNow",
+              "label": "Almanac · Now and next",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "updatePeriodMillis": 1800000,
+              "description": "What is running or next, and how the day is going.",
+              "resizeMode": "horizontal|vertical",
+              "widgetFeatures": "reconfigurable"
+            }
+          ]
+        }
+      ],
+      [
+        "expo-quick-actions",
+        {
+          "androidIcons": {
+            "shortcut_almanac": {
+              "foregroundImage": "./assets/android-icon-foreground.png",
+              "backgroundColor": "#1F5FA8"
+            }
           }
         }
       ]

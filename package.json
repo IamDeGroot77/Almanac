@@ -15,6 +15,7 @@
     "expo-dev-client": "~57.0.18",
     "expo-intent-launcher": "~57.0.1",
     "expo-notifications": "~57.0.16",
+    "expo-quick-actions": "^6.0.2",
     "expo-secure-store": "~57.0.3",
     "expo-status-bar": "~57.0.1",
     "expo-updates": "~57.0.21",
@@ -22,6 +23,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-android-widget": "^0.22.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-web": "^0.21.2"
   },
@@ -33,7 +35,7 @@
     "build:dev:android": "eas build --platform android --profile development",
     "build:dev:ios": "eas build --platform ios --profile development",
     "build:preview": "eas build --platform all --profile preview",
-    "test": "node scripts/test-sync.mjs && node scripts/test-canvas.mjs && node scripts/test-merge.mjs && node scripts/test-dayauto.mjs && node scripts/test-import.mjs && node scripts/test-lists.mjs && node scripts/test-blocks.mjs && node scripts/test-routines.mjs && node scripts/test-journal.mjs && node scripts/test-scratch.mjs && node scripts/test-capacity.mjs && node scripts/test-achievements.mjs && node scripts/test-import-school.mjs && node scripts/test-lists-dedupe.mjs",
+    "test": "node scripts/test-sync.mjs && node scripts/test-canvas.mjs && node scripts/test-merge.mjs && node scripts/test-dayauto.mjs && node scripts/test-import.mjs && node scripts/test-lists.mjs && node scripts/test-blocks.mjs && node scripts/test-routines.mjs && node scripts/test-journal.mjs && node scripts/test-scratch.mjs && node scripts/test-capacity.mjs && node scripts/test-achievements.mjs && node scripts/test-import-school.mjs && node scripts/test-lists-dedupe.mjs && node scripts/test-widget.mjs",
     "build:web": "expo export --platform web --output-dir docs/app",
     "serve:web": "node scripts/serve-web.js docs/app 8090",
     "laptop": "node scripts/serve-web.js docs/app 8090"
