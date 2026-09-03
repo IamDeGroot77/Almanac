@@ -2,6 +2,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, shared } from '../theme';
 import Screen from '../components/Screen';
 import ScratchCard from '../components/ScratchCard';
+import ImportBox from '../components/ImportBox';
 import { SmallButton, PrimaryButton } from '../components/Buttons';
 import WeatherLine from '../components/WeatherLine';
 import { quoteOfDay } from '../quotes';
@@ -33,6 +34,7 @@ export default function HomeScreen({
   onOpenTask,
   onJustOneThing,
   onGo,
+  importProps,
 }) {
   const now = useNow(!!running, 30000);
   const runs = streaks(store, Date.now()).filter((s) => s.run > 0);
@@ -104,6 +106,8 @@ export default function HomeScreen({
       </View>
 
       <ScratchCard scratch={scratch} {...scratchActions} />
+
+      {importProps ? <ImportBox {...importProps} /> : null}
 
       <View style={styles.links}>
         <Link label="Today" onPress={() => onGo('today')} />

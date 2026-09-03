@@ -931,6 +931,8 @@ export function useAlmanacStore() {
             if (!listId) continue;
             const listObj = lists.find((x) => x.id === listId);
             for (const t of l.tasks) {
+              const existsAlready = tasks.some((x) => x.listId === listId && !x.done && !x.parentId && x.text.toLowerCase() === t.text.toLowerCase());
+              if (existsAlready) continue;
               const id = newId('t');
               tasks.push({
                 id,

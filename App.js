@@ -219,6 +219,15 @@ function AlmanacApp() {
   useQuickAdd(store, { enabled: !!store.prefs.quickAddNotification });
   useTaskCheckins(store, { minutes: store.prefs.checkinMinutes ?? 30 });
   useEnergyCheckins(store, { enabled: store.prefs.energyCheckins !== false });
+  const importPlanWithToast = (plan) => {
+    const added = store.importPlan(plan);
+    const bits = [];
+    if (added.tasks) bits.push(`${added.tasks} ${added.tasks === 1 ? 'task' : 'tasks'}`);
+    if (added.lists) bits.push(`${added.lists} new ${added.lists === 1 ? 'list' : 'lists'}`);
+    if (added.routines) bits.push(`${added.routines} new ${added.routines === 1 ? 'routine' : 'routines'}`);
+    if (added.categories) bits.push(`${added.categories} new ${added.categories === 1 ? 'category' : 'categories'}`);
+    setToast({ text: bits.length ? `Added ${bits.join(', ')}.` : 'Nothing new to add (everything was already there).', at: Date.now() });
+  };
   const justOneRef = useRef(null);
   useCalendarRules(store);
   // Achievements: check after edits settle, award, and say so once.
@@ -440,6 +449,7 @@ function AlmanacApp() {
             onOpenTask={(task) => setSheetTaskId(task.id)}
             onJustOneThing={justOneThing}
             onGo={go}
+            importProps={{ people: store.people, lists: store.lists, routines: store.routines, categories: store.categories || [], onImport: importPlanWithToast }}
           />
         )}
         {isWeb && tab === 'calendar' ? (
@@ -571,15 +581,7 @@ function AlmanacApp() {
             google={google}
             allRoutines={store.routines}
             categories={store.categories || []}
-            onImport={(plan) => {
-              const added = store.importPlan(plan);
-              const bits = [];
-              if (added.tasks) bits.push(`${added.tasks} ${added.tasks === 1 ? 'task' : 'tasks'}`);
-              if (added.lists) bits.push(`${added.lists} new ${added.lists === 1 ? 'list' : 'lists'}`);
-              if (added.routines) bits.push(`${added.routines} new ${added.routines === 1 ? 'routine' : 'routines'}`);
-              if (added.categories) bits.push(`${added.categories} new ${added.categories === 1 ? 'category' : 'categories'}`);
-              setToast({ text: bits.length ? `Added ${bits.join(', ')}.` : 'Nothing new to add.', at: Date.now() });
-            }}
+            onImport={importPlanWithToast}
           />
         )}
         {tab === 'journal' && (
