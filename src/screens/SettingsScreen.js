@@ -20,6 +20,8 @@ import CalendarRulesSection from '../components/CalendarRulesSection';
 import DayPlanSection from '../components/DayPlanSection';
 import DopamenuSection from '../components/DopamenuSection';
 import Collapsible from '../components/Collapsible';
+import { canScheduleExact, openExactAlarmSettings } from '../../modules/almanac-alarm';
+import { lockAvailable } from '../journalLock';
 import DropBoxSection from '../components/DropBoxSection';
 
 // Settings in five groups, each one line until opened: Look and feel, Your
@@ -171,6 +173,14 @@ export default function SettingsScreen({
           <View>
             <Text style={styles.label}>Morning brief</Text>
             <Text style={shared.muted}>{reminderMessage(reminderStatus) || 'Checking your alarm…'}</Text>
+            {canScheduleExact() === false ? (
+              <View>
+                <Text style={[shared.muted, styles.errorText]}>Android is holding this app to "roughly on time": the brief and nudges can land up to an hour late.</Text>
+                <SmallButton label="Allow exact timing" onPress={() => openExactAlarmSettings()} style={styles.button} />
+              </View>
+            ) : canScheduleExact() === true ? (
+              <Text style={styles.detail}>Exact timing is allowed, so the brief lands on the minute.</Text>
+            ) : null}
             <Text style={styles.subLabel}>Up by</Text>
             <Text style={shared.muted}>The one time the app defends. With no alarm set, the brief comes at this time instead of waiting for you to pick up the phone.</Text>
             <PersonChips
@@ -316,6 +326,25 @@ export default function SettingsScreen({
         )}
       </Collapsible>
 
+      <Collapsible title="Privacy" summary={prefs.journalLock ? 'Journal locked with your fingerprint or face' : 'Journal opens without a check'}>
+        {!isWeb ? (
+          <View>
+            <View style={styles.switchRow}>
+              <Text style={styles.label}>Lock the journal</Text>
+              <Switch value={!!prefs.journalLock} onValueChange={(v) => onSetPref('journalLock', v)} disabled={!lockAvailable()} />
+            </View>
+            <Text style={shared.muted}>
+              {lockAvailable()
+                ? 'Opening the Journal tab asks for your fingerprint, face, or screen lock, and locks again when you leave the app.'
+                : 'Needs the newer build.'}
+            </Text>
+          </View>
+        ) : null}
+        <Text style={[shared.muted, styles.note]}>
+          What the app stores and where it goes is written up at iamdegroot77.github.io/Almanac/privacy. In short: everything stays on your devices and in one private file in your own Google Drive; nothing goes to the app's author.
+        </Text>
+      </Collapsible>
+
       <Collapsible title="People" summary={people.map((p) => p.name).join(', ')}>
         <Text style={shared.muted}>Tasks and lists can be tagged for any of these.</Text>
         <PersonChips people={people} selected={null} onSelect={() => {}} onAdd={onAddPerson} compact />
@@ -350,5 +379,6 @@ const styles = StyleSheet.create({
   input: { flex: 1 },
   option: { marginTop: 8 },
   error: { color: colors.danger, fontSize: 13, marginTop: 6 },
+  errorText: { color: colors.warn },
   footer: { marginTop: 32, fontSize: 13, color: colors.muted, textAlign: 'center' },
 });

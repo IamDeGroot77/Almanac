@@ -17,3 +17,22 @@ export function getNextAlarm() {
     return null;
   }
 }
+
+// null when the build cannot tell; true/false otherwise.
+export function canScheduleExact() {
+  if (!native?.canScheduleExact) return null;
+  try {
+    return !!native.canScheduleExact();
+  } catch {
+    return null;
+  }
+}
+
+export function openExactAlarmSettings() {
+  if (!native?.openExactAlarmSettings) return false;
+  try {
+    return !!native.openExactAlarmSettings();
+  } catch {
+    return false;
+  }
+}

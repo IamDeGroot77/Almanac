@@ -126,6 +126,12 @@ snapshots, and native features hide behind small modules.
 
 - Syncs are batched: Google Tasks 30 s after the last edit, Drive 45 s after the last edit and never more than every 3 minutes; a foreground only re-syncs after 5 minutes. Calendar rules read the calendar at most every 15 minutes. Achievements are checked at most once a minute. The bedtime nudge is scheduled once per setting. Home memoises its run calculations. Metro ignores docs/ and dist-web/ (metro.config.js).
 
+## Native, since 1.5.0
+
+- `modules/almanac-alarm` also reports `canScheduleExact` and opens the system page to allow exact alarms; Settings → Notifications shows the state. `SCHEDULE_EXACT_ALARM` is declared in app.json.
+- `modules/almanac-sleep`: the Sleep API receiver is no longer exported; a boot receiver re-subscribes after a restart.
+- Journal lock (`src/journalLock.js`, expo-local-authentication, pref `journalLock`): biometric or screen-lock check when the tab opens, re-locks when the app leaves the foreground.
+
 ## On the home screen
 
 - Widget (`react-native-android-widget`, config in app.json): `src/widget/model.js` (pure, tested by `scripts/test-widget.mjs`) computes Now/Next and the day's numbers from the saved state; `src/widget/index.js` renders it and registers the headless task handler from index.js; the app refreshes it after edits through `src/widget/bridge.js` (lazy require, so web and older builds are unaffected). Tapping opens the app.

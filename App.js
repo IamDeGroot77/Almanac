@@ -55,6 +55,7 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import { quoteOfDay, parseQuotes } from './src/quotes';
 import { useArt } from './src/art';
 import useQuickActions from './src/quickActions';
+import useJournalLock from './src/journalLock';
 import { refreshWidgetSafe } from './src/widget/bridge';
 import InsightsScreen from './src/screens/InsightsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
@@ -136,6 +137,11 @@ function AlmanacApp() {
   const [youView, setYouView] = useState('insights');
   const view = isWeb && tab === 'calendar' ? calView : tab;
   const [journalPrompt, setJournalPrompt] = useState(null);
+  const journalLock = useJournalLock(!isWeb && !!store.prefs.journalLock);
+  useEffect(() => {
+    if (tab === 'journal' && !journalLock.unlocked && !journalLock.busy) journalLock.unlock();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, journalLock.unlocked]);
   const [dayOffset, setDayOffset] = useState(0); // 0 = today, 1 = tomorrow
   const derived = useTodayDerived({
     store,
@@ -622,7 +628,15 @@ function AlmanacApp() {
             onImport={importPlanWithToast}
           />
         )}
-        {tab === 'journal' && (
+        {tab === 'journal' && !journalLock.unlocked && (
+          <View style={styles.locked}>
+            <Text style={styles.lockedTitle}>Journal is locked.</Text>
+            <TouchableOpacity style={styles.lockedButton} onPress={journalLock.unlock} accessibilityRole="button">
+              <Text style={styles.lockedButtonText}>{journalLock.busy ? 'Checking…' : 'Unlock'}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {tab === 'journal' && journalLock.unlocked && (
           <JournalScreen
             journal={store.journal || {}}
             dayNotes={store.dayNotes}
@@ -775,6 +789,10 @@ function AlmanacApp() {
 }
 
 const styles = StyleSheet.create({
+  locked: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 },
+  lockedTitle: { fontSize: 18, fontWeight: '700', color: colors.ink },
+  lockedButton: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 999, backgroundColor: colors.accent },
+  lockedButtonText: { color: colors.onAccent, fontWeight: '700' },
   safe: { flex: 1, backgroundColor: colors.bg },
   body: { flex: 1 },
 });
