@@ -114,12 +114,6 @@ export default function HomeScreen({
 
       {importProps ? <ImportBox {...importProps} /> : null}
 
-      <View style={styles.links}>
-        <Link label="Today" onPress={() => onGo('today')} />
-        <Link label="Lists" onPress={() => onGo('lists')} />
-        <Link label="Journal" onPress={() => onGo('journal')} />
-        <Link label="Insights" onPress={() => onGo('insights')} />
-      </View>
     </Screen>
   );
 }
