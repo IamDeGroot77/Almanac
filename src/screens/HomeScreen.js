@@ -102,7 +102,7 @@ export default function HomeScreen({
           <Stat key={r.id} value={`${minutesToday(r.id, store.routineLog, new Date())}/${r.minutesPerDay}`} label={`${r.name} min`} />
         ))}
         {runs.slice(0, 2).map((s) => (
-          <Stat key={s.id} value={s.run} label={`${s.name.toLowerCase()} run`} />
+          <Stat key={s.id} value={`${s.run}d`} label={s.id === 'opened' ? 'in a row here' : s.id === 'bracketed' ? 'mornings in a row' : `${s.name} in a row`} />
         ))}
       </View>
 

@@ -18,12 +18,23 @@ export function registerNotificationHandler(prefix, handler) {
 
 const seen = new Set();
 
+// Actions that only make sense near the moment they were tapped. A response
+// replayed hours later (the process was dead) would otherwise close today's
+// day at breakfast or finish a task nine hours late.
+const TIME_SENSITIVE = ['daybracket-', 'checkin-', 'energy-'];
+const STALE_MS = 30 * 60 * 1000;
+
 function dispatch(response) {
   if (!response) return;
+  const at = Number(response.notification?.date) || 0;
+  const action = response.actionIdentifier || '';
+  if (at && Date.now() - at > STALE_MS && TIME_SENSITIVE.some((p) => action.startsWith(p))) {
+    console.warn('Ignoring a stale notification response', action, Math.round((Date.now() - at) / 60000), 'min old');
+    return;
+  }
   const key = `${response.notification?.request?.identifier}:${response.notification?.date}:${response.actionIdentifier}`;
   if (seen.has(key)) return;
   seen.add(key);
-  const action = response.actionIdentifier || '';
   for (const [prefix, handler] of handlers) {
     if (action.startsWith(prefix)) {
       try {

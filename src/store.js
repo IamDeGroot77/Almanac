@@ -22,6 +22,7 @@ export { newId, DONE_RETENTION_MS };
 // or the id of a standing list. Only standing lists sync with Google Tasks.
 
 const STORAGE_KEY = 'almanac:v2';
+const BACKUP_KEY = 'almanac:v2.bak';
 const LEGACY_TASKS_KEY = 'tasks';
 export const DAY_PREFIX = 'day:';
 export const dayListId = (key) => `${DAY_PREFIX}${key}`;
@@ -109,9 +110,22 @@ function prune(input) {
 }
 
 async function load() {
-  const raw = await AsyncStorage.getItem(STORAGE_KEY);
+  let raw = null;
+  try {
+    raw = await AsyncStorage.getItem(STORAGE_KEY);
+  } catch (err) {
+    console.warn('Store read failed, trying the backup', err?.message || err);
+    raw = await AsyncStorage.getItem(BACKUP_KEY);
+  }
   if (raw) {
-    const parsed = JSON.parse(raw);
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (err) {
+      console.warn('Store parse failed, trying the backup', err?.message || err);
+      parsed = JSON.parse((await AsyncStorage.getItem(BACKUP_KEY)) || 'null');
+      if (!parsed) throw err;
+    }
     const base = emptyState();
     return prune({
       ...base,
@@ -182,22 +196,36 @@ function finishIn(s, id, now) {
 export function useAlmanacStore() {
   const [state, setState] = useState(emptyState);
   const [loaded, setLoaded] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const lastSaved = useRef(null);
 
   useEffect(() => {
     load()
       .then(setState)
-      .catch((err) => console.warn('Store load failed', err))
+      .catch((err) => {
+        // Never let an empty default replace data we could not read.
+        console.error('Store load failed; saving is off until the app restarts', err?.message || err);
+        setLoadFailed(true);
+      })
       .finally(() => setLoaded(true));
   }, []);
 
-  // Persist after the initial load only, so the empty default never
-  // overwrites saved data.
+  // Persist after the initial load only, and never after a failed load. The
+  // previous blob is kept as a backup so a bad write cannot take the data.
   useEffect(() => {
-    if (!loaded) return;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch((err) =>
-      console.warn('Store save failed', err)
-    );
-  }, [state, loaded]);
+    if (!loaded || loadFailed) return;
+    const json = JSON.stringify(state);
+    if (json === lastSaved.current) return;
+    (async () => {
+      try {
+        if (lastSaved.current) await AsyncStorage.setItem(BACKUP_KEY, lastSaved.current);
+        await AsyncStorage.setItem(STORAGE_KEY, json);
+        lastSaved.current = json;
+      } catch (err) {
+        console.error('Store save failed', err?.message || err);
+      }
+    })();
+  }, [state, loaded, loadFailed]);
 
   // A user edit: apply the partial and bump localVersion so sync notices.
   // Also keeps the day bracket honest when buttons get forgotten: an edit
@@ -517,10 +545,18 @@ export function useAlmanacStore() {
       },
       endDay(key) {
         setState((s) => {
+          const now = Date.now();
           const openLeft = s.tasks.some((t) => !t.done && !t.parentId && t.listId === dayListId(key));
+          // A timer left running at bedtime is banked, not left ticking all night.
+          const tasks = s.tasks.map((t) =>
+            t.startedAt && !t.done
+              ? { ...t, spentMs: (t.spentMs || 0) + Math.max(0, now - t.startedAt), sessions: [...(t.sessions || []), { start: t.startedAt, end: now }], startedAt: null, updatedAt: now }
+              : t
+          );
           return {
             ...s,
-            days: { ...s.days, [key]: { ...(s.days[key] || {}), sleptAt: Date.now(), autoClosed: false, cleanSlate: !openLeft } },
+            tasks,
+            days: { ...s.days, [key]: { ...(s.days[key] || {}), sleptAt: now, autoClosed: false, cleanSlate: !openLeft } },
           };
         });
       },
@@ -678,7 +714,7 @@ export function useAlmanacStore() {
         const now = Date.now();
         edit((s) => ({
           tasks: s.tasks.map((t) =>
-            t.listId === from && !t.done ? { ...t, listId: to, startedAt: null, updatedAt: now } : t
+            t.listId === from && !t.done ? { ...t, listId: to, startedAt: null, carriedCount: t.parentId ? t.carriedCount : (t.carriedCount || 0) + 1, updatedAt: now } : t
           ),
         }));
       },
@@ -792,7 +828,12 @@ export function useAlmanacStore() {
       moveTask(id, listId) {
         const now = Date.now();
         edit((s) => ({
-          tasks: s.tasks.map((t) => (t.id === id || t.parentId === id ? { ...t, listId, updatedAt: now } : t)),
+          tasks: s.tasks.map((t) => {
+            if (t.id !== id && t.parentId !== id) return t;
+            // Moving an open task from one day list to a later one is a carry.
+            const carried = t.id === id && !t.done && isDayList(t.listId) && isDayList(listId) && dayOfList(listId) > dayOfList(t.listId);
+            return { ...t, listId, startedAt: carried ? null : t.startedAt, carriedCount: carried ? (t.carriedCount || 0) + 1 : t.carriedCount, updatedAt: now };
+          }),
         }));
       },
       // ----- steps (sub-tasks) -----
@@ -1061,7 +1102,7 @@ export function useAlmanacStore() {
     [edit]
   );
 
-  return { ...state, loaded, ...actions };
+  return { ...state, loaded, loadFailed, ...actions };
 }
 
 // Unfinished tasks on day lists dated before today, oldest day first.

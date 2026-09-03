@@ -14,7 +14,7 @@ export default function BlockCard({ block, next, category, nextCategory, color, 
     return (
       <Text style={styles.upNext}>
         Next block: {nextCategory?.name || 'a category'} time, {describeBlockTime(next)}
-        {next.dayKey !== new Date(now).toISOString().slice(0, 10) ? ' tomorrow' : ''}.
+        {next.dayKey !== localDayKey(now) ? ' tomorrow' : ''}.
       </Text>
     );
   }
@@ -48,6 +48,11 @@ export default function BlockCard({ block, next, category, nextCategory, color, 
       )}
     </View>
   );
+}
+
+function localDayKey(ms) {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 const styles = StyleSheet.create({

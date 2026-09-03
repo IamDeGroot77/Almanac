@@ -53,8 +53,6 @@ import HomeScreen from './src/screens/HomeScreen';
 import YouScreen from './src/screens/YouScreen';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { quoteOfDay, parseQuotes } from './src/quotes';
-import { parseImport } from './src/importText';
-import { FALL_2026, SEED_ID } from './src/seeds/fall2026';
 import { useArt } from './src/art';
 import useQuickActions from './src/quickActions';
 import { refreshWidgetSafe } from './src/widget/bridge';
@@ -233,21 +231,6 @@ function AlmanacApp() {
     setToast({ text: bits.length ? `Added ${bits.join(', ')}.` : 'Nothing new to add (everything was already there).', at: Date.now() });
   };
   const justOneRef = useRef(null);
-  // One-time seed: the Fall 2026 syllabus goes into the School list on the phone.
-  useEffect(() => {
-    if (!store.loaded || isWeb) return;
-    if (store.prefs.seeds?.[SEED_ID]) return;
-    try {
-      const plan = parseImport(FALL_2026, { people: store.people, lists: store.lists, routines: store.routines, categories: store.categories || [] });
-      const added = store.importPlan(plan);
-      store.setPref('seeds', { ...(store.prefs.seeds || {}), [SEED_ID]: Date.now() });
-      console.log('Seeded', SEED_ID, added);
-      if (added.tasks) setToast({ text: `Added the Fall 2026 plan: ${added.tasks} tasks on School.`, at: Date.now() });
-    } catch (err) {
-      console.error('Seed failed', err?.message || err);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store.loaded]);
   // Icon shortcuts.
   useQuickActions((go) => {
     if (go === 'one') justOneRef.current?.();

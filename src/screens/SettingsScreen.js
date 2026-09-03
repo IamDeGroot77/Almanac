@@ -168,6 +168,8 @@ export default function SettingsScreen({
                 { id: '23', name: '11 PM' },
                 { id: '0', name: 'Midnight' },
                 { id: '1', name: '1 AM' },
+                { id: '2', name: '2 AM' },
+                { id: '3', name: '3 AM' },
               ]}
               selected={String(prefs.bedtimeHour ?? 23)}
               onSelect={(id) => onSetPref('bedtimeHour', Number(id))}

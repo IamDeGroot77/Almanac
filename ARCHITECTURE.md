@@ -59,6 +59,15 @@ snapshots, and native features hide behind small modules.
 - Laptop-only tabs live in `src/screens/web/`: `PlannerScreen` (week columns, drag and drop), `SemesterScreen` (courses × weeks), `DashboardSections` (charts), `CalendarScreen` (month grid over the Google Calendar API, `src/google/calendarApi.js`, needs the `calendar.events` scope on the web client), and `FilesScreen` (the drop box).
 - The drop box is a normal Drive folder called "Almanac Drop" (`src/drive/filesApi.js`, `drive.file` scope, so the app only sees files it made). The laptop uploads by drag and drop; the phone lists the folder at the bottom of Lists (`DropBoxSection`) and opens files in Drive. Sending from the phone needs a file picker native module, planned for the next build.
 
+## Guard rails (from the September review)
+
+- Store: a failed load turns saving off for the session (`loadFailed`), and the previous blob is kept as `almanac:v2.bak` before every write, so a bad read can never be overwritten by an empty default.
+- Notifications: bracket, check-in, and energy responses older than 30 minutes are ignored, so a tap replayed after the process died cannot close the wrong day.
+- Carries: moving an open task to a later day list, pushing leftovers to tomorrow, and the morning review all count a carry.
+- Closing the day banks any running timer, which also stops its check-ins.
+- Canvas: a course that fails to load keeps its tasks; courses are fetched two at a time.
+- Widget refreshes coalesce to the end of the 30-second window instead of being dropped.
+
 ## Lists are unique by name
 
 - `src/lists.js` `dedupeLists` (tested by `scripts/test-lists-dedupe.mjs`) folds lists that share a name (ignoring case and spaces): the Google-linked one survives, else the oldest; tasks, routine quotas, and calendar rules are re-pointed; the rest get delete tombstones. It runs on load, after an import, and inside the Drive merge, so a list made on both devices before they synced becomes one.

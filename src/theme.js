@@ -43,7 +43,7 @@ const ANIME = {
   warnSoft: '#3A2A10',
   warn: '#FFC857',
   danger: '#FF7B7B',
-  onAccent: '#FFFFFF',
+  onAccent: '#1A0B14',
   scheme: 'dark',
 };
 

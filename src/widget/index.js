@@ -64,8 +64,15 @@ export async function widgetTaskHandler(props) {
 
 // From inside the app: refresh the widget after the state changes.
 let lastPush = 0;
+let pending = null;
 export function refreshWidget(state) {
-  if (Date.now() - lastPush < 30000) return;
+  const wait = 30000 - (Date.now() - lastPush);
+  if (wait > 0) {
+    // Coalesce: one push at the end of the window with the latest state.
+    clearTimeout(pending);
+    pending = setTimeout(() => refreshWidget(state), wait);
+    return;
+  }
   lastPush = Date.now();
   try {
     const model = widgetModel(state, Date.now());

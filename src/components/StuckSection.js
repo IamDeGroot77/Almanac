@@ -23,7 +23,7 @@ export default function StuckSection({ task, onStuck, actions }) {
     <View style={styles.wrap}>
       <Text style={styles.title}>Why am I stuck?</Text>
       <Text style={styles.hint}>
-        {dodged >= 2 ? `Dodged ${dodged} days. ` : ''}Name it and the app offers a way out. No judgement, just a default.
+        {dodged >= 2 ? `Carried ${dodged >= 4 ? '3+' : dodged} days. ` : ''}Name it and the app offers a way out. No judgement, just a default.
       </Text>
       <View style={styles.chips}>
         {STUCK_REASONS.map((r) => (

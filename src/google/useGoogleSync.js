@@ -33,10 +33,7 @@ export default function useGoogleSync(store, auth) {
     setStatus({ state: 'syncing', error: null });
     try {
       const token = await getValidAccessToken();
-      if (!token) {
-        await auth.signOut();
-        throw new Error('Google session expired. Connect again.');
-      }
+      if (!token) throw new Error('Google did not hand back a token. It retries on its own; if this keeps up, Disconnect and Connect.');
       const snapshot = {
         lists: current.lists,
         tasks: current.tasks,

@@ -11,6 +11,7 @@ const THEME_KEY = 'almanac:theme';
 if (globalThis.ErrorUtils?.setGlobalHandler) {
   const previous = globalThis.ErrorUtils.getGlobalHandler?.();
   globalThis.ErrorUtils.setGlobalHandler((err, isFatal) => {
+    if (/Requiring unknown module/.test(err?.message || '')) return previous?.(err, false); // Metro's async-import probe, not a real failure
     console.error('Uncaught', isFatal ? '(fatal)' : '', err?.message || err, err?.stack || '');
     previous?.(err, isFatal);
   });

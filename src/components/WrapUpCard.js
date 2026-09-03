@@ -58,7 +58,7 @@ export default function WrapUpCard({
             <View key={t.id} style={styles.leftoverRow}>
               <View style={styles.leftoverBody}>
                 <Text style={styles.leftoverText}>{t.text}</Text>
-                {t.carriedCount >= 2 ? <Text style={styles.leftoverMeta}>dodged {t.carriedCount} days</Text> : null}
+                {t.carriedCount >= 2 ? <Text style={styles.leftoverMeta}>carried {t.carriedCount >= 4 ? '3+' : t.carriedCount} days</Text> : null}
               </View>
               <SmallButton label="Tomorrow" onPress={() => onCarry(t.id)} />
               <SmallButton label="Next week" onPress={() => onNextWeek(t.id)} />

@@ -33,19 +33,31 @@ function relevant(a, now) {
   return due >= now - LOOKBACK_MS && due <= now + LOOKAHEAD_MS;
 }
 
+const warnedCourses = new Set();
+
 export async function fetchCanvasData(api) {
   const courses = await api.courses();
   const active = courses.filter((c) => !c.access_restricted_by_date && c.name);
-  const perCourse = await Promise.all(
-    active.map(async (c) => {
-      try {
-        return { course: c, assignments: await api.assignments(c.id) };
-      } catch (err) {
-        console.warn('Canvas course fetch failed', c.name, err.message);
-        return { course: c, assignments: [] };
-      }
-    })
-  );
+  // Two at a time: Canvas throttles bursts, and a throttled course must not
+  // look like an emptied one.
+  const perCourse = [];
+  for (let i = 0; i < active.length; i += 2) {
+    const chunk = active.slice(i, i + 2);
+    const results = await Promise.all(
+      chunk.map(async (c) => {
+        try {
+          return { course: c, assignments: await api.assignments(c.id) };
+        } catch (err) {
+          if (!warnedCourses.has(c.id)) {
+            warnedCourses.add(c.id);
+            console.warn('Canvas course fetch failed', c.name, err.message);
+          }
+          return { course: c, assignments: null, failed: true };
+        }
+      })
+    );
+    perCourse.push(...results);
+  }
   return perCourse;
 }
 
@@ -69,6 +81,7 @@ export function runCanvasSync(snapshot, perCourse, now = Date.now()) {
   const courses = [];
 
   for (const { course, assignments } of perCourse) {
+    if (!assignments) continue; // failed to load: unknown, not empty
     const enrollment = (course.enrollments || []).find((e) => e.type === 'student' || e.computed_current_score != null);
     courses.push({
       id: course.id,
@@ -145,14 +158,17 @@ export function runCanvasSync(snapshot, perCourse, now = Date.now()) {
     }
   }
 
-  // Everything else stays; Canvas tasks no longer in Canvas go unless done here.
+  // Everything else stays; Canvas tasks no longer in Canvas go unless done
+  // here. A course that failed to load is unknown, not empty: keep its tasks.
+  const failedCourses = new Set(perCourse.filter((p) => p.failed || p.assignments == null).map((p) => p.course.course_code || p.course.name));
+  const failedNames = new Set(perCourse.filter((p) => p.failed || p.assignments == null).map((p) => p.course.name));
   for (const t of tasks) {
     if (!t.canvasId) {
       nextTasks.push(t);
       continue;
     }
     if (seen.has(t.canvasId)) continue; // already emitted above
-    if (t.done) nextTasks.push(t);
+    if (t.done || failedCourses.has(t.canvasCourse) || failedNames.has(t.canvasCourse)) nextTasks.push(t);
   }
 
   return {

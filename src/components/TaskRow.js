@@ -32,7 +32,7 @@ export default function TaskRow({ task, tag, context, steps, isStep, onToggle, o
     });
   }
   if (task.firstStep && !task.done && !running) meta.push({ text: `Start with: ${task.firstStep}`, active: true });
-  if ((task.carriedCount || 0) >= 2 && !task.done) meta.push({ text: `dodged ${task.carriedCount} days`, overdue: task.carriedCount >= 4, today: task.carriedCount < 4 });
+  if ((task.carriedCount || 0) >= 2 && !task.done) meta.push({ text: `carried ${task.carriedCount >= 4 ? '3+' : task.carriedCount} days` });
   if (task.plan && !task.done) meta.push({ text: `📍 ${task.plan}` });
   if (task.notes?.trim()) meta.push({ text: `≡ ${task.notes.trim().split('\n')[0].slice(0, 40)}` });
   if (task.done && elapsed != null) {

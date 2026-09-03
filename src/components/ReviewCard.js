@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   pillCarry: { backgroundColor: colors.accentSoft, color: colors.accent },
-  pillDrop: { backgroundColor: '#FEE2E2', color: colors.danger },
+  pillDrop: { backgroundColor: colors.warnSoft, color: colors.danger },
   quick: { flexDirection: 'row', gap: 10, marginTop: 14 },
   actions: { flexDirection: 'row', alignItems: 'center', marginTop: 14, gap: 12 },
   applyButton: { flex: 1 },
