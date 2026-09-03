@@ -61,6 +61,8 @@ snapshots, and native features hide behind small modules.
 
 ## Guard rails (from the September review)
 
+- Notification taps replayed after the process was dead: check-in and energy answers older than 30 minutes are dropped; day-bracket taps ("I'm up", "Going to bed") are applied at the time the notification was shown (`meta.at` from `notificationRouter`), so a bedtime tap with the app closed still closes that night's day (`dayOpenAt` in `clock.js`, `endDay(key, at)`). Android only hands a dead app its last response if the process survived, so `src/backgroundTaps.js` (expo-task-manager, registered from `index.js`) runs headless on a button tap and records it in AsyncStorage; the router drains those on launch through the same dispatch.
+
 - Cue reminders: `src/cues.js` (pure, tested by `scripts/test-cues.mjs`) reads a time out of a task's "when and where" ("after lunch", "tonight", "Tuesday 2pm") and `reminders.js` fires the task's reminder on that cue instead of the due time. Reminders are reconciled once on load against what Android has scheduled.
 - Slots: `task.slot` (morning / afternoon / evening, set on the task sheet) groups the day list (`src/slots.js`), and `pickNext` holds back tasks whose slot has not come.
 - Focus shows time remaining and a shrinking bar when there is an estimate. Home shows a done wall of the week's finished tasks, no numbers.

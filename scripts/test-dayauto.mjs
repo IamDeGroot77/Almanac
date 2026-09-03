@@ -1,6 +1,7 @@
 // Exercises src/dayAuto.js. Run: node scripts/test-dayauto.mjs
 import assert from 'node:assert/strict';
 import { planAutoStart, MIN_SLEEP_GAP_MS } from '../src/dayAuto.js';
+import { dayOpenAt } from '../src/clock.js';
 
 const H = 3600000;
 const key = (t) => {
@@ -98,6 +99,22 @@ assert.equal(planAutoStart({ days: { [TODAY]: { wokeAt: NOW - 8 * H, sleptAt: NO
   oneAm.setHours(1, 0, 0, 0);
   const state = { days: { [YESTERDAY]: { wokeAt: oneAm.getTime() - 18 * H, sleptAt: null, lastActiveAt: oneAm.getTime() - 10 * 60000 } }, usage: {} };
   assert.equal(planAutoStart(state, oneAm.getTime()), null);
+}
+
+// 11. A "Going to bed" tap replayed the next morning applies to the day that was
+//     open when the notification showed (11 PM last night), not to today.
+{
+  const bedAt = NOW - 10 * H; // 11 PM
+  const still = { [YESTERDAY]: { wokeAt: NOW - 25 * H, sleptAt: null } };
+  assert.equal(dayOpenAt(still, bedAt), YESTERDAY);
+  // Yesterday auto-closed by a guess and today already started: the tap still names yesterday.
+  const guessed = { [YESTERDAY]: { wokeAt: NOW - 25 * H, sleptAt: NOW - 9 * H, implicitClose: true }, [TODAY]: { wokeAt: NOW - H, sleptAt: null } };
+  assert.equal(dayOpenAt(guessed, bedAt), YESTERDAY);
+  // Closed on purpose already: nothing to apply.
+  const closed = { [YESTERDAY]: { wokeAt: NOW - 25 * H, sleptAt: NOW - 9 * H }, [TODAY]: { wokeAt: NOW - H, sleptAt: null } };
+  assert.equal(dayOpenAt(closed, bedAt), null);
+  // A tap from before the day started names nothing.
+  assert.equal(dayOpenAt({ [TODAY]: { wokeAt: NOW - H, sleptAt: null } }, NOW - 2 * H), null);
 }
 
 console.log('All auto-start scenarios passed.');

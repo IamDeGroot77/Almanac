@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import { registerNotificationHandler } from './notificationRouter';
-import { openDayKey } from './clock';
+import { openDayKey, dayOpenAt } from './clock';
 import { dayKey } from './dates';
 import { isWeb } from './platform';
 
@@ -43,18 +43,24 @@ export default function useDayBracketNotifications(store, { bedtimeHour, onJustO
 
   useEffect(
     () =>
-      registerNotificationHandler(PREFIX, (response) => {
+      registerNotificationHandler(PREFIX, (response, meta) => {
         const s = storeRef.current;
         const action = response.actionIdentifier;
+        // A tap replayed hours later (the process was dead overnight) counts
+        // from when the notification was shown, not from breakfast.
+        const stale = !!meta?.stale;
+        const at = stale ? meta.at : Date.now();
         const open = openDayKey(s.days);
-        const today = dayKey(new Date());
         if (action === 'daybracket-up' || action === 'daybracket-one') {
-          if (!open) s.startDay(today);
-          if (action === 'daybracket-one') setTimeout(() => jotRef.current?.(), 300);
+          const openDay = open ? s.days[open] : null;
+          if (!open) s.startDay(dayKey(new Date(at)), at);
+          else if (stale && openDay.autoStarted && at < openDay.wokeAt && openDay.wokeAt - at < 12 * 3600000) s.startDay(open, at); // the tap beats the guess
+          if (action === 'daybracket-one' && !stale) setTimeout(() => jotRef.current?.(), 300);
         } else if (action === 'daybracket-bed') {
-          if (open) s.endDay(open);
-          else if (s.days[today]?.wokeAt && !s.days[today]?.sleptAt) s.endDay(today);
+          const key = dayOpenAt(s.days, at);
+          if (key) s.endDay(key, at);
         } else if (action === 'daybracket-later') {
+          if (stale) return;
           Notifications.scheduleNotificationAsync({
             identifier: SNOOZE_ID,
             content: { title: 'Still up?', body: bedtimeBody(openCountOf(s)), categoryIdentifier: BED_CATEGORY },

@@ -38,6 +38,19 @@ export function openDayKey(days) {
   return open.length ? open[open.length - 1] : null;
 }
 
+// The day that was open at a moment in the past: started before it, within
+// a day of it, and either still open or closed only by a guess (auto-close).
+// Used to apply a "Going to bed" tap replayed hours after the fact.
+export function dayOpenAt(days, at) {
+  let best = null;
+  for (const [k, v] of Object.entries(days || {})) {
+    if (!v?.wokeAt || v.wokeAt > at || at - v.wokeAt > 24 * 3600000) continue;
+    if (v.sleptAt && !v.implicitClose) continue; // closed on purpose, leave it
+    if (!best || v.wokeAt > best.wokeAt) best = { key: k, ...v };
+  }
+  return best ? best.key : null;
+}
+
 // Most recently closed day, for "reopen" after an accidental Good night.
 export function lastClosedDay(days) {
   let best = null;

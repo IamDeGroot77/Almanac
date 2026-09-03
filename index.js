@@ -7,6 +7,17 @@ import Root from './Root';
 // then loads the rest of the app.
 registerRootComponent(Root);
 
+// Notification buttons tapped while the app is dead (Android): a headless
+// task records them; the app applies them on its next launch.
+if (Platform.OS === 'android') {
+  try {
+    const { registerTapTask } = require('./src/backgroundTaps');
+    registerTapTask();
+  } catch (err) {
+    // Older build without expo-task-manager.
+  }
+}
+
 // Home-screen widget (Android): runs headless when the launcher asks for it.
 if (Platform.OS === 'android') {
   try {

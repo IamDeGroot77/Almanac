@@ -552,10 +552,10 @@ export function useAlmanacStore() {
       },
       // ----- day bracket -----
       // These bypass `edit` so they don't stamp activity or implicitly start days.
-      startDay(key) {
+      startDay(key, at = Date.now()) {
         setState((s) => ({
           ...s,
-          days: { ...s.days, [key]: { ...(s.days[key] || {}), wokeAt: Date.now(), sleptAt: null, implicit: false, autoStarted: false } },
+          days: { ...s.days, [key]: { ...(s.days[key] || {}), wokeAt: at, sleptAt: null, implicit: false, autoStarted: false } },
         }));
       },
       // From planAutoStart: close a stale day and open today, bypassing edit.
@@ -577,20 +577,22 @@ export function useAlmanacStore() {
           return { ...s, days };
         });
       },
-      endDay(key) {
+      // `at` is the bedtime: now for a tap in the app, or when the bedtime
+      // notification was shown for a tap replayed the next morning.
+      endDay(key, at = Date.now()) {
         setState((s) => {
           const now = Date.now();
           const openLeft = s.tasks.some((t) => !t.done && !t.parentId && t.listId === dayListId(key));
           // A timer left running at bedtime is banked, not left ticking all night.
           const tasks = s.tasks.map((t) =>
-            t.startedAt && !t.done
-              ? { ...t, spentMs: (t.spentMs || 0) + Math.max(0, now - t.startedAt), sessions: [...(t.sessions || []), { start: t.startedAt, end: now }], startedAt: null, updatedAt: now }
+            t.startedAt && !t.done && t.startedAt < at
+              ? { ...t, spentMs: (t.spentMs || 0) + Math.max(0, at - t.startedAt), sessions: [...(t.sessions || []), { start: t.startedAt, end: at }], startedAt: null, updatedAt: now }
               : t
           );
           return {
             ...s,
             tasks,
-            days: { ...s.days, [key]: { ...(s.days[key] || {}), sleptAt: now, autoClosed: false, cleanSlate: !openLeft } },
+            days: { ...s.days, [key]: { ...(s.days[key] || {}), sleptAt: at, autoClosed: false, implicitClose: false, cleanSlate: !openLeft } },
           };
         });
       },

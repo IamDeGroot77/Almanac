@@ -59,11 +59,11 @@ export default function DayBracket({
         <Text style={styles.kicker}>Still {dayLabel}?</Text>
         <Text style={styles.title}>You've been up {formatDuration(awake)}.</Text>
         <Text style={styles.sub}>
-          Close {dayLabel} first, or if you forgot to last night, start a fresh day now.
+          Start today now and {dayLabel} closes at the last thing you did, or wrap {dayLabel} up first.
         </Text>
         <View style={styles.row}>
-          <PrimaryButton label={`Going to bed`} onPress={onBed} />
-          <SmallButton label="Start a new day" onPress={onStartFresh} />
+          <PrimaryButton label="Start a new day" onPress={onStartFresh} />
+          <SmallButton label={`Wrap up ${dayLabel}`} onPress={onBed} />
         </View>
       </View>
     );
@@ -77,7 +77,7 @@ export default function DayBracket({
           {openDay.autoStarted ? (openDay.wakeSource === 'open' ? ' · from your first open' : ' · from sleep detection') : ''}
         </Text>
         {openDay.autoStarted && now - openDay.wokeAt < REOPEN_WINDOW_MS ? <SmallButton label="Just got up" onPress={onStart} /> : null}
-        <SmallButton label="Going to bed" onPress={onBed} />
+        <SmallButton label="Wrap up the day" onPress={onBed} />
       </View>
       {onEnergy && energy?.wake == null ? (
         <EnergyPrompt question="How's your energy this morning?" value={null} onSelect={(v) => onEnergy('wake', v)} compact />
