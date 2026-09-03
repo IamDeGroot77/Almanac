@@ -61,6 +61,12 @@ snapshots, and native features hide behind small modules.
 
 ## Guard rails (from the September review)
 
+- "Up by" (pref `wakeTarget`, shared): with no alarm set, the brief fires daily at this time instead of waiting for the first open.
+- Tomorrow's one thing: picked on the wrap-up card (`days[tomorrow].oneThing`); it leads Home's Now card and the widget the next day.
+- Replan the rest of today (Home, when the projected finish is past bedtime): moves the biggest unstarted, not-due-today tasks to tomorrow until the day fits, counted as carries, with undo.
+- Rest day (toggle in the Day header, `days[key].rest`): blocks, considerations, routines, and the capacity line hide; runs and routine streaks count the day as met.
+- Check-ins auto-pause a task after three unanswered intervals.
+
 - Drive sync re-reads the file's modifiedTime before uploading and merges again if another device wrote in between; edits made while a download was running are folded in before apply; an unchanged file is not downloaded twice.
 - Only the phone auto-starts days; in a merge, a wake time from a sensor beats one guessed from an app open.
 - The start-of-day review lives on Home. The midday energy check is off unless turned on. Now mode is the default on Day once three tasks are open. Notifications have their own Settings group.

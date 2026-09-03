@@ -4,6 +4,7 @@ import { dayKey, todayKey } from './dates';
 import { almanacToday, almanacDayKeyFromOffset, openDayKey } from './clock.js';
 import { newId, DONE_RETENTION_MS } from './ids';
 import { dueForHorizon } from './consider';
+import { capacityFor } from './capacity';
 import { dedupeLists } from './lists';
 import { periodKey as periodKeyFor } from './routines';
 
@@ -156,7 +157,7 @@ function markDeleted(deleted, kind, ids) {
   return { ...base, [kind]: next };
 }
 
-const SHARED_PREF_KEYS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep', 'bedtimeHour', 'calendarRules', 'dayBlocks', 'dopamenu', 'quotes'];
+const SHARED_PREF_KEYS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep', 'bedtimeHour', 'calendarRules', 'dayBlocks', 'dopamenu', 'quotes', 'wakeTarget'];
 
 const TIME_LOG_MAX = 2000;
 
@@ -411,6 +412,39 @@ export function useAlmanacStore() {
             routineDone: { ...s.routineDone, [routineId]: { ...forRoutine, [periodKey]: forPeriod } },
           };
         });
+      },
+      // ----- tomorrow's one thing, replan, rest days -----
+      setOneThing(key, taskId) {
+        edit((s) => ({ days: { ...s.days, [key]: { ...(s.days[key] || {}), oneThing: taskId || null, lastActiveAt: Date.now() } } }));
+      },
+      // Moves today's open tasks to tomorrow, biggest estimates first and never
+      // a running or due-today task, until the projected finish fits before
+      // bedtime. Returns the ids moved, for undo.
+      replanRestOfToday(todayKey, { bedtimeHour = 23 } = {}) {
+        const from = dayListId(todayKey);
+        const to = dayListId(almanacDayKeyFromOffset(1));
+        const now = Date.now();
+        const moved = [];
+        edit((s) => {
+          const open = s.tasks.filter((t) => t.listId === from && !t.done && !t.parentId);
+          const movable = open.filter((t) => !t.startedAt && t.due !== todayKey).sort((a, b) => (b.estimateMs || 20 * 60000) - (a.estimateMs || 20 * 60000));
+          let remaining = [...open];
+          for (const t of movable) {
+            const cap = capacityFor(remaining, { now, bedtimeHour });
+            if (!cap || !cap.over) break;
+            moved.push(t.id);
+            remaining = remaining.filter((x) => x.id !== t.id);
+          }
+          if (!moved.length) return {};
+          const set = new Set(moved);
+          return {
+            tasks: s.tasks.map((t) => (set.has(t.id) || set.has(t.parentId) ? { ...t, listId: to, carriedCount: t.parentId ? t.carriedCount : (t.carriedCount || 0) + 1, updatedAt: now } : t)),
+          };
+        });
+        return moved;
+      },
+      toggleRestDay(key) {
+        edit((s) => ({ days: { ...s.days, [key]: { ...(s.days[key] || {}), rest: !s.days[key]?.rest, lastActiveAt: Date.now() } } }));
       },
       // ----- working memory -----
       addScratch(text, source = 'typed') {

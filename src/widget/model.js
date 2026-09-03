@@ -16,7 +16,8 @@ export function widgetModel(state, now = Date.now()) {
   const block = currentBlock(state?.prefs?.dayBlocks, now);
   const category = block ? (state?.categories || []).find((c) => c.id === block.categoryId) : null;
   const pool = block ? categoryTasks(tasks, lists, block.categoryId) : [];
-  const next = (pool.length ? pickNext(pool, { today, running: runningIds }) : null) || pickNext(tasks.filter((t) => !t.parentId), { today, running: runningIds });
+  const pinned = tasks.find((t) => t.id === state?.days?.[today]?.oneThing && !t.done) || null;
+  const next = pinned || (pool.length ? pickNext(pool, { today, running: runningIds }) : null) || pickNext(tasks.filter((t) => !t.parentId), { today, running: runningIds });
   const openToday = tasks.filter((t) => !t.done && !t.parentId && t.listId === `day:${today}`);
   const dayStart = new Date(now);
   dayStart.setHours(0, 0, 0, 0);
@@ -24,7 +25,7 @@ export function widgetModel(state, now = Date.now()) {
   const capacity = capacityFor(openToday, { now, bedtimeHour: state?.prefs?.bedtimeHour ?? 23 });
   const fmt = (ms) => new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   return {
-    kicker: running ? 'Now' : block ? `${category?.name || 'Block'} time · ${describeBlockTime(block)}` : 'Next',
+    kicker: running ? 'Now' : pinned ? 'The one thing' : block ? `${category?.name || 'Block'} time · ${describeBlockTime(block)}` : 'Next',
     title: running ? running.text : next ? next.text : 'Nothing lined up',
     sub: running
       ? `running${running.estimateMs ? ` · ~${Math.round(running.estimateMs / 60000)} min` : ''}`

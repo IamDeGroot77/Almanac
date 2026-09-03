@@ -77,6 +77,8 @@ export default function TodayScreen({
   onSkipRoutineItem,
   dopamenu,
   onDopamenuDid,
+  restDay = false,
+  onToggleRestDay,
 }) {
   const isToday = dayOffset === 0;
   const dayKey = almanacDayKeyFromOffset(dayOffset);
@@ -95,6 +97,11 @@ export default function TodayScreen({
           <Text style={styles.title}>{formatHeaderDate(headerDate)}</Text>
           <WeatherLine forecast={forecast} dayKey={dayKey} isToday={isToday} />
         </View>
+        {isToday && onToggleRestDay ? (
+          <TouchableOpacity style={[styles.nowToggle, restDay && styles.nowToggleOn]} onPress={onToggleRestDay} accessibilityRole="button" accessibilityState={{ selected: restDay }} accessibilityLabel="Rest day: nothing counts, nothing nags">
+            <Text style={[styles.nowToggleText, restDay && styles.nowToggleTextOn]}>Rest</Text>
+          </TouchableOpacity>
+        ) : null}
         {isToday && setNowMode ? (
           <TouchableOpacity
             style={[styles.nowToggle, nowMode && styles.nowToggleOn]}
@@ -170,7 +177,7 @@ export default function TodayScreen({
 
       {isToday && (energy?.wake === 1 || energy?.midday === 1) ? <DopamenuCard menu={dopamenu} onDid={onDopamenuDid} /> : null}
 
-      {isToday && blockInfo ? (
+      {isToday && blockInfo && !restDay ? (
         <BlockCard
           block={blockInfo.current}
           next={blockInfo.next}
@@ -189,7 +196,7 @@ export default function TodayScreen({
         <DueSection overdue={dueOverdue} dueToday={dueToday} contextFor={contextFor} listProps={listProps} />
       )}
 
-      {isToday && !nowMode && <ConsiderSection items={considerations} onToday={onConsiderToday} onLater={onConsiderLater} />}
+      {isToday && !nowMode && !restDay && <ConsiderSection items={considerations} onToday={onConsiderToday} onLater={onConsiderLater} />}
 
       <TaskList
         listId={dayListId}
@@ -201,7 +208,7 @@ export default function TodayScreen({
         {...nowListProps}
       />
 
-      {isToday && !nowMode && routines.length > 0 && (
+      {isToday && !nowMode && !restDay && routines.length > 0 && (
         <View style={styles.routines}>
           <Text style={styles.sectionTitle}>Routines</Text>
           {routines.map((r) => (
@@ -238,7 +245,7 @@ export default function TodayScreen({
 const styles = StyleSheet.create({
   kicker: { fontSize: 13, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', color: colors.accent },
   title: { fontSize: 26, fontWeight: '700', color: colors.ink, marginTop: 4 },
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 },
   headerText: { flex: 1, marginRight: 10 },
   nowToggle: { borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, marginTop: 4 },
   nowToggleOn: { backgroundColor: colors.ink, borderColor: colors.ink },

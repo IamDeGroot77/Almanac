@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BRIEF_CATEGORY, ensureDayBracketCategories } from './dayBracket';
 import { getNextAlarm, isAvailable as alarmAvailable } from '../modules/almanac-alarm';
 import { dayKey } from './dates';
+import { formatTime24 } from './due';
 
 // Docs: https://docs.expo.dev/versions/v57.0.0/sdk/notifications/
 //
@@ -48,7 +49,7 @@ async function prepare() {
 }
 
 // Returns { mode: 'alarm', at } | { mode: 'wake', alarmSupported } | { mode: 'denied' | 'unsupported' }.
-export async function scheduleMorningBrief(now = Date.now()) {
+export async function scheduleMorningBrief({ wakeTarget = null, now = Date.now() } = {}) {
   const ready = await prepare();
   if (ready !== 'ok') return { mode: ready };
   await Notifications.cancelScheduledNotificationAsync(BRIEF_ID).catch(() => {});
@@ -61,6 +62,15 @@ export async function scheduleMorningBrief(now = Date.now()) {
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: REMINDER_CHANNEL },
     });
     return { mode: 'alarm', at };
+  }
+  if (wakeTarget) {
+    const [h, m] = wakeTarget.split(':').map(Number);
+    await Notifications.scheduleNotificationAsync({
+      identifier: BRIEF_ID,
+      content: BRIEF_CONTENT,
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: h, minute: m || 0, channelId: REMINDER_CHANNEL },
+    });
+    return { mode: 'anchor', wakeTarget, alarmSupported: alarmAvailable() };
   }
   return { mode: 'wake', alarmSupported: alarmAvailable() };
 }
@@ -101,6 +111,8 @@ export function reminderMessage(status) {
       const day = dayKey(d) === dayKey(new Date()) ? 'today' : 'tomorrow';
       return `Tied to your alarm: arrives ${when} ${day}, with I'm up and Just one thing buttons on the phone and the watch.`;
     }
+    case 'anchor':
+      return `No alarm set, so the brief comes at your up-by time, ${formatTime24(status.wakeTarget)}. An alarm within the day takes over when there is one.`;
     case 'wake':
       return status.alarmSupported
         ? 'No alarm set, so the brief arrives when your day starts (the first time you pick up the app after sleeping). Set an alarm and it follows that instead.'

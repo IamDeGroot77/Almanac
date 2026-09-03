@@ -171,6 +171,22 @@ export default function SettingsScreen({
           <View>
             <Text style={styles.label}>Morning brief</Text>
             <Text style={shared.muted}>{reminderMessage(reminderStatus) || 'Checking your alarm…'}</Text>
+            <Text style={styles.subLabel}>Up by</Text>
+            <Text style={shared.muted}>The one time the app defends. With no alarm set, the brief comes at this time instead of waiting for you to pick up the phone.</Text>
+            <PersonChips
+              people={[
+                { id: 'off', name: 'Off' },
+                { id: '06:00', name: '6:00' },
+                { id: '06:30', name: '6:30' },
+                { id: '07:00', name: '7:00' },
+                { id: '07:30', name: '7:30' },
+                { id: '08:00', name: '8:00' },
+                { id: '09:00', name: '9:00' },
+              ]}
+              selected={prefs.wakeTarget || 'off'}
+              onSelect={(id) => onSetPref('wakeTarget', id === 'off' ? null : id)}
+              compact
+            />
 
             <Text style={styles.label}>Bedtime nudge</Text>
             <Text style={shared.muted}>"Going to bed" and "Not yet" buttons in a notification, so closing the day is one tap. Not yet asks again in half an hour.</Text>

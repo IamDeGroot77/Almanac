@@ -20,6 +20,9 @@ export default function WrapUpCard({
   onDrop,
   doneTasks = [],
   openTasks = [],
+  tomorrowOptions = [],
+  oneThing = null,
+  onPickOneThing,
   onGoodNight,
   onClose,
   energy,
@@ -65,6 +68,18 @@ export default function WrapUpCard({
               <SmallButton label="Drop" onPress={() => onDrop(t.id)} />
             </View>
           ))}
+        </View>
+      ) : null}
+
+      {onPickOneThing && tomorrowOptions.length > 0 ? (
+        <View style={styles.leftovers}>
+          <Text style={styles.label}>Tomorrow starts with</Text>
+          <View style={styles.chips}>
+            {tomorrowOptions.slice(0, 6).map((t) => (
+              <SmallButton key={t.id} label={oneThing === t.id ? `★ ${t.text}` : t.text} onPress={() => onPickOneThing(oneThing === t.id ? null : t.id)} />
+            ))}
+          </View>
+          <Text style={styles.doneMeta}>One thing. It leads the brief, Home, and the widget in the morning.</Text>
         </View>
       ) : null}
 
@@ -121,6 +136,7 @@ const styles = StyleSheet.create({
   leftoverBody: { flex: 1 },
   leftoverText: { fontSize: 14, color: colors.ink },
   leftoverMeta: { fontSize: 11, color: colors.warn },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   routine: { fontSize: 14, color: colors.ink, marginTop: 2 },
   routineDone: { color: colors.muted },
   label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 14, marginBottom: 6 },

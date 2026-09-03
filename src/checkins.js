@@ -25,6 +25,7 @@ export async function ensureCheckinCategory() {
 }
 
 export default function useTaskCheckins(store, { minutes }) {
+  const answered = useRef({});
   const storeRef = useRef(store);
   storeRef.current = store;
   const scheduled = useRef(new Map()); // taskId -> `${startedAt}:${minutes}`
@@ -35,6 +36,7 @@ export default function useTaskCheckins(store, { minutes }) {
         const taskId = response.notification?.request?.content?.data?.taskId;
         if (!taskId) return;
         const s = storeRef.current;
+        answered.current[taskId] = Date.now();
         if (response.actionIdentifier === ACTION_PAUSE) s.pauseTask(taskId);
         else if (response.actionIdentifier === ACTION_FINISH) s.finishTask(taskId);
         // "Still on it" needs nothing: the repeat keeps going.
@@ -44,6 +46,27 @@ export default function useTaskCheckins(store, { minutes }) {
 
   const running = store.tasks.filter((t) => !t.done && t.startedAt);
   const signature = running.map((t) => `${t.id}:${t.startedAt}`).join(';');
+
+  // A timer nobody has answered in three check-ins is a timer left running;
+  // pause it (auto-pause) so the log stays honest and the nagging stops.
+  useEffect(() => {
+    if (!store.loaded || isWeb || !minutes) return;
+    const timer = setInterval(() => {
+      const s = storeRef.current;
+      const limit = 3 * minutes * 60000;
+      const now = Date.now();
+      for (const t of s.tasks) {
+        if (!t.startedAt || t.done) continue;
+        const since = Math.max(t.startedAt, answered.current[t.id] || 0);
+        if (now - since > limit) {
+          s.pauseTask(t.id);
+          console.warn('Auto-paused after unanswered check-ins:', t.text);
+        }
+      }
+    }, 60000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.loaded, minutes]);
 
   useEffect(() => {
     if (!store.loaded || isWeb) return;

@@ -38,6 +38,9 @@ export default function HomeScreen({
   onGo,
   importProps,
   review,
+  pinned = false,
+  restDay = false,
+  onReplan,
 }) {
   const now = useNow(!!running, 30000);
   const runs = useMemo(() => streaks(store, Date.now()).filter((s) => s.run > 0), [store.usage, store.days, store.routineDone, store.routineLog, store.routines]);
@@ -81,7 +84,7 @@ export default function HomeScreen({
           </View>
         ) : nextPick ? (
           <View>
-            <Text style={styles.nowKicker}>{blockInfo?.current ? `${blockInfo.category?.name || 'Block'} time · ${describeBlockTime(blockInfo.current)}` : 'Next'}</Text>
+            <Text style={styles.nowKicker}>{pinned ? 'The one thing' : blockInfo?.current ? `${blockInfo.category?.name || 'Block'} time · ${describeBlockTime(blockInfo.current)}` : 'Next'}</Text>
             <Text style={styles.nowText}>{nextPick.text}</Text>
             {nextPick.firstStep ? <Text style={styles.nowMeta}>Start with: {nextPick.firstStep}</Text> : null}
             <View style={styles.row}>
@@ -97,6 +100,9 @@ export default function HomeScreen({
           </View>
         )}
       </View>
+
+      {restDay ? <Text style={styles.rest}>Rest day. Nothing counts against you today.</Text> : null}
+      {capacity?.over && onReplan && !restDay ? <SmallButton label="Replan the rest of today" onPress={onReplan} style={styles.replan} /> : null}
 
       <View style={styles.numbers}>
         <Stat value={doneToday} label="done today" />
@@ -148,6 +154,8 @@ const styles = StyleSheet.create({
   nowMeta: { fontSize: 13, color: colors.muted, marginTop: 2 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
   numbers: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
+  rest: { marginTop: 12, fontSize: 14, color: colors.muted, fontStyle: 'italic' },
+  replan: { alignSelf: 'flex-start', marginTop: 12 },
   stat: { minWidth: 88, flexGrow: 1, padding: 10, borderRadius: 12, backgroundColor: colors.accentSoft },
   statValue: { fontSize: 20, fontWeight: '800', color: colors.accent },
   statWarn: { color: colors.warn },

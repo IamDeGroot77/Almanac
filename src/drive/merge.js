@@ -23,7 +23,7 @@ const BOOKKEEPING = [
   'canvasId', 'canvasCourse', 'canvasUrl', 'canvasDueAt', 'canvasPoints', 'canvasScore',
   'canvas',
 ];
-export const SHARED_PREFS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep', 'bedtimeHour', 'calendarRules', 'dayBlocks', 'dopamenu', 'quotes'];
+export const SHARED_PREFS = ['weatherPlace', 'checkinMinutes', 'energyCheckins', 'weeklyLetter', 'focusApp', 'timerApp', 'healthSleep', 'bedtimeHour', 'calendarRules', 'dayBlocks', 'dopamenu', 'quotes', 'wakeTarget'];
 
 const ts = (x) => x?.updatedAt || x?.createdAt || 0;
 

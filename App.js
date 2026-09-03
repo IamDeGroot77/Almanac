@@ -166,8 +166,10 @@ function AlmanacApp() {
   const [reminderStatus, setReminderStatus] = useState({ mode: 'pending' });
   const briefRef = useRef(reminderStatus);
   briefRef.current = reminderStatus;
+  const prefsRef = useRef(store.prefs);
+  prefsRef.current = store.prefs;
   const refreshBrief = () =>
-    scheduleMorningBrief()
+    scheduleMorningBrief({ wakeTarget: prefsRef.current?.wakeTarget || null })
       .then((st) => {
         briefRef.current = st;
         setReminderStatus(st);
@@ -180,7 +182,8 @@ function AlmanacApp() {
     refreshBrief();
     const sub = AppState.addEventListener('change', () => refreshBrief());
     return () => sub.remove();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.prefs.wakeTarget]);
 
   const storeRef = useRef(store);
   storeRef.current = store;
@@ -292,6 +295,9 @@ function AlmanacApp() {
           note: store.dayNotes[day.today] || '',
           onChangeNote: (text) => store.setDayNote(day.today, text),
           onPushToTomorrow: () => store.pushOpenToTomorrow(day.today),
+          tomorrowOptions: [...store.tasks.filter((t) => !t.done && !t.parentId && t.listId === dayListId(almanacDayKeyFromOffset(1))), ...derived.wrapUpStats.openTasks].filter((t, i, arr) => arr.findIndex((x) => x.id === t.id) === i),
+          oneThing: store.days[almanacDayKeyFromOffset(1)]?.oneThing || null,
+          onPickOneThing: (id) => store.setOneThing(almanacDayKeyFromOffset(1), id),
           onCarry: (id) => store.moveTask(id, dayListId(almanacDayKeyFromOffset(1))),
           onNextWeek: (id) => store.moveTask(id, dayListId(almanacDayKeyFromOffset(7))),
           onDrop: (id) => {
@@ -344,6 +350,7 @@ function AlmanacApp() {
   // "Just one thing": pick the next task worth starting and open Focus on it.
   const timerApp = APP_CATALOG.find((a) => a.id === store.prefs.timerApp) || null;
   const art = useArt(google.account, day.today);
+  const oneThing = store.tasks.find((t) => t.id === store.days[day.today]?.oneThing && !t.done) || null;
   const block = currentBlock(store.prefs.dayBlocks, Date.now());
   const blockPicksAll = block ? categoryTasks(people.visibleTasks, store.lists, block.categoryId) : [];
   const justOneThing = () => {
@@ -435,7 +442,15 @@ function AlmanacApp() {
             quote={quoteOfDay(day.today, parseQuotes(store.prefs.quotes))}
             running={store.tasks.find((t) => !t.done && t.startedAt) || null}
             blockInfo={blockInfoFor(store, block, blockPicksAll)}
-            nextPick={(blockPicksAll.length ? pickNext(blockPicksAll, { running: store.tasks.filter((t) => !t.done && t.startedAt).map((t) => t.id) }) : null) || pickNext(people.visibleTasks, { running: store.tasks.filter((t) => !t.done && t.startedAt).map((t) => t.id) })}
+            pinned={!!oneThing}
+            restDay={!!store.days[day.today]?.rest}
+            onReplan={() => {
+              const moved = store.replanRestOfToday(day.today, { bedtimeHour: store.prefs.bedtimeHour ?? 23 });
+              if (!moved.length) return setToast({ text: 'Nothing safe to move; everything left is due today or already started.', at: Date.now() });
+              offerUndo(`Moved ${moved.length} to tomorrow`, () => moved.forEach((id) => store.moveTask(id, dayListId(day.today))));
+              setToast({ text: `Moved ${moved.length} ${moved.length === 1 ? 'task' : 'tasks'} to tomorrow. Today fits now.`, at: Date.now() });
+            }}
+            nextPick={oneThing || (blockPicksAll.length ? pickNext(blockPicksAll, { running: store.tasks.filter((t) => !t.done && t.startedAt).map((t) => t.id) }) : null) || pickNext(people.visibleTasks, { running: store.tasks.filter((t) => !t.done && t.startedAt).map((t) => t.id) })}
             openToday={store.tasks.filter((t) => !t.done && !t.parentId && t.listId === dayListId(day.today)).length}
             doneToday={derived.wrapUpStats.doneCount}
             capacity={derived.capacity}
@@ -516,7 +531,9 @@ function AlmanacApp() {
             onEditRoutine={setEditingRoutine}
             dayListId={derived.dayListId}
             daySummary={derived.daySummary}
-            capacity={derived.capacity}
+            capacity={store.days[day.today]?.rest ? null : derived.capacity}
+            restDay={!!store.days[day.today]?.rest}
+            onToggleRestDay={() => store.toggleRestDay(day.today)}
             onSkipRoutineItem={store.skipRoutineItem}
             dopamenu={store.prefs.dopamenu || []}
             onDopamenuDid={(m) => setToast({ text: `${m.text}. Good.`, at: Date.now() })}

@@ -59,8 +59,9 @@ export function bestRun(met, now = Date.now(), maxDays = 365) {
 }
 
 export function streaks(state, now = Date.now()) {
-  const opened = (k) => (state.usage?.[k]?.opens || 0) > 0;
-  const bracketed = (k) => !!state.days?.[k]?.wokeAt && !state.days[k].implicit;
+  const rest = (k) => !!state.days?.[k]?.rest;
+  const opened = (k) => rest(k) || (state.usage?.[k]?.opens || 0) > 0;
+  const bracketed = (k) => rest(k) || (!!state.days?.[k]?.wokeAt && !state.days[k].implicit);
   const out = [
     { id: 'opened', name: 'Opened Almanac', run: forgivingRun(opened, now), best: bestRun(opened, now) },
     { id: 'bracketed', name: 'Days with a start', run: forgivingRun(bracketed, now), best: bestRun(bracketed, now) },
@@ -69,6 +70,7 @@ export function streaks(state, now = Date.now()) {
   for (const r of state.routines || []) {
     if (r.cadence !== 'daily') continue;
     const met = (k) => {
+      if (rest(k)) return true;
       const p = routineProgress(r, rs, parseDayKey(k));
       return p.target > 0 && p.complete;
     };
