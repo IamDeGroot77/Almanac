@@ -83,4 +83,21 @@ assert.equal(planAutoStart({ days: { [TODAY]: { wokeAt: NOW - H, sleptAt: null }
 // 8. Today started and closed already (an early night after midnight logged under today): leave it.
 assert.equal(planAutoStart({ days: { [TODAY]: { wokeAt: NOW - 8 * H, sleptAt: NOW - 6 * H } }, usage: {} }, NOW), null);
 
+// 9. Yesterday's day still open at 9 AM after 22 hours, with activity stamped 10 minutes ago
+//    (a sync or a laptop left open): it is still over. Close it and start today.
+{
+  const state = { days: { [YESTERDAY]: { wokeAt: NOW - 22 * H, sleptAt: null, lastActiveAt: NOW - 10 * 60000 } }, usage: {} };
+  const p = planAutoStart(state, NOW);
+  assert.ok(p, 'overlong day is closed');
+  assert.equal(p.closeKey, YESTERDAY);
+  assert.equal(p.startKey, TODAY);
+}
+// 10. But an 18-hour day at 1 AM with activity 10 minutes ago is a night owl, not a stale day.
+{
+  const oneAm = new Date(NOW);
+  oneAm.setHours(1, 0, 0, 0);
+  const state = { days: { [YESTERDAY]: { wokeAt: oneAm.getTime() - 18 * H, sleptAt: null, lastActiveAt: oneAm.getTime() - 10 * 60000 } }, usage: {} };
+  assert.equal(planAutoStart(state, oneAm.getTime()), null);
+}
+
 console.log('All auto-start scenarios passed.');

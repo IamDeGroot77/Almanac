@@ -9,6 +9,7 @@ import { openDayKey } from './clock.js';
 // (review, energy, refresh).
 
 export const MIN_SLEEP_GAP_MS = 4 * 60 * 60 * 1000;
+const LONG_DAY_MS = 20 * 60 * 60 * 1000; // a day open this long is yesterday's, whatever the activity says
 const DETECTION_FRESH_MS = 12 * 60 * 60 * 1000;
 
 // Latest moment the person demonstrably used the phone or the app.
@@ -33,7 +34,12 @@ export function planAutoStart(state, now = Date.now()) {
   const detected = today.sleep && now - today.sleep.end < DETECTION_FRESH_MS ? today.sleep : null;
   const sleptSince = detected && (!last || detected.end > last);
   const gap = last ? now - last : Infinity;
-  if (!sleptSince && gap < MIN_SLEEP_GAP_MS) return null;
+  // A day from an earlier calendar date that has been open 20 hours is over,
+  // even if something kept stamping activity on it overnight (a sync, a
+  // laptop left open, a background edit). Morning means after 4 AM.
+  const openDay = open ? state.days[open] : null;
+  const overlong = openDay && open < todayKey && now - openDay.wokeAt >= LONG_DAY_MS && new Date(now).getHours() >= 4;
+  if (!sleptSince && gap < MIN_SLEEP_GAP_MS && !overlong) return null;
 
   const plan = { startKey: todayKey, wokeAt: detected ? detected.end : now, source: detected ? 'sleep' : 'open', closeKey: null, closeAt: null };
   if (open) {

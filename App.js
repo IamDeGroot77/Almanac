@@ -220,7 +220,12 @@ function AlmanacApp() {
     const openToday = store.tasks.filter((t) => !t.done && !t.parentId && t.listId === `day:${day.today}`).length;
     if (openToday >= 3) setNowMode(true);
     const sub = AppState.addEventListener('change', (st) => st === 'active' && onAppOpenRef.current());
-    return () => sub.remove();
+    // auto-start tick: while the app stays open across a night, the day still rolls over.
+    const tick = setInterval(() => onAppOpenRef.current(), 5 * 60 * 1000);
+    return () => {
+      sub.remove();
+      clearInterval(tick);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store.loaded]);
 
