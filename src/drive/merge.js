@@ -1,5 +1,6 @@
 import { mergeJournals } from '../journal.js';
 import { mergeScratch } from '../scratch.js';
+import { dedupeLists } from '../lists.js';
 // Merging two copies of the shared state (phone and laptop) into one.
 // Symmetric and pure, so it runs in Node for tests.
 //
@@ -135,7 +136,7 @@ export function mergeStates(a, b, now = Date.now()) {
   const sharedPrefs = {};
   for (const k of SHARED_PREFS) if (prefsSource.sharedPrefs?.[k] !== undefined) sharedPrefs[k] = prefsSource.sharedPrefs[k];
 
-  return {
+  return dedupeLists({
     version: 1,
     tasks,
     lists,
@@ -156,7 +157,7 @@ export function mergeStates(a, b, now = Date.now()) {
     sharedPrefs,
     prefsUpdatedAt: Math.max(pa, pb),
     revision: Math.max(a.revision || 0, b.revision || 0),
-  };
+  }, now);
 }
 
 // The slice of a store that travels between devices.

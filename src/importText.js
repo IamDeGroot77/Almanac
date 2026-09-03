@@ -54,7 +54,7 @@ export function parseImport(text, { people = [], lists = [], routines = [], cate
       plan.routines.push(current);
     } else {
       const dayId = dayListFor(name, now);
-      const existing = dayId ? null : lists.find((l) => l.name.toLowerCase() === name.toLowerCase());
+      const existing = dayId ? null : lists.find((l) => l.name.trim().toLowerCase() === name.trim().toLowerCase());
       current = {
         kind: 'list',
         name: existing ? existing.name : name,

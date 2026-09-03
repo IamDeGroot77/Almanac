@@ -4,6 +4,7 @@ import { dayKey, todayKey } from './dates';
 import { almanacToday, almanacDayKeyFromOffset, openDayKey } from './clock.js';
 import { newId, DONE_RETENTION_MS } from './ids';
 import { dueForHorizon } from './consider';
+import { dedupeLists } from './lists';
 import { periodKey as periodKeyFor } from './routines';
 
 export { newId, DONE_RETENTION_MS };
@@ -98,7 +99,8 @@ function migrateLegacy(saved) {
 // doesn't grow forever. Unfinished tasks are never pruned; the morning review
 // handles those. Synced tasks are left alone here; sync applies the same
 // window when pulling from Google.
-function prune(state) {
+function prune(input) {
+  const state = dedupeLists(input);
   const cutoff = Date.now() - DONE_RETENTION_MS;
   return {
     ...state,
@@ -869,7 +871,7 @@ export function useAlmanacStore() {
           const tasks = [...s.tasks];
           const routines = [...s.routines];
           let order = now;
-          const byName = (arr, name) => arr.find((x) => x.name.toLowerCase() === name.toLowerCase());
+          const byName = (arr, name) => arr.find((x) => x.name.trim().toLowerCase() === (name || '').trim().toLowerCase());
           const categories = [...(s.categories || [])];
           const categoryIdFor = (name) => {
             if (!name) return null;
@@ -971,7 +973,7 @@ export function useAlmanacStore() {
               }
             }
           }
-          return { lists, tasks, routines, categories };
+          return dedupeLists({ ...s, lists, tasks, routines, categories });
         });
         return added;
       },

@@ -59,6 +59,10 @@ snapshots, and native features hide behind small modules.
 - Laptop-only tabs live in `src/screens/web/`: `PlannerScreen` (week columns, drag and drop), `SemesterScreen` (courses × weeks), `DashboardSections` (charts), `CalendarScreen` (month grid over the Google Calendar API, `src/google/calendarApi.js`, needs the `calendar.events` scope on the web client), and `FilesScreen` (the drop box).
 - The drop box is a normal Drive folder called "Almanac Drop" (`src/drive/filesApi.js`, `drive.file` scope, so the app only sees files it made). The laptop uploads by drag and drop; the phone lists the folder at the bottom of Lists (`DropBoxSection`) and opens files in Drive. Sending from the phone needs a file picker native module, planned for the next build.
 
+## Lists are unique by name
+
+- `src/lists.js` `dedupeLists` (tested by `scripts/test-lists-dedupe.mjs`) folds lists that share a name (ignoring case and spaces): the Google-linked one survives, else the oldest; tasks, routine quotas, and calendar rules are re-pointed; the rest get delete tombstones. It runs on load, after an import, and inside the Drive merge, so a list made on both devices before they synced becomes one.
+
 ## Capture
 
 - Working memory (`src/scratch.js` pure, tested by `scripts/test-scratch.mjs`; `components/ScratchCard.js` at the top of Today on both devices): a few notes you're holding right now, with Hold / Task / Journal / drop, an age label, and "Clear N old" for notes from earlier days. The shade notification's third button, "Hold a thought", captures by voice. Merged across devices by id.
