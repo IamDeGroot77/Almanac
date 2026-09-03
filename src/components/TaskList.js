@@ -6,6 +6,7 @@ import { colors, shared } from '../theme';
 import { tasksForList } from '../store';
 import { childrenOf } from '../pickNext';
 import { groupByWeek } from '../weeks';
+import { groupBySlot } from '../slots';
 
 // One list of tasks with its own add box. Used for the day list and for each
 // standing list. Steps (sub-tasks) render indented under their parent.
@@ -101,7 +102,7 @@ export default function TaskList({
         </View>
       )}
 
-      {(groupByWeek(all) || [{ key: 'flat', courses: [{ name: null, tasks: all }] }]).map((group) => (
+      {(groupByWeek(all) || (listId.startsWith('day:') ? groupBySlot(all) : null) || [{ key: 'flat', courses: [{ name: null, tasks: all }] }]).map((group) => (
         <View key={group.key}>
           {group.title ? (
             <Text style={[styles.weekTitle, group.current && styles.weekCurrent]}>

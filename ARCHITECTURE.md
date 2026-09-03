@@ -61,6 +61,10 @@ snapshots, and native features hide behind small modules.
 
 ## Guard rails (from the September review)
 
+- Cue reminders: `src/cues.js` (pure, tested by `scripts/test-cues.mjs`) reads a time out of a task's "when and where" ("after lunch", "tonight", "Tuesday 2pm") and `reminders.js` fires the task's reminder on that cue instead of the due time. Reminders are reconciled once on load against what Android has scheduled.
+- Slots: `task.slot` (morning / afternoon / evening, set on the task sheet) groups the day list (`src/slots.js`), and `pickNext` holds back tasks whose slot has not come.
+- Focus shows time remaining and a shrinking bar when there is an estimate. Home shows a done wall of the week's finished tasks, no numbers.
+
 - "Up by" (pref `wakeTarget`, shared): with no alarm set, the brief fires daily at this time instead of waiting for the first open.
 - Tomorrow's one thing: picked on the wrap-up card (`days[tomorrow].oneThing`); it leads Home's Now card and the widget the next day.
 - Replan the rest of today (Home, when the projected finish is past bedtime): moves the biggest unstarted, not-due-today tasks to tomorrow until the day fits, counted as carries, with undo.

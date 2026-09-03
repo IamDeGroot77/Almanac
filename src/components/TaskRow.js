@@ -31,6 +31,7 @@ export default function TaskRow({ task, tag, context, steps, isStep, onToggle, o
           : task.canvasCourse,
     });
   }
+  if (task.slot && !task.done) meta.push({ text: task.slot.charAt(0).toUpperCase() + task.slot.slice(1) });
   if (task.firstStep && !task.done && !running) meta.push({ text: `Start with: ${task.firstStep}`, active: true });
   if ((task.carriedCount || 0) >= 2 && !task.done) meta.push({ text: `carried ${task.carriedCount >= 4 ? '3+' : task.carriedCount} days` });
   if (task.plan && !task.done) meta.push({ text: `📍 ${task.plan}` });

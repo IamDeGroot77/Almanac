@@ -754,6 +754,7 @@ function AlmanacApp() {
         onSetNotes={store.setTaskNotes}
         onSetPlan={store.setTaskPlan}
         onSetFirstStep={store.setTaskFirstStep}
+        onSetSlot={store.setTaskSlot}
         onStuck={store.setTaskStuck}
         stuckActions={{
           startFirstStep: (task) => {

@@ -44,6 +44,7 @@ export default function TaskSheet({
   onSetFirstStep,
   onStuck,
   stuckActions,
+  onSetSlot,
 }) {
   const [stepText, setStepText] = useState('');
   const [customDue, setCustomDue] = useState('');
@@ -175,6 +176,18 @@ export default function TaskSheet({
                 </View>
               ) : null}
               {dueError ? <Text style={styles.error}>{dueError}</Text> : null}
+
+              {onSetSlot ? (
+                <View>
+                  <Text style={[styles.label, styles.spacedSmall]}>When today</Text>
+                  <View style={styles.chips}>
+                    <Chip label="Anytime" active={!task.slot} onPress={() => onSetSlot(task.id, null)} />
+                    <Chip label="Morning" active={task.slot === 'morning'} onPress={() => onSetSlot(task.id, 'morning')} />
+                    <Chip label="Afternoon" active={task.slot === 'afternoon'} onPress={() => onSetSlot(task.id, 'afternoon')} />
+                    <Chip label="Evening" active={task.slot === 'evening'} onPress={() => onSetSlot(task.id, 'evening')} />
+                  </View>
+                </View>
+              ) : null}
 
               <Text style={[styles.label, styles.spacedSmall]}>First two-minute step</Text>
               <TextInput

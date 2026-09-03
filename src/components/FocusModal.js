@@ -59,14 +59,15 @@ export default function FocusModal({ task, nextStep, stepsSummary, prefs, sessio
           ) : (
             <Text style={styles.task}>{task.text}</Text>
           )}
-          <Text style={[styles.timer, over && styles.timerOver]}>{formatDuration(elapsed) || '0m'}</Text>
+          <Text style={[styles.timer, over && styles.timerOver]}>{est ? (over ? `+${formatDuration(elapsed - est) || '0m'}` : `${formatDuration(est - elapsed) || '<1m'}`) : formatDuration(elapsed) || '0m'}</Text>
+          {est ? <Text style={styles.timerLabel}>{over ? 'over the estimate' : 'left'}</Text> : null}
           {est ? (
             <View style={styles.estimate}>
               <View style={styles.track}>
-                <View style={[styles.fill, over && styles.fillOver, { width: `${Math.round(pct * 100)}%` }]} />
+                <View style={[styles.fill, over && styles.fillOver, { width: `${Math.round((over ? 1 : 1 - pct) * 100)}%` }]} />
               </View>
               <Text style={styles.estimateText}>
-                {over ? `Past the ~${formatDuration(est)} estimate` : `of ~${formatDuration(est)} estimated`}
+                {over ? `Past the ~${formatDuration(est)} estimate. Stop, or go again.` : `${formatDuration(elapsed) || '0m'} in, of ~${formatDuration(est)}. The bar shrinks.`}
               </Text>
             </View>
           ) : (
@@ -134,6 +135,7 @@ export default function FocusModal({ task, nextStep, stepsSummary, prefs, sessio
 }
 
 const styles = StyleSheet.create({
+  timerLabel: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: -6, marginBottom: 8 },
   screen: { flex: 1, backgroundColor: colors.bg, padding: 24, paddingTop: 48 },
   back: { alignSelf: 'flex-start', paddingVertical: 6 },
   backText: { color: colors.accent, fontWeight: '600', fontSize: 15 },

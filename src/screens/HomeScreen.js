@@ -47,6 +47,8 @@ export default function HomeScreen({
   const hour = new Date().getHours();
   const greeting = hour < 5 ? 'Still up' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const routinesWithGoal = (store.routines || []).filter((r) => r.minutesPerDay);
+  const weekAgo = Date.now() - 7 * 86400000;
+  const doneWall = (store.tasks || []).filter((t) => t.done && !t.parentId && t.doneAt >= weekAgo).sort((a, b) => a.doneAt - b.doneAt).slice(-40);
 
   return (
     <Screen>
@@ -116,6 +118,19 @@ export default function HomeScreen({
         ))}
       </View>
 
+      {doneWall.length ? (
+        <View style={styles.wall}>
+          <Text style={styles.wallTitle}>Done this week</Text>
+          <View style={styles.wallGrid}>
+            {doneWall.map((t) => (
+              <View key={t.id} style={styles.brick}>
+                <Text style={styles.brickText} numberOfLines={1}>{t.text}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
       <ScratchCard scratch={scratch} {...scratchActions} />
 
       {importProps ? <ImportBox {...importProps} /> : null}
@@ -155,6 +170,11 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
   numbers: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
   rest: { marginTop: 12, fontSize: 14, color: colors.muted, fontStyle: 'italic' },
+  wall: { marginTop: 16 },
+  wallTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: colors.muted, marginBottom: 6 },
+  wallGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  brick: { maxWidth: 150, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: colors.accentSoft },
+  brickText: { fontSize: 12, color: colors.ink },
   replan: { alignSelf: 'flex-start', marginTop: 12 },
   stat: { minWidth: 88, flexGrow: 1, padding: 10, borderRadius: 12, backgroundColor: colors.accentSoft },
   statValue: { fontSize: 20, fontWeight: '800', color: colors.accent },
