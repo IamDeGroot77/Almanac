@@ -20,6 +20,8 @@ export default function useDriveSync(store, auth) {
   const queued = useRef(false);
   const lastRun = useRef(0);
   const fileId = useRef(null);
+  const lastRemoteModified = useRef(null);
+  const lastRemoteBody = useRef(null);
   const lastSyncedVersion = useRef(-1);
   const failures = useRef(0);
   const blockedUntil = useRef(0);
@@ -42,19 +44,42 @@ export default function useDriveSync(store, auth) {
         const token = await getValidAccessToken();
         if (!token) throw new Error('Google session expired. Connect again.');
         const drive = makeDrive(token);
-        if (!fileId.current) fileId.current = (await drive.findFile())?.id || null;
-        const remote = fileId.current ? await drive.download(fileId.current) : null;
-        const local = shareable(current);
-        const merged = remote ? mergeStates(local, remote) : local;
+        const meta = await drive.findFile();
+        fileId.current = meta?.id || null;
+        // Skip the download when the file has not changed since we last saw it.
+        const unchangedRemote = meta && lastRemoteModified.current === meta.modifiedTime && lastRemoteBody.current;
+        const remote = fileId.current ? unchangedRemote ? lastRemoteBody.current : await drive.download(fileId.current) : null;
+        if (meta && !unchangedRemote) {
+          lastRemoteModified.current = meta.modifiedTime;
+          lastRemoteBody.current = remote;
+        }
+        let local = shareable(current);
+        let merged = remote ? mergeStates(local, remote) : local;
+
+        // Edits typed while the download ran are newer than the snapshot: fold them in.
+        const fresh = storeRef.current;
+        if (fresh.localVersion !== current.localVersion) {
+          local = shareable(fresh);
+          merged = mergeStates(local, merged);
+        }
 
         // Apply anything the other device contributed.
-        if (!remote || !sameShareable(merged, local)) current.applyDriveMerge(merged);
+        if (!remote || !sameShareable(merged, local)) storeRef.current.applyDriveMerge(merged);
 
-        // Upload if Drive is behind.
+        // Upload if Drive is behind, re-checking that nobody wrote in between.
         if (!remote || !sameShareable(merged, remote)) {
+          const again = fileId.current ? await drive.findFile() : null;
+          if (again && meta && again.modifiedTime !== meta.modifiedTime) {
+            const latest = await drive.download(again.id);
+            merged = mergeStates(merged, latest);
+            storeRef.current.applyDriveMerge(merged);
+            lastRemoteModified.current = again.modifiedTime;
+            lastRemoteBody.current = latest;
+          }
           const next = { ...merged, revision: (merged.revision || 0) + 1, updatedAt: Date.now() };
           fileId.current = await drive.upload(fileId.current, next);
-          current.setDriveRevision(next.revision);
+          lastRemoteModified.current = null; // our own write; re-read next time
+          storeRef.current.setDriveRevision(next.revision);
         }
         lastRun.current = Date.now();
         lastSyncedVersion.current = storeRef.current.localVersion;

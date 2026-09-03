@@ -16,7 +16,7 @@ export const PROMPTS = [
   'What do I keep telling myself I should do?',
 ];
 
-export const SKIP_PROMPT = 'What made you skip a day this week?';
+export const SKIP_PROMPT = 'What went well this week, and what got in the way?';
 
 // A prompt for the day, stable within the day, rotating across days.
 export function promptForDay(key) {

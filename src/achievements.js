@@ -63,7 +63,7 @@ export function streaks(state, now = Date.now()) {
   const bracketed = (k) => !!state.days?.[k]?.wokeAt && !state.days[k].implicit;
   const out = [
     { id: 'opened', name: 'Opened Almanac', run: forgivingRun(opened, now), best: bestRun(opened, now) },
-    { id: 'bracketed', name: 'Started the day', run: forgivingRun(bracketed, now), best: bestRun(bracketed, now) },
+    { id: 'bracketed', name: 'Days with a start', run: forgivingRun(bracketed, now), best: bestRun(bracketed, now) },
   ];
   const rs = { tasks: state.tasks || [], routineDone: state.routineDone || {}, routineLog: state.routineLog || [] };
   for (const r of state.routines || []) {
@@ -79,7 +79,7 @@ export function streaks(state, now = Date.now()) {
 
 // Achievements: id, name, blurb, and a progress function -> { done, target }.
 export const ACHIEVEMENTS = [
-  { id: 'first-light', name: 'First light', blurb: 'Started a day on purpose.', progress: (s) => ({ done: Object.values(s.days || {}).some((d) => d?.wokeAt && !d.implicit) ? 1 : 0, target: 1 }) },
+  { id: 'first-light', name: 'First light', blurb: 'A day started, by you or by the phone noticing you were up.', progress: (s) => ({ done: Object.values(s.days || {}).some((d) => d?.wokeAt && !d.implicit) ? 1 : 0, target: 1 }) },
   { id: 'first-finish', name: 'One down', blurb: 'Finished a task.', progress: (s) => ({ done: Math.min(1, doneCount(s)), target: 1 }) },
   { id: 'ten-finished', name: 'Ten down', blurb: 'Ten tasks finished.', progress: (s) => ({ done: Math.min(10, doneCount(s)), target: 10 }) },
   { id: 'fifty-finished', name: 'Fifty down', blurb: 'Fifty tasks finished.', progress: (s) => ({ done: Math.min(50, doneCount(s)), target: 50 }) },

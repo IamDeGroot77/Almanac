@@ -80,9 +80,7 @@ export default function SettingsScreen({
   const themeName = { system: 'Match phone', light: 'Light', dark: 'Dark', anime: 'Anime' }[theme] || theme;
   const connectionsAlert = google.account && (drive?.state === 'reconnect' || drive?.state === 'error' || sync?.state === 'error');
   const connectionsSummary = !google.account ? 'Google not connected' : connectionsAlert ? 'Google needs attention' : `Google · ${google.account}${!isWeb && canvas?.connected ? ' · Canvas' : ''}`;
-  const daySummary = isWeb
-    ? `${categories.length} ${categories.length === 1 ? 'category' : 'categories'} · ${(prefs.dayBlocks || []).length} ${(prefs.dayBlocks || []).length === 1 ? 'block' : 'blocks'}`
-    : `Brief, bedtime ${prefs.bedtimeHour === -1 ? 'off' : `at ${formatTime(new Date().setHours(prefs.bedtimeHour ?? 23, 0, 0, 0))}`}, ${(prefs.dayBlocks || []).length} ${(prefs.dayBlocks || []).length === 1 ? 'block' : 'blocks'}`;
+  const daySummary = `${categories.length} ${categories.length === 1 ? 'category' : 'categories'} · ${(prefs.dayBlocks || []).length} ${(prefs.dayBlocks || []).length === 1 ? 'block' : 'blocks'}${(prefs.dopamenu || []).length ? ` · ${(prefs.dopamenu || []).length} on the dopamine menu` : ''}`;
   const sleepSummary = !sleep?.available ? 'Needs the newer build' : sleep.enabled || sleep.health?.enabled ? `On${sleep.health?.enabled ? ', with the watch' : ''}` : 'Off';
 
   const Wrap = embedded ? View : Screen;
@@ -153,7 +151,23 @@ export default function SettingsScreen({
       </Collapsible>
 
       <Collapsible title="Your day" summary={daySummary}>
-        {!isWeb ? (
+
+        <DayPlanSection
+          categories={categories}
+          lists={lists}
+          blocks={prefs.dayBlocks || []}
+          onAddCategory={onAddCategory}
+          onRenameCategory={onRenameCategory}
+          onDeleteCategory={onDeleteCategory}
+          onSetBlocks={(blocks) => onSetPref('dayBlocks', blocks)}
+        />
+
+        <DopamenuSection menu={prefs.dopamenu || []} onChange={(menu) => onSetPref('dopamenu', menu)} />
+
+      </Collapsible>
+
+      {!isWeb ? (
+        <Collapsible title="Notifications" summary={`Brief ${reminderStatus?.mode === 'alarm' ? 'follows your alarm' : 'at day start'} · bedtime ${prefs.bedtimeHour === -1 ? 'off' : formatTime(new Date().setHours(prefs.bedtimeHour ?? 23, 0, 0, 0))} · energy check ${prefs.energyCheckins === true ? 'on' : 'off'}`}>
           <View>
             <Text style={styles.label}>Morning brief</Text>
             <Text style={shared.muted}>{reminderMessage(reminderStatus) || 'Checking your alarm…'}</Text>
@@ -175,26 +189,9 @@ export default function SettingsScreen({
               onSelect={(id) => onSetPref('bedtimeHour', Number(id))}
               compact
             />
-          </View>
-        ) : null}
-
-        <DayPlanSection
-          categories={categories}
-          lists={lists}
-          blocks={prefs.dayBlocks || []}
-          onAddCategory={onAddCategory}
-          onRenameCategory={onRenameCategory}
-          onDeleteCategory={onDeleteCategory}
-          onSetBlocks={(blocks) => onSetPref('dayBlocks', blocks)}
-        />
-
-        <DopamenuSection menu={prefs.dopamenu || []} onChange={(menu) => onSetPref('dopamenu', menu)} />
-
-        {!isWeb ? (
-          <View>
             <View style={styles.switchRow}>
               <Text style={styles.label}>Midday energy check</Text>
-              <Switch value={prefs.energyCheckins !== false} onValueChange={(v) => onSetPref('energyCheckins', v)} />
+              <Switch value={prefs.energyCheckins === true} onValueChange={(v) => onSetPref('energyCheckins', v)} />
             </View>
             <Text style={shared.muted}>A 1 PM notification asking how your energy is, answered with one tap.</Text>
 
@@ -225,10 +222,8 @@ export default function SettingsScreen({
             </View>
             <Text style={shared.muted}>A Sunday 6 PM note that the week's letter is ready, with one question that files into the journal.</Text>
           </View>
-        ) : (
-          <Text style={[shared.muted, styles.note]}>Reminders, energy checks, check-ins, and voice capture run on the phone.</Text>
-        )}
-      </Collapsible>
+        </Collapsible>
+      ) : null}
 
       {!isWeb && sleep ? (
         <Collapsible title="Sleep" summary={sleepSummary}>

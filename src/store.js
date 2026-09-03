@@ -105,7 +105,7 @@ function prune(input) {
   const cutoff = Date.now() - DONE_RETENTION_MS;
   return {
     ...state,
-    tasks: state.tasks.filter((t) => !(t.done && t.doneAt && t.doneAt < cutoff && isDayList(t.listId))),
+    tasks: state.tasks.filter((t) => !(t.done && t.doneAt && t.doneAt < cutoff && !t.canvasId)),
   };
 }
 

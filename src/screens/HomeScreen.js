@@ -4,6 +4,7 @@ import { colors, shared } from '../theme';
 import Screen from '../components/Screen';
 import ScratchCard from '../components/ScratchCard';
 import ImportBox from '../components/ImportBox';
+import ReviewCard from '../components/ReviewCard';
 import { SmallButton, PrimaryButton } from '../components/Buttons';
 import WeatherLine from '../components/WeatherLine';
 import { quoteOfDay } from '../quotes';
@@ -36,6 +37,7 @@ export default function HomeScreen({
   onJustOneThing,
   onGo,
   importProps,
+  review,
 }) {
   const now = useNow(!!running, 30000);
   const runs = useMemo(() => streaks(store, Date.now()).filter((s) => s.run > 0), [store.usage, store.days, store.routineDone, store.routineLog, store.routines]);
@@ -61,6 +63,8 @@ export default function HomeScreen({
           ) : null}
         </View>
       ) : null}
+
+      {review?.show ? <ReviewCard tasks={review.tasks} tagFor={review.tagFor} onApply={review.onApply} onLater={review.onLater} /> : null}
 
       <View style={[shared.card, styles.now]}>
         {running ? (

@@ -100,7 +100,7 @@ export default function WrapUpCard({
         )}
         <View style={styles.actionRow}>
           <SmallButton label="Not yet" onPress={onClose} />
-          <PrimaryButton label="Good night" onPress={onGoodNight} style={styles.push} />
+          <PrimaryButton label="Going to bed" onPress={onGoodNight} style={styles.push} />
         </View>
       </View>
     </View>

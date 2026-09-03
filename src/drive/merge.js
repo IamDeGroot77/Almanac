@@ -68,6 +68,13 @@ function mergeDay(x, y) {
   for (const k of Object.keys(other)) if (merged[k] == null && other[k] != null) merged[k] = other[k];
   // Energy answers: keep any given on either side.
   if (x.energy || y.energy) merged.energy = { ...(other.energy || {}), ...(base.energy || {}) };
+  // A wake time from a sensor beats one guessed from an app open or a gap.
+  const sensor = [x, y].find((d) => d?.wokeAt && (d.wakeSource === 'health' || d.wakeSource === 'phone'));
+  if (sensor && merged.wokeAt !== sensor.wokeAt && (merged.wakeSource === 'open' || merged.autoStarted || merged.implicit)) {
+    merged.wokeAt = sensor.wokeAt;
+    merged.wakeSource = sensor.wakeSource;
+    merged.implicit = false;
+  }
   // Sleep: measured (watch) beats inferred (phone).
   const sleeps = [x.sleep, y.sleep].filter(Boolean);
   if (sleeps.length) merged.sleep = sleeps.find((s) => s.source === 'health') || base.sleep || other.sleep;

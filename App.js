@@ -191,7 +191,7 @@ function AlmanacApp() {
       if (entry && !entry.skipped) setToast({ text: `${entry.text}: ${formatDuration(entry.durationMs) || '1m'} logged.`, at: Date.now() });
       else if (entry?.skipped) setToast({ text: entry.durationMs < 60000 ? `${entry.text}: under a minute, nothing logged.` : `${entry.text}: timer ran too long, nothing logged.`, at: Date.now() });
     }
-    const plan = planAutoStart(s, Date.now());
+    const plan = isWeb ? null : planAutoStart(s, Date.now()); // sensors live on the phone
     if (plan) {
       s.applyAutoStart(plan);
       setReviewDismissed(false);
@@ -209,7 +209,7 @@ function AlmanacApp() {
     if (!store.loaded) return;
     onAppOpenRef.current();
     const openToday = store.tasks.filter((t) => !t.done && !t.parentId && t.listId === `day:${day.today}`).length;
-    if (openToday > 5) setNowMode(true);
+    if (openToday >= 3) setNowMode(true);
     const sub = AppState.addEventListener('change', (st) => st === 'active' && onAppOpenRef.current());
     return () => sub.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -220,7 +220,7 @@ function AlmanacApp() {
   useTaskReminders(store.tasks, store.loaded);
   useQuickAdd(store, { enabled: !!store.prefs.quickAddNotification });
   useTaskCheckins(store, { minutes: store.prefs.checkinMinutes ?? 30 });
-  useEnergyCheckins(store, { enabled: store.prefs.energyCheckins !== false });
+  useEnergyCheckins(store, { enabled: store.prefs.energyCheckins === true }); // off unless asked for
   const importPlanWithToast = (plan) => {
     const added = store.importPlan(plan);
     const bits = [];
@@ -468,6 +468,7 @@ function AlmanacApp() {
             onOpenTask={(task) => setSheetTaskId(task.id)}
             onJustOneThing={justOneThing}
             onGo={go}
+            review={{ show: showReview, tasks: derived.reviewTasks, tagFor: people.tagFor, onApply: (carry, drop) => store.applyReview(carry, drop), onLater: () => setReviewDismissed(true) }}
             importProps={{ people: store.people, lists: store.lists, routines: store.routines, categories: store.categories || [], onImport: importPlanWithToast }}
           />
         )}

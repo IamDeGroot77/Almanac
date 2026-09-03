@@ -61,6 +61,10 @@ snapshots, and native features hide behind small modules.
 
 ## Guard rails (from the September review)
 
+- Drive sync re-reads the file's modifiedTime before uploading and merges again if another device wrote in between; edits made while a download was running are folded in before apply; an unchanged file is not downloaded twice.
+- Only the phone auto-starts days; in a merge, a wake time from a sensor beats one guessed from an app open.
+- The start-of-day review lives on Home. The midday energy check is off unless turned on. Now mode is the default on Day once three tasks are open. Notifications have their own Settings group.
+
 - Store: a failed load turns saving off for the session (`loadFailed`), and the previous blob is kept as `almanac:v2.bak` before every write, so a bad read can never be overwritten by an empty default.
 - Notifications: bracket, check-in, and energy responses older than 30 minutes are ignored, so a tap replayed after the process died cannot close the wrong day.
 - Carries: moving an open task to a later day list, pushing leftovers to tomorrow, and the morning review all count a carry.

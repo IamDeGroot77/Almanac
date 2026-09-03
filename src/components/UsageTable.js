@@ -27,7 +27,7 @@ export default function UsageTable({ weeks }) {
         </View>
       ))}
       <Text style={styles.note}>
-        Opened counts days this device opened Almanac. Bracketed counts days with a real "I'm up" tap, not a guessed one.
+        Opened counts days this device opened Almanac. Bracketed counts days that got a start: a tap, or the phone noticing you were up. Days guessed from a first edit don't count.
       </Text>
     </View>
   );
